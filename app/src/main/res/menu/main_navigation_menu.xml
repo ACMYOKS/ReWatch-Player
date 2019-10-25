@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/home_nav_graph"
+        android:title="@string/main_bottom_nav_title_home" />
+    <item
+        android:id="@+id/library_nav_graph"
+        android:title="@string/main_bottom_nav_title_library" />
+    <item
+        android:id="@+id/downloads_nav_graph"
+        android:title="@string/main_bottom_nav_title_downloads" />
+    <item
+        android:id="@+id/account_nav_graph"
+        android:title="@string/main_bottom_nav_title_account" />
+</menu>

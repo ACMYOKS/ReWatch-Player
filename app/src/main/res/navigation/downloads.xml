@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/downloads_nav_graph"
+    app:startDestination="@id/downloadManagerFragment">
+
+    <fragment
+        android:id="@+id/downloadManagerFragment"
+        android:name="com.amoscyk.android.rewatchplayer.ui.downloads.DownloadManagerFragment"
+        tools:layout="@layout/fragment_download_manager" />
+</navigation>

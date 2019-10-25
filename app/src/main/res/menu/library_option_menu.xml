@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <group
+        android:id="@+id/library_option_group">
+        <item
+            android:id="@+id/search_item"
+            android:title="search"
+            app:showAsAction="ifRoom" />
+        <item
+            android:id="@+id/show_playlists"
+            android:title="show playlists"
+            app:showAsAction="ifRoom" />
+        <item
+            android:id="@+id/show_all_items"
+            android:title="show all items"
+            app:showAsAction="ifRoom" />
+        <item
+            android:id="@+id/edit_item"
+            android:title="edit"
+            app:showAsAction="ifRoom" />
+    </group>
+    <group android:id="@+id/library_edit_group">
+        <item android:id="@+id/confirm_delete"
+            android:title="delete"
+            app:showAsAction="ifRoom"/>
+    </group>
+</menu>

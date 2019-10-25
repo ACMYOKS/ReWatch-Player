@@ -1,4 +1,4 @@
-package com.asmod.android.rewatchplayer
+package com.amoscyk.android.rewatchplayer
 
 import org.junit.Test
 

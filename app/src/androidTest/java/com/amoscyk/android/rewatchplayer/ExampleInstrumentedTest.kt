@@ -1,4 +1,4 @@
-package com.asmod.android.rewatchplayer
+package com.amoscyk.android.rewatchplayer
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.asmod.android.rewatchplayer", appContext.packageName)
+        assertEquals("com.amoscyk.android.rewatchplayer", appContext.packageName)
     }
 }
