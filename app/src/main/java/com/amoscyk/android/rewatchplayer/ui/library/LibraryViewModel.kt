@@ -11,11 +11,11 @@ class LibraryViewModel: ViewModel() {
     }
 
     private val _editMode = MutableLiveData<Boolean>()
-    val editMode = _editMode
+    val editMode: LiveData<Boolean> = _editMode
 
     // set display mode from user preference
     private val _currentDisplayMode = MutableLiveData<DisplayMode>()
-    val currentDisplayMode = _currentDisplayMode
+    val currentDisplayMode: LiveData<DisplayMode> = _currentDisplayMode
 
     init {
         _editMode.value = false

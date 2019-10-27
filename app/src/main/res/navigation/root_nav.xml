@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_nav"
+    app:startDestination="@id/rootRouterPageFragment">
+
+    <fragment
+        android:id="@+id/rootRouterPageFragment"
+        android:name="com.amoscyk.android.rewatchplayer.ui.RootRouterPageFragment"
+        tools:layout="@layout/fragment_root_router_page" >
+        <action
+            android:id="@+id/showMainPage"
+            app:destination="@id/mainPageFragment"
+            app:popUpTo="@+id/root_nav"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/showStartupAccount"
+            app:destination="@id/startupAccountFragment"
+            app:popUpTo="@+id/root_nav"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/mainPageFragment"
+        android:name="com.amoscyk.android.rewatchplayer.ui.MainPageFragment"
+        tools:layout="@layout/fragment_main_page" />
+
+    <fragment
+        android:id="@+id/startupAccountFragment"
+        android:name="com.amoscyk.android.rewatchplayer.ui.account.StartupAccountFragment"
+        tools:layout="@layout/fragment_startup_account" >
+        <action
+            android:id="@+id/showMainPage"
+            app:destination="@id/mainPageFragment"
+            app:popUpTo="@+id/root_nav"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+</navigation>
