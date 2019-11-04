@@ -13,6 +13,7 @@ import com.amoscyk.android.rewatchplayer.util.PreferenceKey
 import com.amoscyk.android.rewatchplayer.util.appSharedPreference
 import com.amoscyk.android.rewatchplayer.util.getString
 import com.amoscyk.android.rewatchplayer.util.remove
+import com.amoscyk.android.rewatchplayer.youtubeServiceProvider
 
 class RootRouterPageFragment : Fragment() {
 
@@ -28,17 +29,15 @@ class RootRouterPageFragment : Fragment() {
         navigateToNextPage()
     }
 
-    private fun checkHasAccount(): Boolean {
-        return requireContext()
-            .appSharedPreference.getString(PreferenceKey.ACCOUNT_NAME, null) != null
+    private fun getSelectedAccountName(): String? {
+        return requireContext().appSharedPreference.getString(PreferenceKey.ACCOUNT_NAME, null)
     }
 
     private fun navigateToNextPage() {
-        if (checkHasAccount()) {
+        getSelectedAccountName()?.let {
+            youtubeServiceProvider.credential.selectedAccountName = it
             findNavController().navigate(RootRouterPageFragmentDirections.showMainPage())
-        } else {
-            findNavController().navigate(RootRouterPageFragmentDirections.showStartupAccount())
-        }
+        } ?: findNavController().navigate(RootRouterPageFragmentDirections.showStartupAccount())
     }
 
 }

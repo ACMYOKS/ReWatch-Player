@@ -6,7 +6,7 @@ import androidx.core.content.edit
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.amoscyk.android.rewatchplayer.service.YoutubeService
+import com.amoscyk.android.rewatchplayer.service.YoutubeServiceProvider
 import com.amoscyk.android.rewatchplayer.util.PreferenceKey
 import com.amoscyk.android.rewatchplayer.util.appSharedPreference
 import com.amoscyk.android.rewatchplayer.util.putString
@@ -37,11 +37,11 @@ class StartupAccountViewModel : ViewModel() {
         }
     }
 
-    fun setUserAccountName(context: Context, youtubeService: YoutubeService, accountName: String) {
+    fun setUserAccountName(context: Context, youtubeServiceProvider: YoutubeServiceProvider, accountName: String) {
         context.appSharedPreference.edit {
             putString(PreferenceKey.ACCOUNT_NAME, accountName)
         }
-        youtubeService.credential.selectedAccountName = accountName
+        youtubeServiceProvider.credential.selectedAccountName = accountName
         _accountName.value = accountName
         _settingStageMessenger.value =
             SettingStageMessenger(SettingStage.USER_ACCOUNT_SELECTED, _accountName.value)

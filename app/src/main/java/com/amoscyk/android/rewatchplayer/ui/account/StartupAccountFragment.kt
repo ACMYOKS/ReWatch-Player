@@ -3,6 +3,7 @@ package com.amoscyk.android.rewatchplayer.ui.account
 import android.Manifest
 import android.accounts.AccountManager
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.fragment.app.Fragment
@@ -16,7 +17,7 @@ import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 
 import com.amoscyk.android.rewatchplayer.R
-import com.amoscyk.android.rewatchplayer.youtubeService
+import com.amoscyk.android.rewatchplayer.youtubeServiceProvider
 import pub.devrel.easypermissions.AfterPermissionGranted
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
@@ -28,6 +29,32 @@ class StartupAccountFragment : Fragment(), EasyPermissions.PermissionCallbacks {
 
     private val viewModel by viewModels<StartupAccountViewModel>()
 
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        viewModel.settingStageMessenger.observe(this, Observer {
+            when (it.stage) {
+                StartupAccountViewModel.SettingStage.REQUEST_GET_ACCOUNT_PERMISSION -> {
+                    EasyPermissions.requestPermissions(this,
+                        "This app needs to access your Google account (via Contacts).",
+                        REQUEST_GET_ACCOUNT_PERMISSION,
+                        Manifest.permission.GET_ACCOUNTS)
+                }
+                StartupAccountViewModel.SettingStage.REQUEST_USER_ACCOUNT -> {
+                    startActivityForResult(
+                        youtubeServiceProvider.credential.newChooseAccountIntent(),
+                        REQUEST_ACCOUNT_PICKER)
+                }
+                StartupAccountViewModel.SettingStage.USER_ACCOUNT_SELECTED -> {
+                    Toast.makeText(requireContext(),
+                        "username set: ${it.username}",
+                        Toast.LENGTH_SHORT)
+                        .show()
+                    findNavController().navigate(StartupAccountFragmentDirections.showMainPage())
+                }
+            }
+        })
+    }
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -44,28 +71,6 @@ class StartupAccountFragment : Fragment(), EasyPermissions.PermissionCallbacks {
         signupBtn.setOnClickListener {
             chooseUserAccount()
         }
-        viewModel.settingStageMessenger.observe(viewLifecycleOwner, Observer {
-            when (it.stage) {
-                StartupAccountViewModel.SettingStage.REQUEST_GET_ACCOUNT_PERMISSION -> {
-                    EasyPermissions.requestPermissions(this,
-                        "This app needs to access your Google account (via Contacts).",
-                        REQUEST_GET_ACCOUNT_PERMISSION,
-                        Manifest.permission.GET_ACCOUNTS)
-                }
-                StartupAccountViewModel.SettingStage.REQUEST_USER_ACCOUNT -> {
-                    startActivityForResult(
-                        youtubeService.credential.newChooseAccountIntent(),
-                        REQUEST_ACCOUNT_PICKER)
-                }
-                StartupAccountViewModel.SettingStage.USER_ACCOUNT_SELECTED -> {
-                    Toast.makeText(requireContext(),
-                        "username set: ${it.username}",
-                        Toast.LENGTH_SHORT)
-                        .show()
-                    findNavController().navigate(StartupAccountFragmentDirections.showMainPage())
-                }
-            }
-        })
     }
 
     @AfterPermissionGranted(REQUEST_GET_ACCOUNT_PERMISSION)
@@ -79,7 +84,7 @@ class StartupAccountFragment : Fragment(), EasyPermissions.PermissionCallbacks {
             REQUEST_ACCOUNT_PICKER -> {
                 if (resultCode == Activity.RESULT_OK) {
                     data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)?.let { accountName ->
-                        viewModel.setUserAccountName(requireContext(), youtubeService, accountName)
+                        viewModel.setUserAccountName(requireContext(), youtubeServiceProvider, accountName)
                     }
                 }
             }
