@@ -8,5 +8,17 @@
     <fragment
         android:id="@+id/libraryFragment"
         android:name="com.amoscyk.android.rewatchplayer.ui.library.LibraryFragment"
-        tools:layout="@layout/fragment_library" />
+        tools:layout="@layout/fragment_library" >
+        <action
+            android:id="@+id/showVideoList"
+            app:destination="@id/videoListFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/videoListFragment"
+        android:name="com.amoscyk.android.rewatchplayer.ui.VideoListFragment"
+        tools:layout="@layout/fragment_video_list" >
+        <argument
+            android:name="playlist"
+            app:argType="com.amoscyk.android.rewatchplayer.datasource.vo.RPPlaylist" />
+    </fragment>
 </navigation>

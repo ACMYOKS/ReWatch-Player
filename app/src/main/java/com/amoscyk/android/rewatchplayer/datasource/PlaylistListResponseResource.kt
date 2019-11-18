@@ -3,8 +3,8 @@ package com.amoscyk.android.rewatchplayer.datasource
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.amoscyk.android.rewatchplayer.datasource.vo.RPSearchListResponse
-import com.amoscyk.android.rewatchplayer.datasource.vo.RPSearchResult
+import com.amoscyk.android.rewatchplayer.datasource.vo.RPPlaylist
+import com.amoscyk.android.rewatchplayer.datasource.vo.RPPlaylistListResponse
 import com.amoscyk.android.rewatchplayer.datasource.vo.Resource
 import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
@@ -12,32 +12,26 @@ import com.google.api.services.youtube.YouTube
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/***
- * The class that holds a livedata value of a search result list that satisfy the query. With this
- * class user can simply call [loadMoreResource] to query for more results. The size of the result
- * list each time queried is limited by the request passed to the builder.
- */
-class SearchListResponseResource private constructor(
-    private val request: YouTube.Search.List
+class PlaylistListResponseResource private constructor(
+    private val request: YouTube.Playlists.List
 ) {
-    private val _resource = MutableLiveData<Resource<List<RPSearchResult>>>()
+    private val _resource = MutableLiveData<Resource<List<RPPlaylist>>>()
         .apply { Resource.loading(null) }
-    val resource: LiveData<Resource<List<RPSearchResult>>> = _resource
+    val resource: LiveData<Resource<List<RPPlaylist>>> = _resource
 
     private var _endOfListReached = false
     val endOfListReached: Boolean
         get() = _endOfListReached
-
     private var _pageToken: String? = null
 
     private suspend fun startRequest() {
         withContext(Dispatchers.IO) {
             _resource.postValue(Resource.loading(null))
-            Log.d("LOG", "start search request")
+            Log.d("LOG", "start playlist request")
             try {
                 val response = request.execute()
-                Log.d("LOG", "finish search request")
-                val result = RPSearchListResponse.fromApi(request.q, "", response)
+                Log.d("LOG", "finish playlist request")
+                val result = RPPlaylistListResponse.fromApi("", response)
                 _pageToken = result.nextPageToken
                 if (_pageToken == null) {
                     _endOfListReached = true
@@ -62,16 +56,16 @@ class SearchListResponseResource private constructor(
         withContext(Dispatchers.IO) {
             // pass the previous list into the loading resource
             _resource.postValue(Resource.loading(_resource.value?.data))
-            Log.d("LOG", "start load more search request")
+            Log.d("LOG", "start load more playlist request")
             try {
                 val response = request.setPageToken(_pageToken).execute()
-                Log.d("LOG", "finish load more search request")
-                val result = RPSearchListResponse.fromApi(request.q, _pageToken!!, response)
+                Log.d("LOG", "finish load more playlist request")
+                val result = RPPlaylistListResponse.fromApi(_pageToken!!, response)
                 _pageToken = result.nextPageToken
                 if (_pageToken == null) {
                     _endOfListReached = true
                 }
-                val newList = ArrayList<RPSearchResult>().apply {
+                val newList = ArrayList<RPPlaylist>().apply {
                     addAll(_resource.value?.data.orEmpty())
                     addAll(result.items)
                 }
@@ -87,8 +81,8 @@ class SearchListResponseResource private constructor(
     }
 
     companion object {
-        suspend fun build(request: YouTube.Search.List): SearchListResponseResource {
-            val resource = SearchListResponseResource(request)
+        suspend fun build(request: YouTube.Playlists.List): PlaylistListResponseResource {
+            val resource = PlaylistListResponseResource(request)
             resource.startRequest()
             return resource
         }

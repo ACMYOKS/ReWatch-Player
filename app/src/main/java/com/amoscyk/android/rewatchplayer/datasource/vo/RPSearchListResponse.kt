@@ -8,12 +8,12 @@ import com.google.api.services.youtube.model.SearchListResponse
 )
 data class RPSearchListResponse(
     val query: String,
-    val items: List<RPSearchResult>,
+    override val items: List<RPSearchResult>,
     override val pageToken: String,
-    override val nextPageToken: String,
+    override val nextPageToken: String?,
     override val totalResults: Int,
     override val resultsPerPage: Int
-): IListResult {
+): IListResult<RPSearchResult> {
     companion object {
         fun fromApi(
             query: String,

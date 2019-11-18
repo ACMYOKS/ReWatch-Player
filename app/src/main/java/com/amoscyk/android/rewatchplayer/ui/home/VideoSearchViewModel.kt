@@ -11,7 +11,7 @@ class VideoSearchViewModel(
 ): ViewModel() {
 
     private val _query = MutableLiveData<String>()
-    private var searchResultResource = MutableLiveData<SearchListResponseResource>()
+    private val searchResultResource = MutableLiveData<SearchListResponseResource>()
     val searchResults: LiveData<Resource<List<RPSearchResult>>> =
         Transformations.switchMap(searchResultResource) { it.resource }
 

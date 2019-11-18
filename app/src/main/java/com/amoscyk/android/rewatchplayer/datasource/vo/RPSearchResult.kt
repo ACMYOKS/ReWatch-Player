@@ -1,6 +1,7 @@
 package com.amoscyk.android.rewatchplayer.datasource.vo
 
 import com.google.api.services.youtube.model.SearchResult
+import com.google.api.services.youtube.model.ThumbnailDetails
 
 data class RPSearchResult(
     val videoId: String?,
@@ -8,6 +9,7 @@ data class RPSearchResult(
     val playlistId: String?,
     val title: String,
     val description: String,
+    val thumbnails: RPThumbnailDetails,
     val publishingChannelId: String,
     val channelTitle: String
 ) {
@@ -19,6 +21,7 @@ data class RPSearchResult(
                 result.id.playlistId,
                 result.snippet.title,
                 result.snippet.description,
+                RPThumbnailDetails.fromApi(result.snippet.thumbnails),
                 result.snippet.channelId,
                 result.snippet.channelTitle
             )

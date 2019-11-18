@@ -8,6 +8,7 @@ data class RPVideo(
     val channelId: String,
     val channelTitle: String,
     val description: String,
+    val thumbnails: RPThumbnailDetails,
     val tags: List<String>
 ) {
     companion object {
@@ -18,7 +19,8 @@ data class RPVideo(
                 video.snippet.channelId,
                 video.snippet.channelTitle,
                 video.snippet.description,
-                video.snippet.tags
+                RPThumbnailDetails.fromApi(video.snippet.thumbnails),
+                video.snippet.tags ?: listOf()
             )
         }
 
@@ -29,6 +31,19 @@ data class RPVideo(
                 searchResult.publishingChannelId,
                 searchResult.channelTitle,
                 searchResult.description,
+                searchResult.thumbnails,
+                listOf()
+            )
+        }
+
+        fun fromPlaylistItem(playlistItem: RPPlaylistItem): RPVideo {
+            return RPVideo(
+                playlistItem.videoId,
+                playlistItem.title,
+                playlistItem.channelId,
+                playlistItem.channelTitle,
+                playlistItem.description,
+                playlistItem.thumbnails,
                 listOf()
             )
         }

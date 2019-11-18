@@ -9,10 +9,13 @@ import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import coil.api.load
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
 
-class VideoListAdapter: ListAdapter<RPVideo, VideoListAdapter.ViewHolder>(DIFF_CALLBACK) {
+class VideoListAdapter(
+    private val onItemClick: ((RPVideo) -> Unit)? = null
+): ListAdapter<RPVideo, VideoListAdapter.ViewHolder>(DIFF_CALLBACK) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -25,7 +28,7 @@ class VideoListAdapter: ListAdapter<RPVideo, VideoListAdapter.ViewHolder>(DIFF_C
         holder.bind(video)
     }
 
-    class ViewHolder(itemView: View): RecyclerView.ViewHolder(itemView) {
+    inner class ViewHolder(itemView: View): RecyclerView.ViewHolder(itemView) {
         private val cardView = itemView.findViewById<CardView>(R.id.card_view)
         private val thumbnailIV = itemView.findViewById<ImageView>(R.id.thumbnail)
         private val titleTv = itemView.findViewById<TextView>(R.id.title_tv)
@@ -34,6 +37,10 @@ class VideoListAdapter: ListAdapter<RPVideo, VideoListAdapter.ViewHolder>(DIFF_C
         fun bind(video: RPVideo) {
             titleTv.text = video.title
             channelTitleTv.text = video.channelTitle
+            thumbnailIV.load(video.thumbnails.standard?.url)
+            itemView.setOnClickListener {
+                onItemClick?.invoke(video)
+            }
         }
     }
 
