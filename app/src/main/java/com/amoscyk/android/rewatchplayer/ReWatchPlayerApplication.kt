@@ -8,6 +8,9 @@ import androidx.room.Room
 import com.amoscyk.android.rewatchplayer.datasource.AppDatabase
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.service.YoutubeServiceProvider
+import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeOpenService
+import retrofit2.Retrofit
+import retrofit2.converter.scalars.ScalarsConverterFactory
 
 class ReWatchPlayerApplication: Application() {
 
@@ -16,6 +19,11 @@ class ReWatchPlayerApplication: Application() {
     private lateinit var _youtubeRepository: YoutubeRepository
     val youtubeRepository
         get() = _youtubeRepository
+    val youtubeOpenService: YouTubeOpenService = Retrofit.Builder()
+        .baseUrl(AppConstant.YOUTUBE_BASE_URL)
+        .addConverterFactory(ScalarsConverterFactory.create())
+        .build()
+        .create(YouTubeOpenService::class.java)
 
     override fun onCreate() {
         super.onCreate()
@@ -27,7 +35,8 @@ class ReWatchPlayerApplication: Application() {
             .fallbackToDestructiveMigration()
             .build()
 
-        _youtubeRepository = YoutubeRepository(youtubeServiceProvider.youtubeService, _appDb)
+        _youtubeRepository = YoutubeRepository(youtubeServiceProvider.youtubeService,
+            youtubeOpenService, _appDb)
     }
 
 }

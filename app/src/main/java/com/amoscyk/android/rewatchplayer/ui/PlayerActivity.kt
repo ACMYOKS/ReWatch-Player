@@ -1,47 +1,55 @@
 package com.amoscyk.android.rewatchplayer.ui
 
-import android.annotation.SuppressLint
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
-import android.util.SparseArray
-import at.huber.youtubeExtractor.VideoMeta
-import at.huber.youtubeExtractor.YouTubeExtractor
-import at.huber.youtubeExtractor.YtFile
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
 import com.amoscyk.android.rewatchplayer.R
+import com.amoscyk.android.rewatchplayer.rpApplication
+import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
+import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeExtractor
 import com.google.android.exoplayer2.ExoPlayerFactory
 import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.source.MediaSource
+import com.google.android.exoplayer2.source.MergingMediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
-import kotlinx.android.synthetic.main.activity_player.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 class PlayerActivity : AppCompatActivity() {
 
-    private var videoId: String = ""
-    private lateinit var playerView: PlayerView
+    private var videoId: String? = null
+    private lateinit var mPlayerView: PlayerView
     private var exoPlayer: SimpleExoPlayer? = null
 
-    private var playWhenReady = false
+    private var playWhenReady = true
     private var playbackPosition: Long = 0
     private var currentWindow: Int = 0
+
+    private val videoUrl = MutableLiveData<String>()
+    private val adaptiveUrls = MutableLiveData<Pair<String, String>>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_player)
 
-        videoId = intent.extras?.getString(VIDEO_ID_KEY) ?: ""
+        videoId = intent.extras?.getString(EXTRA_VIDEO_ID)
 
         setupViews()
 
-        confirm_btn.setOnClickListener {
-            val str = input_field.text.toString()
-            prepareVideoResource(str)
-        }
+        videoUrl.observe(this, Observer {
+//            exoPlayer?.prepare(buildMediaResource(it))
+        })
+
+        adaptiveUrls.observe(this, Observer {
+            val f = DefaultDataSourceFactory(this, "ReWatch Player")
+            val v = ProgressiveMediaSource.Factory(f).createMediaSource(Uri.parse(it.first))
+            val a = ProgressiveMediaSource.Factory(f).createMediaSource(Uri.parse(it.second))
+            exoPlayer?.prepare(MergingMediaSource(a,v))
+        })
     }
 
     override fun onResume() {
@@ -57,16 +65,19 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun setupViews() {
-        playerView = findViewById(R.id.player_view)
+        mPlayerView = findViewById(R.id.player_view)
     }
 
     private fun initPlayer() {
         if (exoPlayer == null) {
             exoPlayer = ExoPlayerFactory.newSimpleInstance(this)
-            playerView.player = exoPlayer
+            mPlayerView.player = exoPlayer
             exoPlayer?.apply {
-                playWhenReady = true
-                seekTo(currentWindow, playbackPosition)
+                playWhenReady = this@PlayerActivity.playWhenReady
+                seekTo(this@PlayerActivity.currentWindow, this@PlayerActivity.playbackPosition)
+            }
+            videoId?.let {
+                prepareVideoResource(it)
             }
         }
     }
@@ -83,23 +94,29 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun prepareVideoResource(videoId: String) {
         GlobalScope.launch {
-            com.amoscyk.android.rewatchplayer.ytextractor.YouTubeExtractor().extractInfo(videoId)
-        }
-        @SuppressLint("StaticFieldLeak")
-        val extractor = object : YouTubeExtractor(this) {
-            override fun onExtractionComplete(
-                ytFiles: SparseArray<YtFile>?,
-                videoMeta: VideoMeta?
-            ) {
-                ytFiles?.let {
-                    Log.d("TAG", it.get(22).url)
-                    it.get(22)?.url?.let { url ->
-                        exoPlayer?.prepare(buildMediaResource(url))
+            val info = YouTubeExtractor(rpApplication.youtubeOpenService).extractInfo(videoId)
+            if (info != null) {
+                if (info.urlMap.containsKey(299) && info.urlMap.containsKey(140)) {
+                    adaptiveUrls.postValue(Pair(info.urlMap.getValue(299), info.urlMap.getValue(140)))
+                }
+                val a = arrayListOf<YouTubeStreamFormatCode.StreamFormat>()
+                val v = arrayListOf<YouTubeStreamFormatCode.StreamFormat>()
+                val av = arrayListOf<YouTubeStreamFormatCode.StreamFormat>()
+                info.availableFormats.asSequence().filter {
+                    it.container == YouTubeStreamFormatCode.Container.MP4
+                }.apply {
+                    filterTo(a) { it.content == YouTubeStreamFormatCode.Content.A }
+                    filterTo(v) { it.content == YouTubeStreamFormatCode.Content.V }
+                    filterTo(av) { it.content == YouTubeStreamFormatCode.Content.AV }
+                }
+                if (info.urlMap.containsKey(299)) {
+                    val url = info.urlMap[299]
+                    if (url != null) {
+                        videoUrl.postValue(url)
                     }
                 }
             }
         }
-        extractor.extract(videoId, true, true)
     }
 
     private fun buildMediaResource(uri: Uri): MediaSource {
@@ -113,7 +130,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     companion object {
-        const val VIDEO_ID_KEY: String = "videoId"
+        const val EXTRA_VIDEO_ID: String = "com.amoscyk.android.rewatchplayer.ui.PlayerActivity.extra.videoId"
         const val YT_URL = "https://www.youtube.com/watch?v="
     }
 }

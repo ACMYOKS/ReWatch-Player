@@ -2,13 +2,14 @@ package com.amoscyk.android.rewatchplayer.ui.home
 
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.TextView
+import android.widget.*
+import androidx.appcompat.widget.AppCompatSpinner
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.viewModels
@@ -22,11 +23,17 @@ import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
+import com.amoscyk.android.rewatchplayer.ui.PlayerActivity
 import com.amoscyk.android.rewatchplayer.ui.VideoListAdapter
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
 
 class VideoSearchFragment : ReWatchPlayerFragment() {
+
+    enum class SearchCriteria(val displayName: String) {
+        BY_ID("by ID"),
+        BY_TITLE("by title")
+    }
 
     private var mRootView: View? = null
     private lateinit var mSuggestionList: RecyclerView
@@ -35,6 +42,7 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
     private lateinit var mSearchView: SearchView
     private lateinit var mTextView: TextView
     private lateinit var mLoadBtn: Button
+    private lateinit var mSpinner: AppCompatSpinner
 
     private val mVideoListAdapter = VideoListAdapter()
 
@@ -42,8 +50,8 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        viewModel.searchResults.observe(this, Observer { resources ->
-            when (resources.status) {
+        viewModel.searchResults.observe(this, Observer { resource ->
+            when (resource.status) {
                 Status.LOADING -> {
 
                 }
@@ -53,16 +61,37 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
 //                        string += "title:${result.title} videoId:${result.videoId}\n"
 //                    }
 //                    mTextView.text = string
-                    resources.data!!.map { searchResult ->
+                    resource.data!!.map { searchResult ->
                         RPVideo.fromSearchResult(searchResult)
                     }.let {
                         mVideoListAdapter.submitList(it)
                     }
                 }
                 Status.ERROR -> {
-                    (resources.message as? UserRecoverableAuthIOException)?.let { exception ->
+                    (resource.message as? UserRecoverableAuthIOException)?.let { exception ->
                         requestForGoogleUserAuth(exception)
                     }
+                }
+            }
+        })
+        viewModel.videoExists.observe(this, Observer { resource ->
+            when (resource.status) {
+                Status.LOADING -> {
+                    Toast.makeText(requireContext(), "checking", Toast.LENGTH_SHORT).show()
+                }
+                Status.SUCCESS -> {
+                    if (resource.data!!.second) {
+                        val intent = Intent(requireContext(), PlayerActivity::class.java)
+                        intent.putExtra(PlayerActivity.EXTRA_VIDEO_ID, resource.data.first)
+                        startActivity(intent)
+                    } else {
+                        Toast.makeText(requireContext(),
+                            "Video with id: ${resource.data.first} not found", Toast.LENGTH_SHORT)
+                            .show()
+                    }
+                }
+                Status.ERROR -> {
+                    Toast.makeText(requireContext(), resource.message.toString(), Toast.LENGTH_SHORT).show()
                 }
             }
         })
@@ -92,6 +121,7 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
         mSearchView = mRootView!!.findViewById(R.id.search_view)
         mTextView = mRootView!!.findViewById(R.id.test_tv)
         mLoadBtn = mRootView!!.findViewById(R.id.loadmorebtn)
+        mSpinner = mRootView!!.findViewById(R.id.search_type_spinner)
 
         mToolbar.setupWithNavController(findNavController())
         mSearchView.apply {
@@ -107,7 +137,14 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
                 override fun onQueryTextSubmit(query: String?): Boolean {
                     Log.d("TAG", "query text submit: $query")
                     query?.let {
-                        viewModel.searchForQuery(it)
+                        when (mSpinner.selectedItemPosition) {
+                            SearchCriteria.BY_ID.ordinal -> {
+                                viewModel.searchForVideoId(it)
+                            }
+                            SearchCriteria.BY_TITLE.ordinal -> {
+                                viewModel.searchForQuery(it)
+                            }
+                        }
                     }
                     return false
                 }
@@ -120,6 +157,9 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
         mLoadBtn.setOnClickListener {
             viewModel.loadMoreResource()
         }
+        mSpinner.adapter = ArrayAdapter(requireContext(),
+            android.R.layout.simple_spinner_dropdown_item,
+            SearchCriteria.values().map { it.displayName })
 
         mVideoList.adapter = mVideoListAdapter
         mVideoList.layoutManager = LinearLayoutManager(requireContext())

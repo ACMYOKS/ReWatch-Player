@@ -1,16 +1,23 @@
 package com.amoscyk.android.rewatchplayer.datasource
 
+import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeExtractor
+import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeOpenService
 import com.google.api.services.youtube.YouTube
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class YoutubeRepository(
-    private val youtubeService: YouTube,
+    private val ytApiService: YouTube,
+    private val ytOpenService: YouTubeOpenService,
     private val appDatabase: AppDatabase
 ) {
+
+    private val ytExtractor = YouTubeExtractor(ytOpenService)
 
     suspend fun loadSearchResultResource(query: String): SearchListResponseResource {
         // TODO: obtain resource from db if record exists, and only request from api when db record
         //  expired, e.g. after 7 days from first query
-        val request = youtubeService.search().list("id,snippet")
+        val request = ytApiService.search().list("id,snippet")
             .setQ(query)
             .setType("video")
             .setMaxResults(MAX_RESULTS)
@@ -18,24 +25,34 @@ class YoutubeRepository(
     }
 
     suspend fun loadUserPlaylistResultResource(): PlaylistListResponseResource {
-        val request = youtubeService.playlists().list("id,snippet")
+        val request = ytApiService.playlists().list("id,snippet")
             .setMine(true)
             .setMaxResults(MAX_RESULTS)
         return PlaylistListResponseResource.build(request)
     }
 
     suspend fun loadPlaylistItemForPlaylist(id: String): PlaylistItemListResponseResource {
-        val request = youtubeService.playlistItems().list("id,snippet")
+        val request = ytApiService.playlistItems().list("id,snippet")
             .setPlaylistId(id)
             .setMaxResults(MAX_RESULTS)
         return PlaylistItemListResponseResource.build(request)
     }
 
     suspend fun loadVideoResultResource(videoIds: List<String>): VideoListResponseResource {
-        val request = youtubeService.videos().list("id,snippet")
+        val request = ytApiService.videos().list("id,snippet")
             .setId(videoIds.joinToString())
             .setMaxResults(MAX_RESULTS)
         return VideoListResponseResource.build(request)
+    }
+
+    suspend fun checkVideoIdExist(videoId: String): Boolean? {
+        return withContext(Dispatchers.IO) {
+            val response = ytOpenService.getVideoInfo(videoId).execute()
+            response.body()?.string()?.let {
+                return@withContext !it.contains("status=fail")
+            }
+            return@withContext null
+        }
     }
 
     companion object {
