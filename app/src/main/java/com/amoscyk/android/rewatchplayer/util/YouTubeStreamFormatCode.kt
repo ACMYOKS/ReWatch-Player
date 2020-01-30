@@ -91,6 +91,28 @@ object YouTubeStreamFormatCode {
         336 to StreamFormat(336, Container.WEBM, Content.V, "1440p60"),
         337 to StreamFormat(337, Container.WEBM, Content.V, "2160p60")
     )
+
+    val MUXED_VIDEO_FORMATS = hashMapOf<Int, StreamFormat>()
+    val ADAPTIVE_VIDEO_FORMATS = hashMapOf<Int, StreamFormat>()
+    val ADAPTIVE_AUDIO_FORMATS = hashMapOf<Int, StreamFormat>()
+
+    init {
+        FORMAT_CODES.forEach { (idx, value) ->
+            when (value.container) {
+                YouTubeStreamFormatCode.Container.MP4 -> {
+                    if (value.content == YouTubeStreamFormatCode.Content.AV) {
+                        MUXED_VIDEO_FORMATS[idx] = value
+                    } else {
+                        ADAPTIVE_VIDEO_FORMATS[idx] = value
+                    }
+                }
+                YouTubeStreamFormatCode.Container.M4A -> {
+                    ADAPTIVE_AUDIO_FORMATS[idx] = value
+                }
+                else -> {}
+            }
+        }
+    }
 }
 
 

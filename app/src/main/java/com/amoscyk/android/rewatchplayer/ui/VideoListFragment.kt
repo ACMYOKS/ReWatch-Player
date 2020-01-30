@@ -2,6 +2,7 @@ package com.amoscyk.android.rewatchplayer.ui
 
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -19,10 +20,12 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.amoscyk.android.rewatchplayer.R
+import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
+import com.amoscyk.android.rewatchplayer.ui.player.PlayerActivity
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 
-class VideoListFragment : Fragment() {
+class VideoListFragment : ReWatchPlayerFragment() {
 
     private val viewModel by viewModels<VideoListViewModel> { viewModelFactory }
 
@@ -34,6 +37,9 @@ class VideoListFragment : Fragment() {
     private lateinit var mButton: Button
     private val mListAdapter = VideoListAdapter(onItemClick = {
         Toast.makeText(requireContext(), "${it.title} ${it.channelTitle}", Toast.LENGTH_SHORT).show()
+        val intent = Intent(requireContext(), PlayerActivity::class.java)
+        intent.putExtra(PlayerActivity.EXTRA_VIDEO_ID, it.id)
+        startActivity(intent)
     })
 
     override fun onAttach(context: Context) {

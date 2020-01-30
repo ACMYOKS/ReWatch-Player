@@ -13,7 +13,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.setupWithNavController
 import com.amoscyk.android.rewatchplayer.R
-import com.amoscyk.android.rewatchplayer.ui.PlayerActivity
+import com.amoscyk.android.rewatchplayer.ui.player.PlayerActivity
 
 class HomeFragment : Fragment() {
 

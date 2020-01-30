@@ -23,7 +23,7 @@ import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
-import com.amoscyk.android.rewatchplayer.ui.PlayerActivity
+import com.amoscyk.android.rewatchplayer.ui.player.PlayerActivity
 import com.amoscyk.android.rewatchplayer.ui.VideoListAdapter
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
@@ -47,6 +47,11 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
     private val mVideoListAdapter = VideoListAdapter()
 
     private val viewModel by viewModels<VideoSearchViewModel> { viewModelFactory }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        Log.d(TAG, "video search on create")
+    }
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -163,6 +168,10 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
 
         mVideoList.adapter = mVideoListAdapter
         mVideoList.layoutManager = LinearLayoutManager(requireContext())
+    }
+
+    companion object {
+        const val TAG = "VideoSearchFragment"
     }
 
 }

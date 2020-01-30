@@ -55,6 +55,12 @@ class YoutubeRepository(
         }
     }
 
+    suspend fun loadYTInfoForVideoId(videoId: String): YouTubeExtractor.YTInfo? {
+        return withContext(Dispatchers.IO) {
+            return@withContext ytExtractor.extractInfo(videoId)
+        }
+    }
+
     companion object {
         private const val MAX_RESULTS: Long = 30
     }

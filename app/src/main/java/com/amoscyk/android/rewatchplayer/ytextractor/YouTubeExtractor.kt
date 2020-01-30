@@ -1,6 +1,7 @@
 package com.amoscyk.android.rewatchplayer.ytextractor
 
 import android.util.Log
+import com.amoscyk.android.rewatchplayer.datasource.vo.AvailableStreamFormat
 import com.amoscyk.android.rewatchplayer.util.TimeLogger
 import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
 import com.squareup.moshi.Moshi
@@ -9,11 +10,37 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 class YouTubeExtractor(private val youTubeOpenService: YouTubeOpenService) {
 
+    private val playerResponseAdapter = Moshi.Builder()
+        .add(KotlinJsonAdapterFactory())
+        .build()
+        .adapter(PlayerResponse::class.java)
+
     suspend fun extractInfo(videoId: String): YTInfo? =
         withContext(Dispatchers.IO) {
+            val json = getJsonFromInfoApi(videoId) ?: return@withContext null
+            val data = getSteamingDataFromJson(json)
+            val log = TimeLogger(TAG)
+            log.addKnot("get streaming data from json")
+            log.dumpToLog()
+            val resObj = playerResponseAdapter.fromJson(json)
+            val muxed = resObj?.streamingData?.formats.orEmpty().map { it.itag }
+            val adaptive = resObj?.streamingData?.adaptiveFormats.orEmpty().map { it.itag }
+            return@withContext YTInfo(
+                data.associateBy({it.itag}, {it.url}),
+                AvailableStreamFormat(
+                    YouTubeStreamFormatCode.MUXED_VIDEO_FORMATS.filterKeys { muxed.contains(it) },
+                    YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMATS.filterKeys { adaptive.contains(it) },
+                    YouTubeStreamFormatCode.ADAPTIVE_AUDIO_FORMATS.filterKeys { adaptive.contains(it) })
+                )
+        }
+
+    private suspend fun getJsonFromWebHtml(videoId: String): String? {
+        return withContext(Dispatchers.IO) {
             val log = TimeLogger(TAG)
             val response = youTubeOpenService.getWebHtml(videoId).execute()
             log.addKnot("get response")
@@ -22,14 +49,23 @@ class YouTubeExtractor(private val youTubeOpenService: YouTubeOpenService) {
             Log.d(TAG, playerScript)
             val json = getPlayerResponse(playerScript)
             log.addKnot("get player response")
-            val data = getSteamingDataFromJson(json)
-            log.addKnot("get streaming data from json")
             log.dumpToLog()
-            return@withContext YTInfo(
-                data.associateBy({it.itag}, {it.url}),
-                getAvailableFormatList(data.map { it.itag })
-            )
+            return@withContext json
         }
+    }
+
+    private suspend fun getJsonFromInfoApi(videoId: String): String? {
+        return withContext(Dispatchers.IO) {
+            val log = TimeLogger(TAG)
+            val response = youTubeOpenService.getVideoInfo(videoId).execute()
+            log.addKnot("get response")
+            val json = response.body()?.string()?.let { getPlayerResponse2(it) } ?: return@withContext null
+            Log.d(TAG, json)
+            log.addKnot("get player response")
+            log.dumpToLog()
+            return@withContext json
+        }
+    }
 
     private fun getPlayerScript(rawHtml: String): String? {
         // NOTE: the following code presumes that the player script must contain term 'ytplayer'
@@ -56,6 +92,27 @@ class YouTubeExtractor(private val youTubeOpenService: YouTubeOpenService) {
             }
         }
         return playerScript.substring(startIndex+1, endIndex).removeEscapeChar()
+    }
+
+    private fun getPlayerResponse2(infoResponse: String): String? {
+        val fieldName = "player_response="
+        val startIdx = infoResponse.indexOf(fieldName).let {
+            if (it == -1) return null
+            it
+        } + fieldName.length
+        val endIdx = infoResponse.indexOf('&', startIdx).let {
+            if (it == -1) infoResponse.lastIndex
+            else it
+        }
+        val substr = infoResponse.substring(startIdx, endIdx)
+        Log.d(TAG, infoResponse)
+        Log.d(TAG, substr)
+        try {
+            val jsonStr = URLDecoder.decode(substr, StandardCharsets.UTF_8.name())
+            return jsonStr
+        } catch (e: Exception) {
+            return null
+        }
     }
 
     private fun getSteamingDataFromJson(jsonString: String): List<ResourceFormat> {
@@ -88,7 +145,7 @@ class YouTubeExtractor(private val youTubeOpenService: YouTubeOpenService) {
 
     data class YTInfo(
         val urlMap: Map<Int, String>,
-        val availableFormats: List<YouTubeStreamFormatCode.StreamFormat>
+        val availableStreamFormat: AvailableStreamFormat
     )
 
     companion object {

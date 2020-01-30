@@ -4,7 +4,7 @@ import android.content.Intent
 import androidx.fragment.app.Fragment
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
 
-open class ReWatchPlayerFragment: Fragment() {
+abstract class ReWatchPlayerFragment: Fragment() {
 
     /***
      * when user encounter UserRecoverableAuthIOException from Google API call,

@@ -10,6 +10,7 @@ import com.amoscyk.android.rewatchplayer.ui.account.StartupAccountViewModel
 import com.amoscyk.android.rewatchplayer.ui.home.HomeViewModel
 import com.amoscyk.android.rewatchplayer.ui.home.VideoSearchViewModel
 import com.amoscyk.android.rewatchplayer.ui.library.LibraryViewModel
+import com.amoscyk.android.rewatchplayer.ui.player.PlayerViewModel
 
 class ViewModelFactory(
     private val youtubeRepository: YoutubeRepository
@@ -32,6 +33,9 @@ class ViewModelFactory(
             }
             modelClass.isAssignableFrom(VideoListViewModel::class.java) -> {
                 return VideoListViewModel(youtubeRepository) as T
+            }
+            modelClass.isAssignableFrom(PlayerViewModel::class.java) -> {
+                return PlayerViewModel(youtubeRepository) as T
             }
             else -> {
                 return super.create(modelClass)
