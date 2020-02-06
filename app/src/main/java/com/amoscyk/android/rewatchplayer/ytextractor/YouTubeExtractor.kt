@@ -23,15 +23,16 @@ class YouTubeExtractor(private val youTubeOpenService: YouTubeOpenService) {
     suspend fun extractInfo(videoId: String): YTInfo? =
         withContext(Dispatchers.IO) {
             val json = getJsonFromInfoApi(videoId) ?: return@withContext null
-            val data = getSteamingDataFromJson(json)
             val log = TimeLogger(TAG)
             log.addKnot("get streaming data from json")
             log.dumpToLog()
-            val resObj = playerResponseAdapter.fromJson(json)
-            val muxed = resObj?.streamingData?.formats.orEmpty().map { it.itag }
-            val adaptive = resObj?.streamingData?.adaptiveFormats.orEmpty().map { it.itag }
+            val resObj = playerResponseAdapter.fromJson(json) ?: return@withContext null
+            val formats = resObj.streamingData.let { it.formats + it.adaptiveFormats }
+            val muxed = resObj.streamingData.formats.map { it.itag }
+            val adaptive = resObj.streamingData.adaptiveFormats.map { it.itag }
             return@withContext YTInfo(
-                data.associateBy({it.itag}, {it.url}),
+                resObj.videoDetails,
+                formats.associateBy({it.itag}, {it.url}),
                 AvailableStreamFormat(
                     YouTubeStreamFormatCode.MUXED_VIDEO_FORMATS.filterKeys { muxed.contains(it) },
                     YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMATS.filterKeys { adaptive.contains(it) },
@@ -144,6 +145,7 @@ class YouTubeExtractor(private val youTubeOpenService: YouTubeOpenService) {
     }
 
     data class YTInfo(
+        val videoDetails: VideoDetails,
         val urlMap: Map<Int, String>,
         val availableStreamFormat: AvailableStreamFormat
     )

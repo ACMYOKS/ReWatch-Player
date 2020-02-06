@@ -36,9 +36,10 @@ class VideoListFragment : ReWatchPlayerFragment() {
     private lateinit var mLoadingView: ProgressBar
     private lateinit var mButton: Button
     private val mListAdapter = VideoListAdapter(onItemClick = {
-        Toast.makeText(requireContext(), "${it.title} ${it.channelTitle}", Toast.LENGTH_SHORT).show()
+//        Toast.makeText(requireContext(), "${it.title} ${it.channelTitle}", Toast.LENGTH_SHORT).show()
         val intent = Intent(requireContext(), PlayerActivity::class.java)
         intent.putExtra(PlayerActivity.EXTRA_VIDEO_ID, it.id)
+        intent.putExtra(PlayerActivity.EXTRA_VIDEO_INFO, it)
         startActivity(intent)
     })
 

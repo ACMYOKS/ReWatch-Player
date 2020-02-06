@@ -1,7 +1,10 @@
 package com.amoscyk.android.rewatchplayer.datasource.vo
 
+import android.os.Parcelable
 import com.google.api.services.youtube.model.Video
+import kotlinx.android.parcel.Parcelize
 
+@Parcelize
 data class RPVideo(
     val id: String,
     val title: String,
@@ -10,7 +13,7 @@ data class RPVideo(
     val description: String,
     val thumbnails: RPThumbnailDetails,
     val tags: List<String>
-) {
+): Parcelable {
     companion object {
         fun fromApi(video: Video): RPVideo {
             return RPVideo(

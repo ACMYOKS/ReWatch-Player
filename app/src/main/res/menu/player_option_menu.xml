@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/bookmark"
+        android:title="bookmark"
+        android:icon="@drawable/ic_bookmark_border_white"
+        app:showAsAction="always"/>
+    <item
+        android:id="@+id/remove_bookmark"
+        android:title="remove bookmark"
+        android:icon="@drawable/ic_bookmark_white"
+        app:showAsAction="always"/>
+    <item
+        android:id="@+id/other_action"
+        android:title="more"
+        android:icon="@drawable/ic_arrow_drop_down_white"
+        app:showAsAction="always"/>
+</menu>

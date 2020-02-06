@@ -3,17 +3,19 @@ package com.amoscyk.android.rewatchplayer.ui.player
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import android.widget.Toast
+import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.widget.AppCompatSpinner
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
+import androidx.recyclerview.widget.*
+import androidx.recyclerview.widget.ListAdapter
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerActivity
+import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
 import com.amoscyk.android.rewatchplayer.rpApplication
+import com.amoscyk.android.rewatchplayer.ui.CommonListDecoration
 import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeExtractor
@@ -25,22 +27,61 @@ import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import kotlinx.android.synthetic.main.bottom_sheet_dialog_user_option.view.*
 
 class PlayerActivity : ReWatchPlayerActivity() {
 
     private var videoId: String? = null
+    private var videoInfo: RPVideo? = null
     private lateinit var mPlayerView: PlayerView
     private lateinit var mAppBarLayout: AppBarLayout
     private lateinit var mToolbar: Toolbar
+    private lateinit var mTitleTv: TextView
     private lateinit var mResSpinner: AppCompatSpinner
+    private lateinit var mOptionDialog: BottomSheetDialog
+    private lateinit var mResolutionDialog: BottomSheetDialog
+    private lateinit var mAudioQualityDialog: BottomSheetDialog
+    private lateinit var mResolutionRv: RecyclerView
     private var exoPlayer: SimpleExoPlayer? = null
+
+//    private var resolutionList = listOf<PlayerSelection>()
+    private val mResSelectionAdapter = PlayerSelectionAdapter({
+        mResolutionDialog.dismiss()
+        viewModel.setVideoFormat(it.item.itag)
+        exoPlayer?.let { player ->
+            // save playback state
+            playWhenReady = player.playWhenReady
+            currentWindow = player.currentWindowIndex
+            playbackPosition = player.currentPosition
+        }
+    }, object :
+        DiffUtil.ItemCallback<PlayerSelection<PlayerViewModel.VideoResSelection>>() {
+        override fun areItemsTheSame(
+            oldItem: PlayerSelection<PlayerViewModel.VideoResSelection>,
+            newItem: PlayerSelection<PlayerViewModel.VideoResSelection>
+        ) = oldItem.item == newItem.item && oldItem.selected == newItem.selected
+
+        override fun areContentsTheSame(
+            oldItem: PlayerSelection<PlayerViewModel.VideoResSelection>,
+            newItem: PlayerSelection<PlayerViewModel.VideoResSelection>
+        ) = oldItem == newItem
+    })
+
+    private val extraPlayerOptions = listOf(
+        PlayerOption("resolution", R.drawable.ic_bookmark_border_white),
+        PlayerOption("audio quality", R.drawable.ic_arrow_drop_down_white),
+        PlayerOption("test item 1", R.drawable.ic_arrow_drop_down_white),
+        PlayerOption("test item 233333", R.drawable.ic_arrow_drop_down_white),
+        PlayerOption("test item 34444444", R.drawable.ic_arrow_drop_down_white)
+    )
 
     private var playWhenReady = true
     private var playbackPosition: Long = 0
     private var currentWindow: Int = 0
 
     private val defaultFactory: DefaultDataSourceFactory by lazy {
-        DefaultDataSourceFactory(this, "ReWatch Player")
+        DefaultDataSourceFactory(this, getString(R.string.app_name))
     }
     private val progressiveSrcFactory: ProgressiveMediaSource.Factory by lazy {
         ProgressiveMediaSource.Factory(defaultFactory)
@@ -52,9 +93,14 @@ class PlayerActivity : ReWatchPlayerActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_player)
 
-        videoId = intent.extras?.getString(EXTRA_VIDEO_ID)
+        videoId = intent.getStringExtra(EXTRA_VIDEO_ID)
+        videoInfo = intent.getParcelableExtra(EXTRA_VIDEO_INFO)
 
         setupViews()
+
+        viewModel.videoInfo.observe(this, Observer {
+            mTitleTv.text = it.title
+        })
 
         viewModel.videoUrl.observe(this, Observer {
             val v = progressiveSrcFactory.createMediaSource(Uri.parse(it))
@@ -75,36 +121,9 @@ class PlayerActivity : ReWatchPlayerActivity() {
 
         })
 
-        viewModel.availableVideoResolution.observe(this, Observer { formats ->
-            mResSpinner.adapter = ArrayAdapter<String>(this,
-                android.R.layout.simple_spinner_dropdown_item, formats.map { it.resolution })
-            mResSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(
-                    parent: AdapterView<*>?,
-                    view: View?,
-                    position: Int,
-                    id: Long
-                ) {
-                    val selectedRes = formats[position]
-                    viewModel.setVideoFormat(selectedRes.itag)
-                    exoPlayer?.let { player ->
-                        // save playback state
-                        playWhenReady = player.playWhenReady
-                        currentWindow = player.currentWindowIndex
-                        playbackPosition = player.currentPosition
-                    }
-                    Toast.makeText(this@PlayerActivity, selectedRes.itag.toString(), Toast.LENGTH_SHORT).show()
-                }
-
-                override fun onNothingSelected(parent: AdapterView<*>?) {
-
-                }
-            }
-        })
-
-        viewModel.selectedVideoResolution.observe(this, Observer { selectedRes ->
-            viewModel.availableVideoResolution.value?.indexOf(selectedRes)?.let {
-                mResSpinner.setSelection(it)
+        viewModel.videoResSelection.observe(this, Observer {
+            mResSelectionAdapter.apply {
+                submitList(it)
             }
         })
     }
@@ -125,7 +144,55 @@ class PlayerActivity : ReWatchPlayerActivity() {
         mPlayerView = findViewById(R.id.player_view)
         mAppBarLayout = findViewById(R.id.app_bar_layout)
         mToolbar = findViewById(R.id.toolbar)
+        mTitleTv = findViewById(R.id.video_title_tv)
         mResSpinner = findViewById(R.id.resolution_spinner)
+        mOptionDialog = BottomSheetDialog(this).apply {
+            val contentView = layoutInflater.inflate(R.layout.bottom_sheet_dialog_user_option, null, false)
+            setContentView(contentView)
+            contentView.recycler_view.apply {
+                adapter = PlayerOptionAdapter { option, position ->
+                    if (position == 0) {
+                        mOptionDialog.dismiss()
+                        mResolutionDialog.show()
+                    }
+                }.apply { submitList(extraPlayerOptions) }
+                layoutManager = LinearLayoutManager(this@PlayerActivity)
+            }
+        }
+        mResolutionDialog = BottomSheetDialog(this).apply {
+            val contentView = layoutInflater.inflate(R.layout.bottom_sheet_dialog_user_option, null, false)
+            setContentView(contentView)
+            contentView.recycler_view.apply {
+                mResolutionRv = this
+                adapter = mResSelectionAdapter
+                layoutManager = LinearLayoutManager(this@PlayerActivity)
+            }
+        }
+
+        mToolbar.apply {
+            setNavigationOnClickListener {
+            // FIXME: home button may have different behavior with back button
+            onBackPressed()
+        }
+            inflateMenu(R.menu.player_option_menu)
+            setOnMenuItemClickListener {
+                when (it.itemId) {
+                    R.id.bookmark -> {
+
+                    }
+                    R.id.remove_bookmark -> {
+
+                    }
+                    R.id.other_action -> {
+                        mOptionDialog.show()
+                    }
+                }
+                true
+            }
+        }
+        mPlayerView.setControllerVisibilityListener { visibility ->
+            mAppBarLayout.visibility = visibility
+        }
     }
 
     private fun initPlayer() {
@@ -138,6 +205,9 @@ class PlayerActivity : ReWatchPlayerActivity() {
             }
             videoId?.let {
                 viewModel.prepareVideoResource(it)
+            }
+            videoInfo?.let {
+                viewModel.prepareVideoResource(it.id)
             }
         }
     }
@@ -180,7 +250,9 @@ class PlayerActivity : ReWatchPlayerActivity() {
 //    }
 
     companion object {
-        const val EXTRA_VIDEO_ID: String = "com.amoscyk.android.rewatchplayer.ui.player.PlayerActivity.extra.videoId"
+        const val TAG = "PlayerActivity"
+        const val EXTRA_VIDEO_ID = "com.amoscyk.android.rewatchplayer.ui.player.PlayerActivity.extra.videoId"
+        const val EXTRA_VIDEO_INFO = "com.amoscyk.android.rewatchplayer.ui.player.PlayerActivity.extra.videoInfo"
         const val YT_URL = "https://www.youtube.com/watch?v="
     }
 }

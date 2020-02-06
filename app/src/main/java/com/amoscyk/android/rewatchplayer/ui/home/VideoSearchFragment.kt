@@ -51,6 +51,9 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "video search on create")
+//        val intent = Intent(requireContext(), PlayerActivity::class.java)
+//        intent.putExtra(PlayerActivity.EXTRA_VIDEO_ID, "")
+//        startActivity(intent)
     }
 
     override fun onAttach(context: Context) {
