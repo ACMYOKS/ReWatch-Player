@@ -1,5 +1,8 @@
 package com.amoscyk.android.rewatchplayer.ui.player
 
+import android.app.DownloadManager
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -7,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.datasource.vo.AvailableStreamFormat
+import com.amoscyk.android.rewatchplayer.util.FileDownloadHelper
 import kotlinx.coroutines.launch
 
 class PlayerViewModel(
@@ -21,8 +25,6 @@ class PlayerViewModel(
     val adaptiveUrls: LiveData<AdaptiveStreamUrl> = _adaptiveUrls
     private val _availableStream = MutableLiveData<AvailableStreamFormat>()
     val availableStream: LiveData<AvailableStreamFormat> = _availableStream
-//    private val _availableVideoResolution = MutableLiveData<List<YouTubeStreamFormatCode.StreamFormat>>()
-//    val availableVideoResolution: LiveData<List<YouTubeStreamFormatCode.StreamFormat>> = _availableVideoResolution
 //    private val _selectedVideoResolution = MutableLiveData<YouTubeStreamFormatCode.StreamFormat>()
 //    val selectedVideoResolution: LiveData<YouTubeStreamFormatCode.StreamFormat> = _selectedVideoResolution
 
@@ -47,9 +49,6 @@ class PlayerViewModel(
                     info.videoDetails.shortDescription
                 )
                 _availableStream.value = info.availableStreamFormat
-//                _availableVideoResolution.value =
-//                    info.availableStreamFormat.muxedStreamFormat.values.toList() +
-//                            info.availableStreamFormat.videoStreamFormat.values.toList()
                 _allUrlMap = info.urlMap
                 var isAdaptive = false
                 var selectedItag = -1
@@ -119,6 +118,42 @@ class PlayerViewModel(
                 }
             } else {
                 Log.d(TAG, "availableStream is null")
+            }
+        }
+    }
+
+    fun archiveVideo(context: Context, videoTag: Int, audioTag: Int) {
+        viewModelScope.launch {
+            _videoInfo.value?.videoId?.let { videoId ->
+                var shouldDl = false
+                val filename = FileDownloadHelper.getFilename(videoId, videoTag)
+                val playerRes = youtubeRepository.getPlayerResource(arrayOf(videoId))
+                if (playerRes.count { it.itag == videoTag } == 0) {
+                    // there is no existing resource, can try download
+                    shouldDl = true
+                } else {
+                    // resource record exist, check if file already exist
+                    if (context.getExternalFilesDir(FileDownloadHelper.DIR_DOWNLOAD)?.
+                            listFiles { _, name -> name == filename }.orEmpty().isEmpty()) {
+                        // file not exist, start download flow
+                        Log.d(TAG, "file not exist, start download")
+                        shouldDl = true
+                    } else {
+                        // file already existed
+                        Log.d(TAG, "file existed already, do not download again")
+                    }
+                }
+                if (shouldDl) {
+                    val dlMngr = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                    val vRequest = DownloadManager.Request(Uri.parse(_allUrlMap[videoTag]))
+                    vRequest.setDestinationInExternalFilesDir(context, FileDownloadHelper.DIR_DOWNLOAD, filename)
+                    vRequest.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
+                    vRequest.setTitle(videoId)
+                    val id = dlMngr.enqueue(vRequest)
+                    youtubeRepository.addPlayerResource(videoId, videoTag,
+                        FileDownloadHelper.getDir(context).absolutePath, filename, 0,
+                        isAdaptive = true, isVideo = true, downloadId = id)
+                }
             }
         }
     }

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.ui.VideoListViewModel
 import com.amoscyk.android.rewatchplayer.ui.account.StartupAccountViewModel
+import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadPageViewModel
 import com.amoscyk.android.rewatchplayer.ui.home.HomeViewModel
 import com.amoscyk.android.rewatchplayer.ui.home.VideoSearchViewModel
 import com.amoscyk.android.rewatchplayer.ui.library.LibraryViewModel
@@ -36,6 +37,9 @@ class ViewModelFactory(
             }
             modelClass.isAssignableFrom(PlayerViewModel::class.java) -> {
                 return PlayerViewModel(youtubeRepository) as T
+            }
+            modelClass.isAssignableFrom(DownloadPageViewModel::class.java) -> {
+                return DownloadPageViewModel(youtubeRepository) as T
             }
             else -> {
                 return super.create(modelClass)

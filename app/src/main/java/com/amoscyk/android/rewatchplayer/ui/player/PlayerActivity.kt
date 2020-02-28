@@ -2,33 +2,32 @@ package com.amoscyk.android.rewatchplayer.ui.player
 
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.widget.AppCompatSpinner
 import androidx.appcompat.widget.Toolbar
-import androidx.lifecycle.MutableLiveData
+import androidx.core.net.toUri
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.*
-import androidx.recyclerview.widget.ListAdapter
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerActivity
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
-import com.amoscyk.android.rewatchplayer.rpApplication
-import com.amoscyk.android.rewatchplayer.ui.CommonListDecoration
-import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
 import com.amoscyk.android.rewatchplayer.viewModelFactory
-import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeExtractor
 import com.google.android.exoplayer2.ExoPlayerFactory
 import com.google.android.exoplayer2.SimpleExoPlayer
-import com.google.android.exoplayer2.source.MediaSource
 import com.google.android.exoplayer2.source.MergingMediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import kotlinx.android.synthetic.main.bottom_sheet_dialog_archive_option.*
+import kotlinx.android.synthetic.main.bottom_sheet_dialog_archive_option.view.*
+import kotlinx.android.synthetic.main.bottom_sheet_dialog_archive_option.view.confirm_btn
 import kotlinx.android.synthetic.main.bottom_sheet_dialog_user_option.view.*
+import java.io.File
 
 class PlayerActivity : ReWatchPlayerActivity() {
 
@@ -42,10 +41,10 @@ class PlayerActivity : ReWatchPlayerActivity() {
     private lateinit var mOptionDialog: BottomSheetDialog
     private lateinit var mResolutionDialog: BottomSheetDialog
     private lateinit var mAudioQualityDialog: BottomSheetDialog
+    private lateinit var mArchiveOptionDialog: BottomSheetDialog
     private lateinit var mResolutionRv: RecyclerView
     private var exoPlayer: SimpleExoPlayer? = null
 
-//    private var resolutionList = listOf<PlayerSelection>()
     private val mResSelectionAdapter = PlayerSelectionAdapter({
         mResolutionDialog.dismiss()
         viewModel.setVideoFormat(it.item.itag)
@@ -67,6 +66,10 @@ class PlayerActivity : ReWatchPlayerActivity() {
             newItem: PlayerSelection<PlayerViewModel.VideoResSelection>
         ) = oldItem == newItem
     })
+    private lateinit var mArchiveVideoOptionSpinner: AppCompatSpinner
+    private lateinit var mArchiveAudioOptionSpinner: AppCompatSpinner
+    private var selectedVideoArchiveTag: Int? = null
+    private var selectedAudioArchiveTag: Int? = null
 
     private val extraPlayerOptions = listOf(
         PlayerOption("resolution", R.drawable.ic_bookmark_border_white),
@@ -117,8 +120,42 @@ class PlayerActivity : ReWatchPlayerActivity() {
             exoPlayer?.seekTo(currentWindow, playbackPosition)
         })
 
-        viewModel.availableStream.observe(this, Observer {
+        viewModel.availableStream.observe(this, Observer { formats ->
+            mArchiveVideoOptionSpinner.apply {
+                val keyList = formats.videoStreamFormat.keys.toList()
+                adapter = ArrayAdapter<String>(this@PlayerActivity,
+                    android.R.layout.simple_spinner_dropdown_item,
+                    keyList.map { formats.videoStreamFormat.getValue(it).resolution }
+                )
+                onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int,
+                                                id: Long) {
+                        Log.d(TAG, "selected video itag: ${keyList[position]}")
+                        selectedVideoArchiveTag = keyList[position]
+                    }
 
+                    override fun onNothingSelected(parent: AdapterView<*>?) {
+                        selectedVideoArchiveTag = null
+                    }
+                }
+            }
+            mArchiveAudioOptionSpinner.apply {
+                val keyList = formats.audioStreamFormat.keys.toList()
+                adapter = ArrayAdapter<String>(this@PlayerActivity,
+                    android.R.layout.simple_spinner_dropdown_item,
+                    keyList.map { formats.audioStreamFormat.getValue(it).bitrate })
+                onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int,
+                                                id: Long) {
+                        Log.d(TAG, "selected audio itag: ${keyList[position]}")
+                        selectedAudioArchiveTag = keyList[position]
+                    }
+
+                    override fun onNothingSelected(parent: AdapterView<*>?) {
+                        selectedAudioArchiveTag = null
+                    }
+                }
+            }
         })
 
         viewModel.videoResSelection.observe(this, Observer {
@@ -168,7 +205,17 @@ class PlayerActivity : ReWatchPlayerActivity() {
                 layoutManager = LinearLayoutManager(this@PlayerActivity)
             }
         }
-
+        mArchiveOptionDialog = BottomSheetDialog(this).apply {
+            val contentView = layoutInflater.inflate(R.layout.bottom_sheet_dialog_archive_option, null, false)
+            setContentView(contentView)
+            mArchiveVideoOptionSpinner = contentView.video_option_spinner
+            mArchiveAudioOptionSpinner = contentView.audio_option_spinner
+            confirm_btn.setOnClickListener {
+                if (selectedAudioArchiveTag != null && selectedVideoArchiveTag != null) {
+                    viewModel.archiveVideo(this@PlayerActivity, selectedVideoArchiveTag!!, selectedAudioArchiveTag!!)
+                }
+            }
+        }
         mToolbar.apply {
             setNavigationOnClickListener {
             // FIXME: home button may have different behavior with back button
@@ -182,6 +229,9 @@ class PlayerActivity : ReWatchPlayerActivity() {
                     }
                     R.id.remove_bookmark -> {
 
+                    }
+                    R.id.archive -> {
+                        mArchiveOptionDialog.show()
                     }
                     R.id.other_action -> {
                         mOptionDialog.show()
@@ -209,6 +259,10 @@ class PlayerActivity : ReWatchPlayerActivity() {
             videoInfo?.let {
                 viewModel.prepareVideoResource(it.id)
             }
+//            val file = File(this.getExternalFilesDir("pb.res"), "FMo4Qarn0tY-160.mp4")
+//            Log.d("XYZ", "${file.absolutePath}, ${file.exists()}")
+//            val v = progressiveSrcFactory.createMediaSource(file.toUri())
+//            exoPlayer?.prepare(v)
         }
     }
 
@@ -221,33 +275,6 @@ class PlayerActivity : ReWatchPlayerActivity() {
             exoPlayer = null
         }
     }
-
-//    private fun prepareVideoResource(videoId: String) {
-//        GlobalScope.launch {
-//            val info = YouTubeExtractor(rpApplication.youtubeOpenService).extractInfo(videoId)
-//            if (info != null) {
-//                if (info.urlMap.containsKey(299) && info.urlMap.containsKey(140)) {
-//                    adaptiveUrls.postValue(Pair(info.urlMap.getValue(299), info.urlMap.getValue(140)))
-//                }
-//                val a = arrayListOf<YouTubeStreamFormatCode.StreamFormat>()
-//                val v = arrayListOf<YouTubeStreamFormatCode.StreamFormat>()
-//                val av = arrayListOf<YouTubeStreamFormatCode.StreamFormat>()
-//                info.muxedStream.asSequence().filter {
-//                    it.container == YouTubeStreamFormatCode.Container.MP4
-//                }.apply {
-//                    filterTo(a) { it.content == YouTubeStreamFormatCode.Content.A }
-//                    filterTo(v) { it.content == YouTubeStreamFormatCode.Content.V }
-//                    filterTo(av) { it.content == YouTubeStreamFormatCode.Content.AV }
-//                }
-//                if (info.urlMap.containsKey(22)) {
-//                    val url = info.urlMap[22]
-//                    if (url != null) {
-//                        videoUrl.postValue(url)
-//                    }
-//                }
-//            }
-//        }
-//    }
 
     companion object {
         const val TAG = "PlayerActivity"

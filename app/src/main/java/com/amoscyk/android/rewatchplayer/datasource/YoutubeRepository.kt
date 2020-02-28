@@ -1,5 +1,10 @@
 package com.amoscyk.android.rewatchplayer.datasource
 
+import com.amoscyk.android.rewatchplayer.datasource.vo.RPThumbnailDetails
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.DownloadedResource
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.PlayerResource
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMetaWithPlayerResource
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeExtractor
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeOpenService
 import com.google.api.services.youtube.YouTube
@@ -57,7 +62,100 @@ class YoutubeRepository(
 
     suspend fun loadYTInfoForVideoId(videoId: String): YouTubeExtractor.YTInfo? {
         return withContext(Dispatchers.IO) {
-            return@withContext ytExtractor.extractInfo(videoId)
+            val ytInfo = ytExtractor.extractInfo(videoId)
+            ytInfo?.videoDetails?.let {
+                val meta = VideoMeta(
+                    videoId = it.videoId,
+                    title = it.title,
+                    channelId = it.channelId,
+                    channelTitle = it.author,
+                    description = it.shortDescription,
+                    thumbnails = RPThumbnailDetails(),
+                    tags = it.keywords
+                )
+                appDatabase.videoMetaDao().insert(meta)
+            }
+            return@withContext ytInfo
+        }
+    }
+
+//    suspend fun getDownloadRecord(): List<DownloadedResource> {
+//        return withContext(Dispatchers.IO) {
+//            return@withContext appDatabase.downloadedResourceDao().getAll()
+//        }
+//    }
+//
+//    suspend fun getAllDownloadRecord(): List<DownloadedResource> {
+//        return withContext(Dispatchers.IO) {
+//            return@withContext appDatabase.downloadedResourceDao().getAll()
+//        }
+//    }
+//
+//    suspend fun getDownloadRecord(videoIds: Array<String>): List<DownloadedResource> {
+//        return withContext(Dispatchers.IO) {
+//            return@withContext appDatabase.downloadedResourceDao().getByVideoId(*videoIds)
+//        }
+//    }
+//
+//    suspend fun addDownloadRecord(videoId: String, itag: Int, downloadId: Long) {
+//        return withContext(Dispatchers.IO) {
+//            appDatabase.downloadedResourceDao().insert(
+//                DownloadedResource(
+//                    downloadId = downloadId,
+//                    videoId = videoId,
+//                    itag = itag
+//                )
+//            )
+//            return@withContext
+//        }
+//    }
+//
+//    suspend fun deleteDownloadRecord(downloadIds: Array<Long>) {
+//        return withContext(Dispatchers.IO) {
+//            appDatabase.downloadedResourceDao().deleteByDownloadId(*downloadIds.toLongArray())
+//            return@withContext
+//        }
+//    }
+
+    suspend fun addPlayerResource(videoId: String, itag: Int, filepath: String, filename: String,
+                                  fileSize: Long, extension: String = ".mp4", isAdaptive: Boolean,
+                                  isVideo: Boolean, downloadId: Long = -1) {
+        return withContext(Dispatchers.IO) {
+            appDatabase.playerResourceDao().insert(
+                PlayerResource(
+                    videoId = videoId,
+                    itag = itag,
+                    filepath = filepath,
+                    filename = filename,
+                    fileSize = fileSize,
+                    extension = extension,
+                    isAdaptive = isAdaptive,
+                    isVideo = isVideo,
+                    downloadId = downloadId
+                )
+            )
+            return@withContext
+        }
+    }
+
+    suspend fun getPlayerResource(videoIds: Array<String>? = null): List<PlayerResource> {
+        return withContext(Dispatchers.IO) {
+            return@withContext if (videoIds == null) appDatabase.playerResourceDao().getAll()
+            else appDatabase.playerResourceDao().getByVideoId(*videoIds)
+        }
+    }
+
+    suspend fun getVideoMeta(videoIds: Array<String>? = null): List<VideoMeta> {
+        return withContext(Dispatchers.IO) {
+            return@withContext if (videoIds == null) appDatabase.videoMetaDao().getAll()
+            else appDatabase.videoMetaDao().getByVideoId(*videoIds)
+        }
+    }
+
+    suspend fun getVideoMetaWithPlayerResource(videoIds: Array<String>? = null): List<VideoMetaWithPlayerResource> {
+        return withContext(Dispatchers.IO) {
+            return@withContext if (videoIds == null) appDatabase.videoMetaDao().getAllWithPlayerResource()
+            else appDatabase.videoMetaDao().getByVideoIdWithPlayerResource(*videoIds)
         }
     }
 

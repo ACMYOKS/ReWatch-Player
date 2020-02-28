@@ -9,6 +9,6 @@
     android:paddingTop="12dp"
     android:paddingBottom="12dp"
     android:background="@drawable/player_selection_bg"
-    android:textColor="@android:color/white"
+    android:textColor="@color/player_selection_content_color"
     android:textSize="16sp"
     tools:text="Selectable Item 1"/>

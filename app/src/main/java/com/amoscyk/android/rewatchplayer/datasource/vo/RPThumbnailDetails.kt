@@ -7,11 +7,11 @@ import java.io.Serializable
 
 @Parcelize
 data class RPThumbnailDetails(
-    val default: RPThumbnail?,
-    val high: RPThumbnail?,
-    val maxres: RPThumbnail?,
-    val medium: RPThumbnail?,
-    val standard: RPThumbnail?
+    val default: RPThumbnail? = null,
+    val high: RPThumbnail? = null,
+    val maxres: RPThumbnail? = null,
+    val medium: RPThumbnail? = null,
+    val standard: RPThumbnail? = null
 ): Parcelable {
     companion object {
         fun fromApi(thumbnails: ThumbnailDetails): RPThumbnailDetails {
