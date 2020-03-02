@@ -3,7 +3,9 @@ package com.amoscyk.android.rewatchplayer.ui.player
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.CompoundButton
 import android.widget.ImageView
+import android.widget.Switch
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -11,7 +13,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.amoscyk.android.rewatchplayer.R
 
 class PlayerOptionAdapter(
-    private val itemOnClick: ((option: PlayerOption, position: Int) -> Unit)? = null
+    private val itemOnClick: ((option: PlayerOption, position: Int) -> Unit)? = null,
+    private val itemOnCheckedChange: ((isChecked: Boolean, position: Int) -> Unit)? = null
 ): ListAdapter<PlayerOption, PlayerOptionAdapter.ViewHolder>(DIFF_UTIL) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -22,18 +25,31 @@ class PlayerOptionAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val option = getItem(position)
         holder.bind(option)
-        holder.itemView.setOnClickListener {
-            itemOnClick?.invoke(option, position)
-        }
     }
 
     inner class ViewHolder(itemView: View): RecyclerView.ViewHolder(itemView) {
         private val imageView: ImageView = itemView.findViewById(R.id.image)
         private val titleTv: TextView = itemView.findViewById(R.id.title_tv)
+        private val switchCheck: Switch = itemView.findViewById(R.id.switch_check)
+
+        init {
+            itemView.setOnClickListener {
+                itemOnClick?.invoke(getItem(adapterPosition), adapterPosition)
+            }
+            switchCheck.setOnClickListener {
+                val isChecked = switchCheck.isChecked
+                getItem(adapterPosition).checked = isChecked
+                itemOnCheckedChange?.invoke(isChecked, adapterPosition)
+            }
+        }
 
         fun bind(option: PlayerOption) {
             imageView.setImageResource(option.imgResId)
             titleTv.text = option.title
+            switchCheck.apply {
+                visibility = if (option.checked == null) View.GONE else View.VISIBLE
+                isChecked = option.checked ?: false
+            }
         }
     }
 

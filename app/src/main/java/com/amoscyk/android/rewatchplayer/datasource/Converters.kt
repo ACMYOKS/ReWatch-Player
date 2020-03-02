@@ -26,6 +26,20 @@ class Converters {
     }
 
     @TypeConverter
+    fun intListToJson(intList: List<Int>): String {
+        val type = Types.newParameterizedType(List::class.java, Int::class.javaObjectType)
+        val adapter: JsonAdapter<List<Int>> = moshi.adapter(type)
+        return adapter.toJson(intList)!!
+    }
+
+    @TypeConverter
+    fun getIntListFromJson(json: String): List<Int> {
+        val type = Types.newParameterizedType(List::class.java, Int::class.javaObjectType)
+        val adapter: JsonAdapter<List<Int>> = moshi.adapter(type)
+        return adapter.fromJson(json)!!
+    }
+
+    @TypeConverter
     fun stringListToJson(stringList: List<String>): String {
         val type = Types.newParameterizedType(List::class.java, String::class.java)
         val adapter: JsonAdapter<List<String>> = moshi.adapter(type)

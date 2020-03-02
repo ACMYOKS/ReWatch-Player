@@ -15,7 +15,7 @@ object YouTubeStreamFormatCode {
         val bitrate: String? = null
     )
 
-    val FORMAT_CODES = hashMapOf(
+    val FORMAT_CODES = sortedMapOf(
         5 to StreamFormat(5, Container.FLV, Content.AV, "240p"),
         6 to StreamFormat(6, Container.FLV, Content.AV, "270p"),
         17 to StreamFormat(17, Container.THREE_GP, Content.AV, "144p"),

@@ -39,7 +39,6 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
     private val mDlHandler = Handler(Looper.getMainLooper())
     private lateinit var mListAdapter: DownloadItemAdapter
 
-    private var downloadRecords = listOf<DownloadedResource>()
     private var downloadItem = listOf<DownloadItem>()
 
     private val viewModel by viewModels<DownloadPageViewModel> { viewModelFactory }
@@ -119,7 +118,7 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
 
     private fun queryDownloadStatus() {
         if (!viewModel.playerResList.value.isNullOrEmpty()) {
-            FileDownloadHelper.getDownloadStatus(mDlMngr, downloadRecords.map { it.downloadId }).
+            FileDownloadHelper.getDownloadStatus(mDlMngr, viewModel.playerResList.value!!.map { it.downloadId }).
                 let { mListAdapter.updateDownloadStatus(it) }
         }
     }

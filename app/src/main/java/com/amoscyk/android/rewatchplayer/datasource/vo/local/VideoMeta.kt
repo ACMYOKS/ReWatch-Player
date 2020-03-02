@@ -11,7 +11,9 @@ data class VideoMeta(
     val title: String,
     @ColumnInfo(name = "channel_id") val channelId: String,
     @ColumnInfo(name = "channel_title") val channelTitle: String,
-    val description: String,
-    val thumbnails: RPThumbnailDetails,
-    val tags: List<String>
+    var description: String,
+    var thumbnails: RPThumbnailDetails,
+    val tags: List<String>,
+    val itags: List<Int>,
+    var bookmarked: Boolean
 )

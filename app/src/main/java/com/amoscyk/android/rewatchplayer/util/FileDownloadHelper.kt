@@ -13,6 +13,10 @@ object FileDownloadHelper {
         return context.getExternalFilesDir(DIR_DOWNLOAD)!!
     }
 
+    fun getFileByName(context: Context, filename: String): File {
+        return File(getDir(context), filename)
+    }
+
     fun getFilename(videoId: String, itag: Int, extension: String = ".mp4"): String {
         return "$videoId-$itag$extension"
     }

@@ -64,16 +64,19 @@ class YoutubeRepository(
         return withContext(Dispatchers.IO) {
             val ytInfo = ytExtractor.extractInfo(videoId)
             ytInfo?.videoDetails?.let {
-                val meta = VideoMeta(
+                val record = appDatabase.videoMetaDao().getByVideoId(it.videoId)
+                val bookmarked = if (record.isEmpty()) false else record[0].bookmarked
+                appDatabase.videoMetaDao().insert(VideoMeta(
                     videoId = it.videoId,
                     title = it.title,
                     channelId = it.channelId,
                     channelTitle = it.author,
                     description = it.shortDescription,
                     thumbnails = RPThumbnailDetails(),
-                    tags = it.keywords
-                )
-                appDatabase.videoMetaDao().insert(meta)
+                    tags = it.keywords,
+                    itags = ytInfo.urlMap.keys.toList(),
+                    bookmarked = bookmarked
+                ))
             }
             return@withContext ytInfo
         }
@@ -156,6 +159,12 @@ class YoutubeRepository(
         return withContext(Dispatchers.IO) {
             return@withContext if (videoIds == null) appDatabase.videoMetaDao().getAllWithPlayerResource()
             else appDatabase.videoMetaDao().getByVideoIdWithPlayerResource(*videoIds)
+        }
+    }
+
+    suspend fun updateVideoMeta(videoMetas: Array<VideoMeta>): List<Long> {
+        return withContext(Dispatchers.IO) {
+            return@withContext appDatabase.videoMetaDao().insert(*videoMetas)
         }
     }
 
