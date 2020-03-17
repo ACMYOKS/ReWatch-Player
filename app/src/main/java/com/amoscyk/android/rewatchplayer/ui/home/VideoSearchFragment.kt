@@ -2,7 +2,6 @@ package com.amoscyk.android.rewatchplayer.ui.home
 
 
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -23,7 +22,7 @@ import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
-import com.amoscyk.android.rewatchplayer.ui.player.PlayerActivity
+import com.amoscyk.android.rewatchplayer.ui.MainActivity
 import com.amoscyk.android.rewatchplayer.ui.VideoListAdapter
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
@@ -89,9 +88,13 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
                 }
                 Status.SUCCESS -> {
                     if (resource.data!!.second) {
-                        val intent = Intent(requireContext(), PlayerActivity::class.java)
-                        intent.putExtra(PlayerActivity.EXTRA_VIDEO_ID, resource.data.first)
-                        startActivity(intent)
+//                        val intent = Intent(requireContext(), PlayerActivity::class.java)
+//                        intent.putExtra(PlayerActivity.EXTRA_VIDEO_ID, resource.data.first)
+//                        startActivity(intent)
+
+                        (activity as? MainActivity)?.apply {
+                            playVideoForId(resource.data.first)
+                        }
                     } else {
                         Toast.makeText(requireContext(),
                             "Video with id: ${resource.data.first} not found", Toast.LENGTH_SHORT)

@@ -5,6 +5,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
+import com.amoscyk.android.rewatchplayer.ui.MainViewModel
 import com.amoscyk.android.rewatchplayer.ui.VideoListViewModel
 import com.amoscyk.android.rewatchplayer.ui.account.StartupAccountViewModel
 import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadPageViewModel
@@ -20,6 +21,9 @@ class ViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel?> create(modelClass: Class<T>): T {
         when {
+            modelClass.isAssignableFrom(MainViewModel::class.java) -> {
+                return MainViewModel(youtubeRepository) as T
+            }
             modelClass.isAssignableFrom(StartupAccountViewModel::class.java) -> {
                 return StartupAccountViewModel() as T
             }
