@@ -2,6 +2,7 @@ package com.amoscyk.android.rewatchplayer
 
 import android.content.Intent
 import androidx.fragment.app.Fragment
+import com.amoscyk.android.rewatchplayer.ui.MainActivity
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
 
 abstract class ReWatchPlayerFragment: Fragment() {
@@ -27,6 +28,8 @@ abstract class ReWatchPlayerFragment: Fragment() {
     open fun onGoogleUserAuthResult(resultCode: Int) {
 
     }
+
+    val mainActivity: MainActivity? get() = activity as? MainActivity
 
     companion object {
         const val REQUEST_GOOGLE_USER_AUTH = 1000

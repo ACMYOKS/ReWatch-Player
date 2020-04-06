@@ -11,6 +11,16 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#454545"/>
+    <TextView
+        android:id="@+id/tv_video_title_small"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:textSize="14sp"
+        android:textColor="@android:color/white"
+        android:singleLine="true"
+        android:ellipsize="marquee"
+        android:marqueeRepeatLimit="marquee_forever"/>
     <ImageButton
         android:id="@+id/btn_playback_small"
         android:layout_width="48dp"
@@ -38,8 +48,7 @@
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="?attr/homeAsUpIndicator">
+            android:layout_height="?attr/actionBarSize">
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
@@ -54,8 +63,9 @@
                     app:layout_constraintBottom_toBottomOf="parent"
                     tools:text="Video Title"
                     android:textSize="18sp"
-                    android:lines="2"
-                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:ellipsize="marquee"
+                    android:marqueeRepeatLimit="marquee_forever"
                     android:textColor="@android:color/white"/>
             </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.appcompat.widget.Toolbar>

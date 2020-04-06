@@ -50,9 +50,6 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "video search on create")
-//        val intent = Intent(requireContext(), PlayerActivity::class.java)
-//        intent.putExtra(PlayerActivity.EXTRA_VIDEO_ID, "")
-//        startActivity(intent)
     }
 
     override fun onAttach(context: Context) {
@@ -88,11 +85,7 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
                 }
                 Status.SUCCESS -> {
                     if (resource.data!!.second) {
-//                        val intent = Intent(requireContext(), PlayerActivity::class.java)
-//                        intent.putExtra(PlayerActivity.EXTRA_VIDEO_ID, resource.data.first)
-//                        startActivity(intent)
-
-                        (activity as? MainActivity)?.apply {
+                        mainActivity?.apply {
                             playVideoForId(resource.data.first)
                         }
                     } else {

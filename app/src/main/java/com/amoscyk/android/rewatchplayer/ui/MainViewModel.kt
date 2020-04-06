@@ -6,6 +6,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.*
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
+import com.amoscyk.android.rewatchplayer.datasource.vo.Resource
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMetaWithPlayerResource
 import com.amoscyk.android.rewatchplayer.ui.player.PlayerSelection
@@ -23,6 +24,9 @@ class MainViewModel(
 
     private val _requestOnlineMode = MutableLiveData<String>()
     val requestOnlineMode: LiveData<String> = _requestOnlineMode
+
+    private val _isVideoExist = MutableLiveData<Resource<String>>()
+    val searchVideoResource: LiveData<Resource<String>> = _isVideoExist
 
     private val _resourceUrl = MutableLiveData<ResourceUrl>()
     val resourceUrl: LiveData<ResourceUrl> = _resourceUrl
@@ -65,6 +69,23 @@ class MainViewModel(
     private fun reloadResourceForPendingVideo(context: Context) {
         if (pendingFetchVideoId != null) {
             prepareVideoResource(context, pendingFetchVideoId!!)
+        }
+    }
+
+    fun searchVideoById(videoId: String?) {
+        viewModelScope.launch {
+            _isVideoExist.value = Resource.loading(null)
+            if (videoId == null) {
+                _isVideoExist.value = Resource.error("video id cannot be null", videoId)
+            } else {
+                youtubeRepository.checkVideoIdExist(videoId).let {
+                    if (it == true) {
+                        _isVideoExist.value = Resource.success(videoId)
+                    } else {
+                        _isVideoExist.value = Resource.error(null, videoId)
+                    }
+                }
+            }
         }
     }
 

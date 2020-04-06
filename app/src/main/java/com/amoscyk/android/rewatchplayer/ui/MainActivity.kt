@@ -1,13 +1,17 @@
 package com.amoscyk.android.rewatchplayer.ui
 
+import android.annotation.SuppressLint
+import android.content.Intent
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
+import android.util.Log
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.Toolbar
 import androidx.core.net.toUri
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.DiffUtil
@@ -15,8 +19,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerActivity
+import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.ui.player.*
 import com.amoscyk.android.rewatchplayer.util.FileDownloadHelper
+import com.amoscyk.android.rewatchplayer.util.OrientationListener
 import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.exoplayer2.ExoPlayerFactory
@@ -24,10 +30,12 @@ import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.source.MergingMediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.android.synthetic.main.bottom_sheet_dialog_user_option.view.*
 import kotlinx.android.synthetic.main.dialog_achive_option.view.*
 import java.io.File
+import kotlin.math.abs
 
 
 class MainActivity : ReWatchPlayerActivity() {
@@ -80,9 +88,7 @@ class MainActivity : ReWatchPlayerActivity() {
     private val extraPlayerOptions = listOf(
         PlayerOption("resolution", R.drawable.ic_bookmark_border_white),
         PlayerOption("audio quality", R.drawable.ic_arrow_drop_down_white),
-        PlayerOption("online mode", R.drawable.ic_arrow_drop_down_white, true),
-        PlayerOption("test item 233333", R.drawable.ic_arrow_drop_down_white),
-        PlayerOption("test item 34444444", R.drawable.ic_arrow_drop_down_white)
+        PlayerOption("online mode", R.drawable.ic_arrow_drop_down_white, true)
     )
 
     private val viewModel by viewModels<MainViewModel> { viewModelFactory }
@@ -125,6 +131,20 @@ class MainActivity : ReWatchPlayerActivity() {
             }.show()
         })
 
+        viewModel.searchVideoResource.observe(this, Observer { res ->
+            when (res.status) {
+                Status.LOADING -> {
+                    Toast.makeText(this, "Checking...", Toast.LENGTH_SHORT).show()
+                }
+                Status.SUCCESS -> {
+                    viewModel.prepareVideoResource(this, res.data!!)
+                }
+                Status.ERROR -> {
+                    Toast.makeText(this, "video with id ${res.data!!} not exist", Toast.LENGTH_SHORT).show()
+                }
+            }
+        })
+
         viewModel.videoMeta.observe(this, Observer {
             mPlayerLayout.setTitle(it.title)
             setBookmarkButton(it.bookmarked)
@@ -165,24 +185,59 @@ class MainActivity : ReWatchPlayerActivity() {
             mAudioSelectionAdapter.apply { submitList(it) }
         })
 
-//        val defaultFactory = DefaultDataSourceFactory(this, getString(R.string.app_name))
-//        val f = ProgressiveMediaSource.Factory(defaultFactory)
-//        exoPlayer?.prepare(f.createMediaSource(Uri.parse("http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4")))
-//        mPlayerLayout.apply {
-//            setTitle("Try Title Very Long Title Very Long Title dfg dfg zdfg dfg ")
-//            mMotionLayout.apply {
-//                Handler().postDelayed({
-//
-//                    transitionToEnd()
-//                }, 3000)
-//            }
-//        }
+        // handle implicit intent from hyperlink
+        if (intent.action == Intent.ACTION_VIEW) {
+            intent.data?.let { data ->
+                val videoId: String? = when (data.host) {
+                    "m.youtube.com", "www.youtube.com", "youtube.com" -> {
+                        data.getQueryParameter("v")
+                    }
+                    "youtu.be" -> {
+                        data.lastPathSegment
+                    }
+                    else -> null
+                }
+                // search video
+                viewModel.searchVideoById(videoId)
+            }
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
 
         releasePlayer()
+    }
+
+    @SuppressLint("SourceLockedOrientationActivity")
+    override fun onBackPressed() {
+        if (mPlayerLayout.isFullscreen) {
+            when (resources.configuration.orientation) {
+                Configuration.ORIENTATION_LANDSCAPE -> requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+                Configuration.ORIENTATION_PORTRAIT -> mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.SMALL)
+                else -> super.onBackPressed()
+            }
+        } else {
+            super.onBackPressed()
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+
+        Log.d("MOMO", "config change")
+
+        when (newConfig.orientation) {
+            Configuration.ORIENTATION_LANDSCAPE -> {
+                mPlayerLayout.setEnableTransition(!mPlayerLayout.isFullscreen)
+                if (mPlayerLayout.isSmall) {
+                    mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.FULLSCREEN)
+                }
+            }
+            Configuration.ORIENTATION_PORTRAIT -> {
+                mPlayerLayout.setEnableTransition(true)
+            }
+        }
     }
 
     private fun initPlayer() {
@@ -192,9 +247,6 @@ class MainActivity : ReWatchPlayerActivity() {
             exoPlayer?.let { player ->
                 player.playWhenReady = playWhenReady
                 player.seekTo(currentWindow, playbackPosition)
-            }
-            videoId?.let {
-                viewModel.prepareVideoResource(this, it)
             }
         }
     }
@@ -211,11 +263,7 @@ class MainActivity : ReWatchPlayerActivity() {
 
     private fun setupViews() {
         mPlayerLayout.apply {
-            getToolbar().apply {
-                setNavigationOnClickListener {
-                    // FIXME: home button may have different behavior with back button
-                    onBackPressed()
-                }
+            toolbar.apply {
                 inflateMenu(R.menu.player_option_menu)
                 setOnMenuItemClickListener {
                     when (it.itemId) {
@@ -228,6 +276,9 @@ class MainActivity : ReWatchPlayerActivity() {
                         R.id.archive -> {
                             showArchiveOptions()
                         }
+                        R.id.rotation -> {
+                            handleRotation()
+                        }
                         R.id.other_action -> {
                             mOptionDialog.show()
                         }
@@ -236,28 +287,47 @@ class MainActivity : ReWatchPlayerActivity() {
                 }
                 setBookmarkButton(false)        // set visibility before view data is loaded
             }
+            setPlayerSizeListener(object : VideoPlayerLayout.PlayerSizeListener {
+                @SuppressLint("SourceLockedOrientationActivity")
+                override fun onStart(start: VideoPlayerLayout.PlayerSize, end: VideoPlayerLayout.PlayerSize) {
+                    if (start == VideoPlayerLayout.PlayerSize.DISMISS && end == VideoPlayerLayout.PlayerSize.FULLSCREEN) {
+                        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
+                    }
+                }
+
+                @SuppressLint("SourceLockedOrientationActivity")
+                override fun onComplete(current: VideoPlayerLayout.PlayerSize) {
+                    // when there is transition, check if player size is fullscreen,
+                    // if true then disable user transition when orientation is not portrait
+                    when (current) {
+                        VideoPlayerLayout.PlayerSize.FULLSCREEN -> {
+                            setEnableTransition(resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT)
+                        }
+                        VideoPlayerLayout.PlayerSize.SMALL -> {
+                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+                        }
+                        VideoPlayerLayout.PlayerSize.DISMISS -> {
+                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                        }
+                    }
+                }
+            })
         }
-        mOptionDialog = BottomSheetDialog(this).apply {
-            val contentView = layoutInflater.inflate(R.layout.bottom_sheet_dialog_user_option, null, false)
-            setContentView(contentView)
-            contentView.recycler_view.apply {
+        mOptionDialog = PlayerBottomSheetDialogBuilder.createDialog(this) {
+            it.recycler_view.apply {
                 adapter = mOptionAdapter.apply { submitList(extraPlayerOptions) }
                 layoutManager = LinearLayoutManager(this@MainActivity)
             }
         }
-        mResolutionDialog = BottomSheetDialog(this).apply {
-            val contentView = layoutInflater.inflate(R.layout.bottom_sheet_dialog_user_option, null, false)
-            setContentView(contentView)
-            contentView.recycler_view.apply {
+        mResolutionDialog = PlayerBottomSheetDialogBuilder.createDialog(this) {
+            it.recycler_view.apply {
                 mResolutionRv = this
                 adapter = mResSelectionAdapter
                 layoutManager = LinearLayoutManager(this@MainActivity)
             }
         }
-        mAudioQualityDialog = BottomSheetDialog(this).apply {
-            val contentView = layoutInflater.inflate(R.layout.bottom_sheet_dialog_user_option, null, false)
-            setContentView(contentView)
-            contentView.recycler_view.apply {
+        mAudioQualityDialog = PlayerBottomSheetDialogBuilder.createDialog(this) {
+            it.recycler_view.apply {
                 mQualityRv = this
                 adapter = mAudioSelectionAdapter
                 layoutManager = LinearLayoutManager(this@MainActivity)
@@ -265,8 +335,20 @@ class MainActivity : ReWatchPlayerActivity() {
         }
     }
 
+    @SuppressLint("SourceLockedOrientationActivity")
+    private fun handleRotation() {
+        when (resources.configuration.orientation) {
+            Configuration.ORIENTATION_LANDSCAPE -> {
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+            }
+            Configuration.ORIENTATION_PORTRAIT -> {
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
+            }
+        }
+    }
+
     private fun setBookmarkButton(isBookmarked: Boolean) {
-        val toolbar = mPlayerLayout.getToolbar()
+        val toolbar = mPlayerLayout.toolbar
         val btnBookmark = toolbar.menu.findItem(R.id.bookmark)
         val btnRemoveBookmark = toolbar.menu.findItem(R.id.remove_bookmark)
         btnBookmark.isVisible = !isBookmarked
@@ -337,6 +419,7 @@ class MainActivity : ReWatchPlayerActivity() {
     }
 
     companion object {
+        const val TAG = "MainActivity"
         const val EXTRA_VIDEO_ID = "com.amoscyk.android.rewatchplayer.extra.videoId"
         private val SELECTION_DIFF_CALLBACK = object :
             DiffUtil.ItemCallback<PlayerSelection<MainViewModel.VideoQualitySelection>>() {

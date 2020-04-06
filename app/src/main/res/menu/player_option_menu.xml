@@ -17,6 +17,11 @@
         android:icon="@drawable/ic_archive_white"
         app:showAsAction="always"/>
     <item
+        android:id="@+id/rotation"
+        android:title="screen rotation"
+        android:icon="@drawable/ic_screen_rotation_white"
+        app:showAsAction="always"/>
+    <item
         android:id="@+id/other_action"
         android:title="more"
         android:icon="@drawable/ic_arrow_drop_down_white"
