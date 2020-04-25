@@ -42,6 +42,7 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
     private lateinit var mTextView: TextView
     private lateinit var mLoadBtn: Button
     private lateinit var mSpinner: AppCompatSpinner
+    private lateinit var mLoadingView: ProgressBar
 
     private val mVideoListAdapter = VideoListAdapter()
 
@@ -65,11 +66,9 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
 //                        string += "title:${result.title} videoId:${result.videoId}\n"
 //                    }
 //                    mTextView.text = string
-                    resource.data!!.map { searchResult ->
-                        RPVideo.fromSearchResult(searchResult)
-                    }.let {
-                        mVideoListAdapter.submitList(it)
-                    }
+                    resource.data!!
+                        .map { searchResult -> searchResult.toRPVideo() }
+                        .let { list -> mVideoListAdapter.submitList(list.map { it.toVideoMeta() }) }
                 }
                 Status.ERROR -> {
                     (resource.message as? UserRecoverableAuthIOException)?.let { exception ->
@@ -81,9 +80,11 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
         viewModel.videoExists.observe(this, Observer { resource ->
             when (resource.status) {
                 Status.LOADING -> {
+                    mLoadingView.visibility = View.VISIBLE
                     Toast.makeText(requireContext(), "checking", Toast.LENGTH_SHORT).show()
                 }
                 Status.SUCCESS -> {
+                    mLoadingView.visibility = View.GONE
                     if (resource.data!!.second) {
                         mainActivity?.apply {
                             playVideoForId(resource.data.first)
@@ -95,6 +96,7 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
                     }
                 }
                 Status.ERROR -> {
+                    mLoadingView.visibility = View.GONE
                     Toast.makeText(requireContext(), resource.message.toString(), Toast.LENGTH_SHORT).show()
                 }
             }
@@ -126,6 +128,7 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
         mTextView = mRootView!!.findViewById(R.id.test_tv)
         mLoadBtn = mRootView!!.findViewById(R.id.loadmorebtn)
         mSpinner = mRootView!!.findViewById(R.id.search_type_spinner)
+        mLoadingView = mRootView!!.findViewById(R.id.loading_view)
 
         mToolbar.setupWithNavController(findNavController())
         mSearchView.apply {

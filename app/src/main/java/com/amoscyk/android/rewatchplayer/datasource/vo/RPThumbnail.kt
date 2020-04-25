@@ -7,17 +7,15 @@ import kotlinx.android.parcel.Parcelize
 @Parcelize
 data class RPThumbnail(
     val url: String,
-    val width: Long,
-    val height: Long
-): Parcelable {
-    companion object {
-        fun fromApi(thumbnail: Thumbnail?): RPThumbnail? {
-            if (thumbnail == null) return null
-            return RPThumbnail(
-                thumbnail.url,
-                thumbnail.width,
-                thumbnail.height
-            )
-        }
-    }
+    val width: Long = -1,
+    val height: Long = -1
+): Parcelable
+
+fun Thumbnail?.toRPThumbnail(): RPThumbnail? {
+    if (this == null) return null
+    return RPThumbnail(
+        url,
+        width,
+        height
+    )
 }

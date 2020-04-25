@@ -393,50 +393,46 @@ class MainViewModel(
 //    }
 
     // FIXME: should fetch URL map for download resource in offline mode
-    fun archiveVideo(context: Context, videoTag: Int?, audioTag: Int?, result: ((hasNewTasks: Boolean) -> Unit)? = null) {
-        viewModelScope.launch {
-            _currentVideoMeta.value?.videoMeta?.videoId?.let { videoId ->
-                var count = 0
-                listOf(videoTag, audioTag).forEach { tag ->
-                    if (tag != null) {
-                        var shouldDl = false
-                        val filename = FileDownloadHelper.getFilename(videoId, tag)
-                        val playerRes = youtubeRepository.getPlayerResource(arrayOf(videoId))
-                        if (playerRes.count { it.itag == tag } == 0) {
-                            // there is no existing resource, can try download
-                            shouldDl = true
+    suspend fun archiveVideo(context: Context, videoTag: Int?, audioTag: Int?): Resource<Int> {
+        _currentVideoMeta.value?.videoMeta?.videoId?.let { videoId ->
+            val count = listOf(videoTag, audioTag).fold(0) { acc, tag ->
+                if (tag != null) {
+                    var shouldDl = false
+                    val filename = FileDownloadHelper.getFilename(videoId, tag)
+                    val playerRes = youtubeRepository.getPlayerResource(arrayOf(videoId))
+                    if (playerRes.count { it.itag == tag } == 0) {
+                        // there is no existing resource, can try download
+                        shouldDl = true
+                    } else {
+                        // resource record exist, check if file already exist
+                        if (FileDownloadHelper.getFileByName(context, filename).exists()) {
+                            // file already existed
+                            Log.d(TAG, "file existed already, do not download again")
                         } else {
-                            // resource record exist, check if file already exist
-                            if (context.getExternalFilesDir(FileDownloadHelper.DIR_DOWNLOAD)?.
-                                    listFiles { _, name -> name == filename }.orEmpty().isEmpty()) {
-                                // file not exist, start download flow
-                                Log.d(TAG, "file not exist, start download")
-                                shouldDl = true
-                            } else {
-                                // file already existed
-                                Log.d(TAG, "file existed already, do not download again")
-                            }
-                        }
-                        if (shouldDl) {
-                            val dlMngr = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-                            val vRequest = DownloadManager.Request(Uri.parse(_allUrlMap[tag]))
-                            vRequest.setDestinationInExternalFilesDir(context, FileDownloadHelper.DIR_DOWNLOAD, filename)
-                            vRequest.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
-                            vRequest.setTitle(videoId)
-                            val id = dlMngr.enqueue(vRequest)
-                            youtubeRepository.addPlayerResource(videoId, tag,
-                                FileDownloadHelper.getDir(context).absolutePath, filename, 0,
-                                isAdaptive = (videoTag != null && audioTag != null),
-                                isVideo = tag == videoTag, downloadId = id)
-                            count++
+                            // file not exist, start download flow
+                            Log.d(TAG, "file not exist, start download")
+                            shouldDl = true
                         }
                     }
+                    if (shouldDl) {
+                        val dlMngr = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                        val vRequest = DownloadManager.Request(Uri.parse(_allUrlMap[tag]))
+                        vRequest.setDestinationInExternalFilesDir(context, FileDownloadHelper.DIR_DOWNLOAD, filename)
+                        vRequest.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
+                        vRequest.setTitle(videoId)
+                        val id = dlMngr.enqueue(vRequest)
+                        youtubeRepository.addPlayerResource(videoId, tag,
+                            FileDownloadHelper.getDir(context).absolutePath, filename, 0,
+                            isAdaptive = (videoTag != null && audioTag != null),
+                            isVideo = tag == videoTag, downloadId = id)
+                        return@fold acc + 1
+                    }
                 }
-                result?.invoke(count > 0)
-            } ?: run {
-                result?.invoke(false)
+                return@fold acc
             }
+            return Resource.success(count)
         }
+        return Resource.error("no video id", 0)
     }
 
     fun updateBookmarkStatus(bookmark: Boolean) {

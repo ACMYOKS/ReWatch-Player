@@ -4,18 +4,23 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.cardview.widget.CardView
+import androidx.core.widget.ContentLoadingProgressBar
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.api.load
 import com.amoscyk.android.rewatchplayer.R
-import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
+import com.amoscyk.android.rewatchplayer.util.YouTubeThumbnailHelper
 
 class VideoListAdapter(
-    private val onItemClick: ((RPVideo) -> Unit)? = null
-): ListAdapter<RPVideo, VideoListAdapter.ViewHolder>(DIFF_CALLBACK) {
+    private val onItemClick: ((VideoMeta) -> Unit)? = null
+): ListAdapter<VideoMeta, VideoListAdapter.ViewHolder>(DIFF_CALLBACK) {
+
+    private var shouldShowLoading = false
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -25,32 +30,54 @@ class VideoListAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val video = getItem(position)
-        holder.bind(video)
+        holder.bind(video, position)
     }
 
-    inner class ViewHolder(itemView: View): RecyclerView.ViewHolder(itemView) {
-        private val cardView = itemView.findViewById<CardView>(R.id.card_view)
-        private val thumbnailIV = itemView.findViewById<ImageView>(R.id.thumbnail)
-        private val titleTv = itemView.findViewById<TextView>(R.id.title_tv)
-        private val channelTitleTv = itemView.findViewById<TextView>(R.id.channel_title_tv)
-
-        fun bind(video: RPVideo) {
-            titleTv.text = video.title
-            channelTitleTv.text = video.channelTitle
-            thumbnailIV.load(video.thumbnails.standard?.url)
-            itemView.setOnClickListener {
-                onItemClick?.invoke(video)
-            }
+    // show/hide progress bar when there is item to load or not
+    fun setShowLoadingAtBottom(show: Boolean) {
+        if (shouldShowLoading != show) {
+            shouldShowLoading = show
+            notifyItemChanged(itemCount - 1)
         }
     }
 
+    inner class ViewHolder(itemView: View): RecyclerView.ViewHolder(itemView) {
+        val cardView: CardView = itemView.findViewById(R.id.card_view)
+        val thumbnailIv: ImageView = itemView.findViewById(R.id.thumbnail)
+        val titleTv: TextView = itemView.findViewById(R.id.title_tv)
+        val channelTitleTv: TextView = itemView.findViewById(R.id.channel_title_tv)
+        val progressBar: ContentLoadingProgressBar = itemView.findViewById(R.id.progress_bar)
+
+        init {
+            cardView.apply {
+                setOnClickListener { onItemClick?.invoke(getItem(adapterPosition)) }
+            }
+        }
+
+        fun bind(video: VideoMeta, position: Int) {
+            titleTv.text = video.title
+            channelTitleTv.text = video.channelTitle
+            thumbnailIv.load(
+                video.thumbnails.standard?.url
+                    ?: YouTubeThumbnailHelper.getStandardUrl(video.videoId)
+            ) {
+                placeholder(R.drawable.ic_broken_image_white)
+                error(R.drawable.ic_broken_image_white)
+            }
+            if (position == itemCount - 1 && shouldShowLoading) progressBar.show()
+            else progressBar.hide()
+        }
+
+    }
+
     companion object {
-        val DIFF_CALLBACK = object : DiffUtil.ItemCallback<RPVideo>() {
-            override fun areItemsTheSame(oldItem: RPVideo, newItem: RPVideo): Boolean {
-                return oldItem.id == newItem.id
+        val DIFF_CALLBACK = object : DiffUtil.ItemCallback<VideoMeta>() {
+            override fun areItemsTheSame(oldItem: VideoMeta, newItem: VideoMeta): Boolean {
+                return oldItem.videoId == newItem.videoId &&
+                        oldItem.bookmarked == newItem.bookmarked
             }
 
-            override fun areContentsTheSame(oldItem: RPVideo, newItem: RPVideo): Boolean {
+            override fun areContentsTheSame(oldItem: VideoMeta, newItem: VideoMeta): Boolean {
                 return oldItem == newItem
             }
         }

@@ -8,19 +8,12 @@ data class RPPlaylistItemListResponse(
     override val nextPageToken: String?,
     override val totalResults: Int,
     override val resultsPerPage: Int
-): IListResult<RPPlaylistItem> {
-    companion object {
-        fun fromApi(
-            pageToken: String,
-            response: PlaylistItemListResponse
-        ): RPPlaylistItemListResponse {
-            return RPPlaylistItemListResponse(
-                response.items.map { RPPlaylistItem.fromApi(it) },
-                pageToken,
-                response.nextPageToken,
-                response.pageInfo.totalResults,
-                response.pageInfo.resultsPerPage
-            )
-        }
-    }
-}
+): IListResult<RPPlaylistItem>
+
+fun PlaylistItemListResponse.toRPPlaylistItemListResponse(pageToken: String) = RPPlaylistItemListResponse(
+    items = items.map { it.toRPPlaylistItem() },
+    pageToken = pageToken,
+    nextPageToken = nextPageToken,
+    totalResults = pageInfo.totalResults,
+    resultsPerPage = pageInfo.resultsPerPage
+)

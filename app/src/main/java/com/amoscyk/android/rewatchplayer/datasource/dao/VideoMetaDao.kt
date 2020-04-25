@@ -24,6 +24,10 @@ interface VideoMetaDao {
     fun getByVideoIdWithPlayerResource(vararg videoIds: String): List<VideoMetaWithPlayerResource>
 
     @Transaction
+    @Query("SELECT * FROM video_metas INNER JOIN player_resources ON video_metas.video_id = player_resources.video_id GROUP BY video_metas.video_id")
+    fun getAllExistingPlayerResource(): List<VideoMetaWithPlayerResource>
+
+    @Transaction
     @Query("SELECT * FROM video_metas WHERE bookmarked = 1")
     fun getBookmarkedWithPlayerResource(): List<VideoMetaWithPlayerResource>
 

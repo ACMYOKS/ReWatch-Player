@@ -5,7 +5,8 @@ import android.view.View
 import androidx.recyclerview.widget.RecyclerView
 
 class CommonListDecoration(
-    private val interItemSpace: Int
+    private val verticalSpace: Int,
+    private val horizontalSpace: Int
 ): RecyclerView.ItemDecoration() {
 
     override fun getItemOffsets(
@@ -16,11 +17,11 @@ class CommonListDecoration(
     ) {
         with (outRect) {
             if (parent.getChildAdapterPosition(view) == 0) {
-                top = interItemSpace
+                top = verticalSpace
             }
-            left = interItemSpace
-            bottom = interItemSpace
-            right = interItemSpace
+            left = horizontalSpace
+            bottom = verticalSpace
+            right = horizontalSpace
         }
     }
 

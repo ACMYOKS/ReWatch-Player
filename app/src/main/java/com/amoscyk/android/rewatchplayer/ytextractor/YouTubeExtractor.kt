@@ -2,6 +2,7 @@ package com.amoscyk.android.rewatchplayer.ytextractor
 
 import android.util.Log
 import com.amoscyk.android.rewatchplayer.datasource.vo.AvailableStreamFormat
+import com.amoscyk.android.rewatchplayer.datasource.vo.RPThumbnailDetails
 import com.amoscyk.android.rewatchplayer.util.TimeLogger
 import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
 import com.squareup.moshi.Moshi
@@ -36,6 +37,14 @@ class YouTubeExtractor(private val youTubeOpenService: YouTubeOpenService) {
                     YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMATS.filterKeys { adaptive.contains(it) },
                     YouTubeStreamFormatCode.ADAPTIVE_AUDIO_FORMATS.filterKeys { adaptive.contains(it) })
                 )
+        }
+
+    suspend fun getThumnails(videoId: String): RPThumbnailDetails =
+        withContext(Dispatchers.IO) {
+
+            return@withContext RPThumbnailDetails(
+
+            )
         }
 
     private suspend fun getJsonFromWebHtml(videoId: String): String? {

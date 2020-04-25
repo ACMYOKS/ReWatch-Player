@@ -8,19 +8,12 @@ data class RPVideoListResponse(
     override val nextPageToken: String?,
     override val totalResults: Int,
     override val resultsPerPage: Int
-): IListResult<RPVideo> {
-    companion object {
-        fun fromApi(
-            pageToken: String,
-            response: VideoListResponse
-        ): RPVideoListResponse {
-            return RPVideoListResponse(
-                response.items.map { RPVideo.fromApi(it) },
-                pageToken,
-                response.nextPageToken,
-                response.pageInfo.totalResults,
-                response.pageInfo.resultsPerPage
-            )
-        }
-    }
-}
+): IListResult<RPVideo>
+
+fun VideoListResponse.toRPVideoListResponse(pageToken: String) = RPVideoListResponse(
+    items = items.map { it.toRPVideo() },
+    pageToken = pageToken,
+    nextPageToken = nextPageToken,
+    totalResults = pageInfo.totalResults,
+    resultsPerPage = pageInfo.resultsPerPage
+)

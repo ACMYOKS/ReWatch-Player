@@ -3,18 +3,25 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <group
         android:id="@+id/library_option_group">
-        <item
-            android:id="@+id/search_item"
-            android:title="search"
-            app:showAsAction="ifRoom" />
+<!--        <item-->
+<!--            android:id="@+id/search_item"-->
+<!--            android:title="search"-->
+<!--            app:showAsAction="ifRoom" />-->
         <item
             android:id="@+id/show_playlists"
             android:title="show playlists"
-            app:showAsAction="ifRoom" />
+            android:icon="@drawable/ic_view_list_white"
+            app:showAsAction="always" />
         <item
-            android:id="@+id/show_all_items"
-            android:title="show all items"
-            app:showAsAction="ifRoom" />
+            android:id="@+id/show_bookmark_list"
+            android:title="show bookmark items"
+            android:icon="@drawable/ic_bookmark_border_white"
+            app:showAsAction="always" />
+        <item
+            android:id="@+id/settings"
+            android:title="settings"
+            android:icon="@drawable/ic_settings_white"
+            app:showAsAction="always" />
         <item
             android:id="@+id/edit_item"
             android:title="edit"

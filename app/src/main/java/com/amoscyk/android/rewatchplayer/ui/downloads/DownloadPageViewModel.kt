@@ -1,27 +1,51 @@
 package com.amoscyk.android.rewatchplayer.ui.downloads
 
+import android.app.DownloadManager
+import android.content.Context
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
+import com.amoscyk.android.rewatchplayer.datasource.vo.DownloadStatus
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.PlayerResource
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMetaWithPlayerResource
+import com.amoscyk.android.rewatchplayer.util.FileDownloadHelper
 import kotlinx.coroutines.launch
 
-class DownloadPageViewModel(
+abstract class DownloadPageViewModel(
     private val youtubeRepository: YoutubeRepository
 ): ViewModel() {
-    private val _videoMeta = MutableLiveData<List<VideoMetaWithPlayerResource>>()
+
+    enum class MenuState {
+        NORMAL, SELECT_SINGLE, SELECT_MULTI
+    }
+
+    protected val _videoMeta = MutableLiveData<List<VideoMetaWithPlayerResource>>()
     val videoMeta: LiveData<List<VideoMetaWithPlayerResource>> = _videoMeta
-    private val _playerResList = MutableLiveData<List<PlayerResource>>()
-    val playerResList: LiveData<List<PlayerResource>> = _playerResList
+    protected val _downloadStatus = MutableLiveData<Map<Long, DownloadStatus>>()
+    val downloadStatus: LiveData<Map<Long, DownloadStatus>> = _downloadStatus
 
     fun updateObservingDownloadRecord() {
         viewModelScope.launch {
-            _playerResList.value = youtubeRepository.getPlayerResource()
             _videoMeta.value = youtubeRepository.getVideoMetaWithPlayerResource()
+        }
+    }
+
+    fun getVideoMetaWithPlayerResource(videoIds: List<String>? = null) {
+        viewModelScope.launch {
+            _videoMeta.value = youtubeRepository.getVideoMetaWithPlayerResource(videoIds?.toTypedArray())
+        }
+    }
+
+    fun getVideoMetaContainsPlayerResource() {
+        viewModelScope.launch {
+            _videoMeta.value = youtubeRepository.getVideoMetaWithExistingPlayerResource()
+        }
+    }
+
+    fun updateDownloadStatus(context: Context) {
+        _videoMeta.value?.flatMap { it.playerResources.map { it.downloadId } }?.let {
+            val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            _downloadStatus.value = FileDownloadHelper.getDownloadStatus(downloadManager, it)
         }
     }
 

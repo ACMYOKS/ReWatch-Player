@@ -12,8 +12,7 @@ import com.amoscyk.android.rewatchplayer.datasource.vo.RPSearchListResponse
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
 
 @Database(
-    entities = [RPSearchListResponse::class, PlayerResource::class, VideoMeta::class,
-        DownloadedResource::class],
+    entities = [PlayerResource::class, VideoMeta::class],
     version = 1,
     exportSchema = false
 )
@@ -21,5 +20,4 @@ import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
 abstract class AppDatabase: RoomDatabase() {
     abstract fun playerResourceDao(): PlayerResourceDao
     abstract fun videoMetaDao(): VideoMetaDao
-    abstract fun downloadedResourceDao(): DownloadedResourceDao
 }

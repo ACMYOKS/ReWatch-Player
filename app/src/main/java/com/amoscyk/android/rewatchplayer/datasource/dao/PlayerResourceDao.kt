@@ -15,11 +15,14 @@ interface PlayerResourceDao {
     fun insert(vararg resources: PlayerResource): List<Long>
 
     @Delete
-    fun delete(resource: PlayerResource): Int
+    fun delete(vararg resources: PlayerResource): Int
 
-    @Query("DELETE FROM player_resources WHERE video_id in (:videoId)")
+    @Query("DELETE FROM player_resources WHERE video_id IN (:videoId)")
     fun deleteByVideoId(vararg videoId: String): Int
 
-    @Query("DELETE FROM player_resources WHERE video_id = :videoId AND itag = :itag")
-    fun deleteByVideoIdWithITag(videoId: String, itag: Int): Int
+    @Query("DELETE FROM player_resources WHERE video_id = :videoId AND itag IN (:itags)")
+    fun deleteByVideoIdWithITag(videoId: String, vararg itags: Int): Int
+
+    @Query("DELETE FROM player_resources WHERE download_id IN (:downloadIds)")
+    fun deleteByDownloadId(vararg downloadIds: Long): Int
 }

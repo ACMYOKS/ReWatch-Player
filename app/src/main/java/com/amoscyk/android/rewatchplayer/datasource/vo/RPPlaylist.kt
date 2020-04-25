@@ -14,20 +14,14 @@ data class RPPlaylist(
     val thumbnails: RPThumbnailDetails,
     val channelTitle: String,
     val tags: List<String>
-): Parcelable {
-    companion object {
-        fun fromApi(
-            playlist: Playlist
-        ): RPPlaylist {
-            return RPPlaylist(
-                playlist.id,
-                playlist.snippet.publishedAt,
-                playlist.snippet.title,
-                playlist.snippet.description,
-                RPThumbnailDetails.fromApi(playlist.snippet.thumbnails),
-                playlist.snippet.channelTitle,
-                playlist.snippet.tags ?: listOf()
-            )
-        }
-    }
-}
+): Parcelable
+
+fun Playlist.toRPPlayList() = RPPlaylist(
+    id = id,
+    publishedAt = snippet.publishedAt,
+    title = snippet.title,
+    description = snippet.description,
+    thumbnails = snippet.thumbnails.toRPThumbnailDetails(),
+    channelTitle = snippet.channelTitle,
+    tags = snippet.tags ?: listOf()
+)

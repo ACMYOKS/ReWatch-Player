@@ -14,6 +14,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.core.net.toUri
 import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -34,6 +35,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.android.synthetic.main.bottom_sheet_dialog_user_option.view.*
 import kotlinx.android.synthetic.main.dialog_achive_option.view.*
+import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.abs
 
@@ -375,12 +377,26 @@ class MainActivity : ReWatchPlayerActivity() {
             setView(contentView)
             setTitle("Archive options")
             setPositiveButton("ok") { _, _ ->
-                val vKey = availableVFormats.map { it.key }[contentView.spinner_video_quality.selectedItemPosition]
-                val vTag = availableVFormats[vKey]?.itag
-                val aKey = availableAFormats.map { it.key }[contentView.spinner_audio_quality.selectedItemPosition]
-                val aTag = availableAFormats[aKey]?.itag
-                viewModel.archiveVideo(this@MainActivity, vTag, aTag) {
-                    Toast.makeText(this@MainActivity, "has new download task: $it", Toast.LENGTH_SHORT).show()
+                lifecycleScope.launch {
+                    val vKey = availableVFormats.map { it.key }[contentView.spinner_video_quality.selectedItemPosition]
+                    val vTag = availableVFormats[vKey]?.itag
+                    val aKey = availableAFormats.map { it.key }[contentView.spinner_audio_quality.selectedItemPosition]
+                    val aTag = availableAFormats[aKey]?.itag
+                    viewModel.archiveVideo(this@MainActivity, vTag, aTag).let { result ->
+                        when (result.status) {
+                            Status.SUCCESS -> {
+                                Toast.makeText(this@MainActivity,
+                                    "has new download task: ${result.data!!}",
+                                    Toast.LENGTH_SHORT).show()
+                            }
+                            Status.ERROR -> {
+                                Toast.makeText(this@MainActivity,
+                                    result.stringMessage,
+                                    Toast.LENGTH_SHORT).show()
+                            }
+                            else -> {}
+                        }
+                    }
                 }
             }
             setNegativeButton("cancel") { _, _ -> }

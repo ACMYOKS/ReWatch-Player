@@ -6,6 +6,7 @@ import androidx.lifecycle.MutableLiveData
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPPlaylist
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPPlaylistListResponse
 import com.amoscyk.android.rewatchplayer.datasource.vo.Resource
+import com.amoscyk.android.rewatchplayer.datasource.vo.toRPPlaylistListResponse
 import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
 import com.google.api.services.youtube.YouTube
@@ -31,7 +32,7 @@ class PlaylistListResponseResource private constructor(
             try {
                 val response = request.execute()
                 Log.d("LOG", "finish playlist request")
-                val result = RPPlaylistListResponse.fromApi("", response)
+                val result = response.toRPPlaylistListResponse("")
                 _pageToken = result.nextPageToken
                 if (_pageToken == null) {
                     _endOfListReached = true
@@ -51,6 +52,7 @@ class PlaylistListResponseResource private constructor(
 
     suspend fun loadMoreResource() {
         if (_pageToken == null) {       // reach end of list
+            _resource.postValue(Resource.success(_resource.value?.data))
             return
         }
         withContext(Dispatchers.IO) {
@@ -60,7 +62,7 @@ class PlaylistListResponseResource private constructor(
             try {
                 val response = request.setPageToken(_pageToken).execute()
                 Log.d("LOG", "finish load more playlist request")
-                val result = RPPlaylistListResponse.fromApi(_pageToken!!, response)
+                val result = response.toRPPlaylistListResponse(_pageToken!!)
                 _pageToken = result.nextPageToken
                 if (_pageToken == null) {
                     _endOfListReached = true

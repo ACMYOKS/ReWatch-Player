@@ -31,12 +31,15 @@ class PlaylistListAdapter(
         private val thumbnailImg = itemView.findViewById<ImageView>(R.id.playlist_img)
         private val titleTv = itemView.findViewById<TextView>(R.id.playlist_title_tv)
 
+        init {
+            itemView.setOnClickListener {
+                itemOnClick?.invoke(getItem(adapterPosition))
+            }
+        }
+
         fun bind(playlist: RPPlaylist) {
             thumbnailImg.load(playlist.thumbnails.default?.url)
             titleTv.text = playlist.title
-            itemView.setOnClickListener {
-                itemOnClick?.invoke(playlist)
-            }
         }
     }
 

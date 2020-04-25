@@ -2,8 +2,8 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/search_video"
-        android:title="search"
-        android:icon="@drawable/ic_search_white"
+        android:id="@+id/delete"
+        android:title="delete"
+        android:icon="@drawable/ic_delete_white"
         app:showAsAction="always"/>
 </menu>

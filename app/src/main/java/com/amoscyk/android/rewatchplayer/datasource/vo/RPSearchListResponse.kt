@@ -13,21 +13,13 @@ data class RPSearchListResponse(
     override val nextPageToken: String?,
     override val totalResults: Int,
     override val resultsPerPage: Int
-): IListResult<RPSearchResult> {
-    companion object {
-        fun fromApi(
-            query: String,
-            pageToken: String,
-            result: SearchListResponse
-        ): RPSearchListResponse {
-            return RPSearchListResponse(
-                query,
-                result.items.map { RPSearchResult.fromApi(it) },
-                pageToken,
-                result.nextPageToken,
-                result.pageInfo.totalResults,
-                result.pageInfo.resultsPerPage
-            )
-        }
-    }
-}
+): IListResult<RPSearchResult>
+
+fun SearchListResponse.toRPSearchResponse(query: String, pageToken: String) = RPSearchListResponse(
+    query = query,
+    items = items.map { it.toRPSearchResult() },
+    pageToken = pageToken,
+    nextPageToken = nextPageToken,
+    totalResults = pageInfo.totalResults,
+    resultsPerPage = pageInfo.resultsPerPage
+)

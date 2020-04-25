@@ -7,7 +7,8 @@ import android.content.SharedPreferences
  * Enum class to store keys for SharedPreferences
  * */
 enum class PreferenceKey(val keyName: String) {
-    ACCOUNT_NAME("accountName")
+    ACCOUNT_NAME("accountName"),
+    LIBRARY_LIST_MODE("libraryListMode")
 }
 
 /*

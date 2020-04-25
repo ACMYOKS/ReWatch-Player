@@ -2,16 +2,13 @@ package com.amoscyk.android.rewatchplayer.ui
 
 
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.ProgressBar
-import android.widget.Toast
 import androidx.appcompat.widget.Toolbar
+import androidx.core.widget.ContentLoadingProgressBar
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
@@ -22,7 +19,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
-import com.amoscyk.android.rewatchplayer.ui.player.PlayerActivity
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 
 class VideoListFragment : ReWatchPlayerFragment() {
@@ -33,11 +29,10 @@ class VideoListFragment : ReWatchPlayerFragment() {
     private var rootView: View? = null
     private lateinit var mToolbar: Toolbar
     private lateinit var mVideoListView: RecyclerView
-    private lateinit var mLoadingView: ProgressBar
+    private lateinit var mLoadingView: ContentLoadingProgressBar
     private lateinit var mButton: Button
     private val mListAdapter = VideoListAdapter(onItemClick = {
-//        Toast.makeText(requireContext(), "${it.title} ${it.channelTitle}", Toast.LENGTH_SHORT).show()
-        mainActivity?.playVideoForId(it.id)
+        mainActivity?.playVideoForId(it.videoId)
     })
 
     override fun onAttach(context: Context) {
@@ -47,17 +42,44 @@ class VideoListFragment : ReWatchPlayerFragment() {
             mToolbar.title = title
         })
 
+        viewModel.playlistResource.observe(this, Observer { res ->
+            when (res.status) {
+                Status.SUCCESS -> {
+                    mLoadingView.hide()
+                    viewModel.setPlaylistItems(res.data.orEmpty())
+                }
+                Status.ERROR -> {
+                    mLoadingView.hide()
+                }
+                Status.LOADING -> {
+                    mLoadingView.show()
+                }
+            }
+        })
+
         viewModel.videoList.observe(this, Observer { resource ->
             when (resource.status) {
                 Status.SUCCESS -> {
-                    mLoadingView.visibility = View.GONE
-                    mListAdapter.submitList(resource.data)
+                    if (mListAdapter.itemCount == 0) {
+                        mLoadingView.hide()
+                    } else {
+                        mListAdapter.setShowLoadingAtBottom(false)
+                    }
+                    mListAdapter.submitList(resource.data?.map { it.toVideoMeta() })
                 }
                 Status.ERROR -> {
-                    mLoadingView.visibility = View.GONE
+                    if (mListAdapter.itemCount == 0) {
+                        mLoadingView.hide()
+                    } else {
+                        mListAdapter.setShowLoadingAtBottom(false)
+                    }
                 }
                 Status.LOADING -> {
-                    mLoadingView.visibility = View.VISIBLE
+                    if (mListAdapter.itemCount == 0) {
+                        mLoadingView.show()
+                    } else {
+                        mListAdapter.setShowLoadingAtBottom(true)
+                    }
                 }
             }
 
@@ -75,9 +97,13 @@ class VideoListFragment : ReWatchPlayerFragment() {
         return rootView
     }
 
+    override fun onStart() {
+        super.onStart()
+        fetchVideoList()
+    }
+
     override fun onResume() {
         super.onResume()
-        fetchVideoList()
     }
 
     private fun setupView() {
@@ -87,9 +113,23 @@ class VideoListFragment : ReWatchPlayerFragment() {
         mButton = rootView!!.findViewById(R.id.load_more_btn)
 
         mToolbar.setupWithNavController(findNavController())
-        mVideoListView.adapter = mListAdapter
-        mVideoListView.addItemDecoration(CommonListDecoration(4))
-        mVideoListView.layoutManager = LinearLayoutManager(requireContext())
+        mVideoListView.apply {
+            adapter = mListAdapter
+            addItemDecoration(CommonListDecoration(4, 8))
+            layoutManager = LinearLayoutManager(requireContext())
+            addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    if (dy > 0) {
+                        (layoutManager as? LinearLayoutManager)?.apply {
+                            if (findLastCompletelyVisibleItemPosition() == itemCount - 1) {
+                                mListAdapter.setShowLoadingAtBottom(true)
+                                viewModel.loadMoreVideos()
+                            }
+                        }
+                    }
+                }
+            })
+        }
         mButton.setOnClickListener {
             viewModel.loadMoreVideos()
         }

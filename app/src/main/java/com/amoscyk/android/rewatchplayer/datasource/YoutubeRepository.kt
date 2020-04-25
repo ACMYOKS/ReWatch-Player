@@ -162,14 +162,44 @@ class YoutubeRepository(
         }
     }
 
+    suspend fun getVideoMetaWithExistingPlayerResource(): List<VideoMetaWithPlayerResource> {
+        return withContext(Dispatchers.IO) {
+            return@withContext appDatabase.videoMetaDao().getAllExistingPlayerResource()
+        }
+    }
+
+    suspend fun getBookmarkedVideoMetaWithPlayerResource(): List<VideoMetaWithPlayerResource> {
+        return withContext(Dispatchers.IO) {
+            return@withContext appDatabase.videoMetaDao().getBookmarkedWithPlayerResource()
+        }
+    }
+
     suspend fun updateVideoMeta(videoMetas: Array<VideoMeta>): List<Long> {
         return withContext(Dispatchers.IO) {
             return@withContext appDatabase.videoMetaDao().insert(*videoMetas)
         }
     }
 
+    suspend fun deletePlayerResource(videoIds: Array<String>): Int {
+        return withContext(Dispatchers.IO) {
+            return@withContext appDatabase.playerResourceDao().deleteByVideoId(*videoIds)
+        }
+    }
+
+    suspend fun deletePlayerResource(videoId: String, itags: IntArray): Int {
+        return withContext(Dispatchers.IO) {
+            return@withContext appDatabase.playerResourceDao().deleteByVideoIdWithITag(videoId, *itags)
+        }
+    }
+
+    suspend fun deletePlayerResource(downloadIds: LongArray): Int {
+        return withContext(Dispatchers.IO) {
+            return@withContext appDatabase.playerResourceDao().deleteByDownloadId(*downloadIds)
+        }
+    }
+
     companion object {
-        private const val MAX_RESULTS: Long = 30
+        private const val MAX_RESULTS: Long = 10
     }
 
 }

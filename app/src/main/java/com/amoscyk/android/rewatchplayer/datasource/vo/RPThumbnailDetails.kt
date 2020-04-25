@@ -12,16 +12,15 @@ data class RPThumbnailDetails(
     val maxres: RPThumbnail? = null,
     val medium: RPThumbnail? = null,
     val standard: RPThumbnail? = null
-): Parcelable {
-    companion object {
-        fun fromApi(thumbnails: ThumbnailDetails): RPThumbnailDetails {
-            return RPThumbnailDetails(
-                RPThumbnail.fromApi(thumbnails.default),
-                RPThumbnail.fromApi(thumbnails.high),
-                RPThumbnail.fromApi(thumbnails.maxres),
-                RPThumbnail.fromApi(thumbnails.medium),
-                RPThumbnail.fromApi(thumbnails.standard)
-            )
-        }
-    }
+): Parcelable
+
+fun ThumbnailDetails?.toRPThumbnailDetails(): RPThumbnailDetails {
+    if (this == null) return RPThumbnailDetails()
+    return RPThumbnailDetails(
+        default.toRPThumbnail(),
+        high.toRPThumbnail(),
+        maxres.toRPThumbnail(),
+        medium.toRPThumbnail(),
+        standard.toRPThumbnail()
+    )
 }

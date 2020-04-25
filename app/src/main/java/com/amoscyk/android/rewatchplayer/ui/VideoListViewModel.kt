@@ -14,18 +14,11 @@ class VideoListViewModel(
 ): ViewModel() {
 
     private val _playlistResponse = MutableLiveData<PlaylistItemListResponseResource>()
-    private val _playlistResource = _playlistResponse.switchMap { it.resource }
-    private val _playlist = _playlistResource.map { it.data }
+    val playlistResource = _playlistResponse.switchMap { it.resource }
 
-    private val _videoResponse = _playlist.switchMap { list ->
-        liveData(viewModelScope.coroutineContext + Dispatchers.IO) {
-            if (list != null) {
-                emit(youtubeRepository.loadVideoResultResource(list.map { it.videoId }))
-            }
-        }
-    }
-    private val _videoResource = _videoResponse.switchMap { it.resource }
-    val videoList: LiveData<Resource<List<RPVideo>>> = _videoResource
+    private val _videoResource = MutableLiveData<VideoListResponseResource>()
+    private val _videoList = _videoResource.switchMap { it.resource }
+    val videoList: LiveData<Resource<List<RPVideo>>> = _videoList
 
     private var _currentPlaylist: RPPlaylist? = null
 
@@ -40,6 +33,12 @@ class VideoListViewModel(
                 _playlistResponse.value =
                     youtubeRepository.loadPlaylistItemForPlaylist(playlist.id)
             }
+        }
+    }
+
+    fun setPlaylistItems(items: List<RPPlaylistItem>) {
+        viewModelScope.launch {
+            _videoResource.value = youtubeRepository.loadVideoResultResource(items.map { it.videoId })
         }
     }
 

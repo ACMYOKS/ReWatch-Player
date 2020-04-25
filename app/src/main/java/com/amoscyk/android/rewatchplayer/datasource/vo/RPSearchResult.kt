@@ -13,18 +13,24 @@ data class RPSearchResult(
     val publishingChannelId: String,
     val channelTitle: String
 ) {
-    companion object {
-        fun fromApi(result: SearchResult): RPSearchResult {
-            return RPSearchResult(
-                result.id.videoId,
-                result.id.channelId,
-                result.id.playlistId,
-                result.snippet.title,
-                result.snippet.description,
-                RPThumbnailDetails.fromApi(result.snippet.thumbnails),
-                result.snippet.channelId,
-                result.snippet.channelTitle
-            )
-        }
-    }
+    fun toRPVideo() = RPVideo(
+        id = videoId!!,
+        title = title,
+        channelId = publishingChannelId,
+        channelTitle = channelTitle,
+        description = description,
+        thumbnails = thumbnails,
+        tags = listOf()
+    )
 }
+
+fun SearchResult.toRPSearchResult() = RPSearchResult(
+    videoId = id.videoId,
+    channelId = id.channelId,
+    playlistId = id.playlistId,
+    title = snippet.title,
+    description = snippet.description,
+    thumbnails = snippet.thumbnails.toRPThumbnailDetails(),
+    publishingChannelId = snippet.channelId,
+    channelTitle = snippet.channelTitle
+)

@@ -29,7 +29,7 @@ class VideoListResponseResource private constructor(
             try {
                 val response = request.execute()
                 Log.d("LOG", "finish video list request")
-                val result = RPVideoListResponse.fromApi("", response)
+                val result = response.toRPVideoListResponse("")
                 _pageToken = result.nextPageToken
                 if (_pageToken == null) {
                     _endOfListReached = true
@@ -49,6 +49,7 @@ class VideoListResponseResource private constructor(
 
     suspend fun loadMoreResource() {
         if (_pageToken == null) {       // reach end of list
+            _resource.postValue(Resource.success(_resource.value?.data))
             return
         }
         withContext(Dispatchers.IO) {
@@ -58,7 +59,7 @@ class VideoListResponseResource private constructor(
             try {
                 val response = request.setPageToken(_pageToken).execute()
                 Log.d("LOG", "finish load more video list request")
-                val result = RPVideoListResponse.fromApi(_pageToken!!, response)
+                val result = response.toRPVideoListResponse(_pageToken!!)
                 _pageToken = result.nextPageToken
                 if (_pageToken == null) {
                     _endOfListReached = true

@@ -5,6 +5,7 @@ import com.amoscyk.android.rewatchplayer.datasource.PlaylistListResponseResource
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPPlaylist
 import com.amoscyk.android.rewatchplayer.datasource.vo.Resource
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMetaWithPlayerResource
 import kotlinx.coroutines.launch
 
 class LibraryViewModel(
@@ -12,7 +13,8 @@ class LibraryViewModel(
 ): ViewModel() {
     enum class DisplayMode {
         PLAYLISTS,
-        SHOW_ALL
+        BOOKMARKED,
+        SAVED
     }
 
     private val _editMode = MutableLiveData<Boolean>()
@@ -25,6 +27,8 @@ class LibraryViewModel(
     private val playlistResponseResource = MutableLiveData<PlaylistListResponseResource>()
     val playlistList: LiveData<Resource<List<RPPlaylist>>> =
         Transformations.switchMap(playlistResponseResource) { it.resource }
+    private val _bookmarkList = MutableLiveData<Resource<List<VideoMetaWithPlayerResource>>>()
+    val bookmarkList: LiveData<Resource<List<VideoMetaWithPlayerResource>>> = _bookmarkList
 
     init {
         _editMode.value = false
@@ -39,6 +43,14 @@ class LibraryViewModel(
     fun setEditMode(isActive: Boolean) {
         if (_editMode.value == isActive) return
         _editMode.value = isActive
+    }
+
+    fun loadBookmarkList() {
+        viewModelScope.launch {
+            _bookmarkList.value = Resource.loading(null)
+            // FIXME: not always success
+            _bookmarkList.value = Resource.success(youtubeRepository.getBookmarkedVideoMetaWithPlayerResource())
+        }
     }
 
     fun loadPlaylists() {

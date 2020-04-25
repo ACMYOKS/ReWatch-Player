@@ -16,20 +16,26 @@ data class RPPlaylistItem(
     val position: Long,
     val videoId: String
 ) {
-    companion object {
-        fun fromApi(item: PlaylistItem): RPPlaylistItem {
-            return RPPlaylistItem(
-                item.id,
-                item.snippet.title,
-                item.snippet.publishedAt,
-                item.snippet.channelId,
-                item.snippet.channelTitle,
-                item.snippet.description,
-               RPThumbnailDetails.fromApi(item.snippet.thumbnails),
-                item.snippet.playlistId,
-                item.snippet.position,
-                item.snippet.resourceId.videoId
-            )
-        }
-    }
+    fun toRPVideo() = RPVideo(
+        id = videoId,
+        title = title,
+        channelId = channelId,
+        channelTitle = channelTitle,
+        description = description,
+        thumbnails = thumbnails,
+        tags = listOf()
+    )
 }
+
+fun PlaylistItem.toRPPlaylistItem() = RPPlaylistItem(
+    id = id,
+    title = snippet.title,
+    publishedAt = snippet.publishedAt,
+    channelId = snippet.channelId,
+    channelTitle = snippet.channelTitle,
+    description = snippet.description,
+    thumbnails = snippet.thumbnails.toRPThumbnailDetails(),
+    playlistId = snippet.playlistId,
+    position = snippet.position,
+    videoId = snippet.resourceId.videoId
+)

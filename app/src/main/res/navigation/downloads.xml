@@ -8,5 +8,17 @@
     <fragment
         android:id="@+id/downloadManagerFragment"
         android:name="com.amoscyk.android.rewatchplayer.ui.downloads.DownloadManagerFragment"
-        tools:layout="@layout/fragment_download_manager" />
+        tools:layout="@layout/fragment_download_manager" >
+        <action
+            android:id="@+id/showDownloadedFile"
+            app:destination="@id/downloadFileListFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/downloadFileListFragment"
+        android:name="com.amoscyk.android.rewatchplayer.ui.downloads.DownloadFileDetailFragment"
+        tools:layout="@layout/fragment_download_file_detail" >
+        <argument
+            android:name="videoId"
+            app:argType="string" />
+    </fragment>
 </navigation>
