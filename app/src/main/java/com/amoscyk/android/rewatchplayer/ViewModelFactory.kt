@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel
 import com.amoscyk.android.rewatchplayer.ui.VideoListViewModel
+import com.amoscyk.android.rewatchplayer.ui.account.SettingsViewModel
 import com.amoscyk.android.rewatchplayer.ui.account.StartupAccountViewModel
 import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadFileDetailViewModel
 import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadManagerFragment
@@ -50,6 +51,9 @@ class ViewModelFactory(
             }
             modelClass.isAssignableFrom(DownloadFileDetailViewModel::class.java) -> {
                 return DownloadFileDetailViewModel(youtubeRepository) as T
+            }
+            modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
+                return SettingsViewModel() as T
             }
             else -> {
                 return super.create(modelClass)

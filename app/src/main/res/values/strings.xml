@@ -13,4 +13,13 @@
 
     <!-- Common string -->
     <string name="confirm_text">confirm</string>
+
+    <!-- Setting -->
+    <string name="setting_account">Account</string>
+    <string name="setting_account_account_name">account name</string>
+    <string name="setting_player">Player</string>
+    <string name="setting_player_play_only_using_wifi">allow play only when using Wi-Fi</string>
+    <string name="setting_download">Download</string>
+    <string name="setting_download_download_location">download location</string>
+    <string name="setting_download_storage_used">storage used</string>
 </resources>

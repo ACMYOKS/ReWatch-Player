@@ -8,9 +8,10 @@ import android.view.View
 import android.view.ViewGroup
 
 import com.amoscyk.android.rewatchplayer.R
+import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
-class MainPageFragment : Fragment() {
+class MainPageFragment : ReWatchPlayerFragment() {
 
     private var rootView: View? = null
 
@@ -38,7 +39,7 @@ class MainPageFragment : Fragment() {
                     R.navigation.home,
                     R.navigation.library,
                     R.navigation.downloads,
-                    R.navigation.account),
+                    R.navigation.settings),
                 childFragmentManager,
                 R.id.main_page_nav_host_fragment
             )

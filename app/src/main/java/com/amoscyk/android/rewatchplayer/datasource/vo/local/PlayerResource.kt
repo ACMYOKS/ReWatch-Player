@@ -18,5 +18,5 @@ data class PlayerResource(
     val extension: String,
     @ColumnInfo(name = "is_adaptive") val isAdaptive: Boolean,
     @ColumnInfo(name = "is_video") val isVideo: Boolean,
-    @ColumnInfo(name= "download_id") val downloadId: Long   // id for DownloadManager
+    @ColumnInfo(name = "download_id") val downloadId: Long   // id for DownloadManager
 )

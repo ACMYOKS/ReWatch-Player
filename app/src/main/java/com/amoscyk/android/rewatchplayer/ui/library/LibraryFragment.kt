@@ -28,6 +28,7 @@ import com.amoscyk.android.rewatchplayer.util.appSharedPreference
 import com.amoscyk.android.rewatchplayer.util.getString
 import com.amoscyk.android.rewatchplayer.util.putString
 import com.amoscyk.android.rewatchplayer.viewModelFactory
+import com.google.android.material.snackbar.Snackbar
 
 class LibraryFragment : ReWatchPlayerFragment() {
 
@@ -40,6 +41,9 @@ class LibraryFragment : ReWatchPlayerFragment() {
     private lateinit var loadingView: ContentLoadingProgressBar
     private val viewModel by viewModels<LibraryViewModel> { viewModelFactory }
 
+    private var currentDisplayMode = LibraryViewModel.DisplayMode.PLAYLISTS
+    private var isEditMode = false
+
     private val mPlaylistAdapter = PlaylistListAdapter(itemOnClick = {
         findNavController().navigate(LibraryFragmentDirections.showVideoList(it))
     })
@@ -49,11 +53,13 @@ class LibraryFragment : ReWatchPlayerFragment() {
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        viewModel.editMode.observe(this, Observer { isEditMode ->
-            setMenuItemVisibility(isEditMode, viewModel.currentDisplayMode.value!!)
+        viewModel.editMode.observe(this, Observer {
+            isEditMode = it
+            setMenuItemVisibility(it, currentDisplayMode)
         })
         viewModel.currentDisplayMode.observe(this, Observer {
-            setMenuItemVisibility(viewModel.editMode.value!!, it)
+            currentDisplayMode = it
+            setMenuItemVisibility(isEditMode, it)
             setListForDisplayMode(it)
         })
         viewModel.playlistList.observe(this, Observer { resource ->
@@ -113,18 +119,18 @@ class LibraryFragment : ReWatchPlayerFragment() {
         requireActivity().appSharedPreference.apply {
             getString(PreferenceKey.LIBRARY_LIST_MODE, null).let {
                 if (it == null)
-                    edit { putString(PreferenceKey.LIBRARY_LIST_MODE, viewModel.currentDisplayMode.value?.name) }
+                    edit { putString(PreferenceKey.LIBRARY_LIST_MODE, currentDisplayMode.name) }
                 else
                     viewModel.setDisplayMode(LibraryViewModel.DisplayMode.valueOf(it))
             }
         }
-        reloadList()
+        viewModel.getVideoList()
     }
 
     override fun onPause() {
         super.onPause()
         requireActivity().appSharedPreference.apply {
-            edit { putString(PreferenceKey.LIBRARY_LIST_MODE, viewModel.currentDisplayMode.value?.name) }
+            edit { putString(PreferenceKey.LIBRARY_LIST_MODE, currentDisplayMode.name) }
         }
     }
 
@@ -175,9 +181,9 @@ class LibraryFragment : ReWatchPlayerFragment() {
         toolbar.inflateMenu(R.menu.library_option_menu)
         toolbar.setOnMenuItemClickListener {
             when (it.itemId) {
-//                R.id.search_item -> {
-//
-//                }
+                R.id.refresh_list -> {
+                    viewModel.refreshList()
+                }
                 R.id.show_bookmark_list -> {
                     viewModel.setDisplayMode(LibraryViewModel.DisplayMode.BOOKMARKED)
                 }
@@ -193,11 +199,6 @@ class LibraryFragment : ReWatchPlayerFragment() {
             }
             true
         }
-    }
-
-    private fun reloadList() {
-        viewModel.loadPlaylists()
-        viewModel.loadBookmarkList()
     }
 
     private fun setListForDisplayMode(displayMode: LibraryViewModel.DisplayMode) {

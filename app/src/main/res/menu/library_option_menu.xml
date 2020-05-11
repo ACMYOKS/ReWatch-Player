@@ -8,6 +8,11 @@
 <!--            android:title="search"-->
 <!--            app:showAsAction="ifRoom" />-->
         <item
+            android:id="@+id/refresh_list"
+            android:title="refresh"
+            android:icon="@drawable/ic_refresh_white"
+            app:showAsAction="always"/>
+        <item
             android:id="@+id/show_playlists"
             android:title="show playlists"
             android:icon="@drawable/ic_view_list_white"

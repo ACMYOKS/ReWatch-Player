@@ -7,6 +7,6 @@
 
     <fragment
         android:id="@+id/accountFragment"
-        android:name="com.amoscyk.android.rewatchplayer.ui.account.AccountFragment"
-        tools:layout="@layout/fragment_account" />
+        android:name="com.amoscyk.android.rewatchplayer.ui.account.SettingsFragment"
+        tools:layout="@layout/fragment_settings" />
 </navigation>
