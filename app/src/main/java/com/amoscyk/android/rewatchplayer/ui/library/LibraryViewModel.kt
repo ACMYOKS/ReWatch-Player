@@ -2,8 +2,10 @@ package com.amoscyk.android.rewatchplayer.ui.library
 
 import androidx.lifecycle.*
 import com.amoscyk.android.rewatchplayer.datasource.PlaylistListResponseResource
+import com.amoscyk.android.rewatchplayer.datasource.SubscriptionListResponseResource
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPPlaylist
+import com.amoscyk.android.rewatchplayer.datasource.vo.RPSubscription
 import com.amoscyk.android.rewatchplayer.datasource.vo.Resource
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMetaWithPlayerResource
 import kotlinx.coroutines.launch
@@ -13,13 +15,15 @@ class LibraryViewModel(
     private val youtubeRepository: YoutubeRepository
 ) : ViewModel() {
     enum class DisplayMode {
+        CHANNEL,
         PLAYLISTS,
-        BOOKMARKED,
-        SAVED
+        BOOKMARKED
     }
 
+    private var channelTimer: Timer? = null
     private var playlistTimer: Timer? = null
     private var bookmarkListTimer: Timer? = null
+    private var reachRefreshChannelTime = true
     private var reachRefreshPlaylistTime = true
     private var reachRefreshBookmarkListTime = true
 
@@ -30,6 +34,9 @@ class LibraryViewModel(
     private val _currentDisplayMode = MutableLiveData<DisplayMode>()
     val currentDisplayMode: LiveData<DisplayMode> = _currentDisplayMode
 
+    private val channelListResponseResource = MutableLiveData<SubscriptionListResponseResource>()
+    val channelList: LiveData<Resource<List<RPSubscription>>> =
+        channelListResponseResource.switchMap { it.resource }
     private val playlistResponseResource = MutableLiveData<PlaylistListResponseResource>()
     val playlistList: LiveData<Resource<List<RPPlaylist>>> =
         Transformations.switchMap(playlistResponseResource) { it.resource }
@@ -43,10 +50,27 @@ class LibraryViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        channelTimer?.cancel()
+        channelTimer = null
         bookmarkListTimer?.cancel()
         bookmarkListTimer = null
         playlistTimer?.cancel()
         playlistTimer = null
+    }
+
+    private fun setChannelTimer() {
+        reachRefreshChannelTime = false
+        channelTimer?.cancel()
+        channelTimer = Timer().apply {
+            schedule(object : TimerTask() {
+                override fun run() {
+                    reachRefreshChannelTime = true
+                    if (_currentDisplayMode.value == DisplayMode.CHANNEL) {
+                        loadChannelList()
+                    }
+                }
+            }, LIST_REFRESH_RATE)
+        }
     }
 
     private fun setPlaylistTimer() {
@@ -83,6 +107,9 @@ class LibraryViewModel(
      timer */
     fun getVideoList() {
         when (_currentDisplayMode.value) {
+            DisplayMode.CHANNEL -> {
+                if (reachRefreshChannelTime) loadChannelList()
+            }
             DisplayMode.PLAYLISTS -> {
                 if (reachRefreshPlaylistTime) loadPlaylists()
             }
@@ -96,6 +123,9 @@ class LibraryViewModel(
     fun refreshList() {
         when (_currentDisplayMode.value) {
             // TODO: should notify user list has been reloaded
+            DisplayMode.CHANNEL -> {
+                loadChannelList()
+            }
             DisplayMode.PLAYLISTS -> {
                 loadPlaylists()
             }
@@ -110,6 +140,11 @@ class LibraryViewModel(
         if (_currentDisplayMode.value == displayMode) return
         _currentDisplayMode.value = displayMode
         when (displayMode) {
+            DisplayMode.CHANNEL -> {
+                if (reachRefreshChannelTime && _editMode.value == false) {
+                    loadChannelList()
+                }
+            }
             DisplayMode.BOOKMARKED -> {
                 if (reachRefreshBookmarkListTime && _editMode.value == false) {
                     loadBookmarkList()
@@ -120,7 +155,6 @@ class LibraryViewModel(
                     loadPlaylists()
                 }
             }
-            else -> {}
         }
     }
 
@@ -128,11 +162,26 @@ class LibraryViewModel(
         if (_editMode.value == isActive) return
         _editMode.value = isActive
         if (!isActive) {
-            if (_currentDisplayMode.value == DisplayMode.PLAYLISTS && reachRefreshPlaylistTime) {
+            if (_currentDisplayMode.value == DisplayMode.CHANNEL && reachRefreshChannelTime) {
+                loadChannelList()
+            } else if (_currentDisplayMode.value == DisplayMode.PLAYLISTS && reachRefreshPlaylistTime) {
                 loadPlaylists()
             } else if (_currentDisplayMode.value == DisplayMode.BOOKMARKED && reachRefreshBookmarkListTime) {
                 loadBookmarkList()
             }
+        }
+    }
+
+    private fun loadChannelList() {
+        viewModelScope.launch {
+            channelListResponseResource.value = youtubeRepository.loadSubscribedChannelResource()
+            setChannelTimer()
+        }
+    }
+
+    fun loadMoreChannels() {
+        viewModelScope.launch {
+            channelListResponseResource.value?.loadMoreResource()
         }
     }
 

@@ -25,7 +25,7 @@ import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMetaWithPlayerResource
 import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadPageViewModel.MenuState
 import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
-import com.amoscyk.android.rewatchplayer.util.YouTubeThumbnailHelper
+import com.amoscyk.android.rewatchplayer.util.YouTubeVideoThumbnailHelper
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.download_manager_fragment_list_item.view.*
@@ -168,7 +168,7 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
             val item = getItem(position)
             if (checkStatus[item.videoMeta.videoId] == null) checkStatus[item.videoMeta.videoId] = false
             holder.apply {
-                ivPreview.load(YouTubeThumbnailHelper.getDefaultUrl(item.videoMeta.videoId))
+                ivPreview.load(YouTubeVideoThumbnailHelper.getDefaultUrl(item.videoMeta.videoId))
                 tvTitle.text = item.videoMeta.title
                 tvAuthor.text = item.videoMeta.channelTitle
                 tvQuality.text = item.playerResources.joinToString { res ->

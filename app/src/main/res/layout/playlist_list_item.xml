@@ -1,21 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="100dp"
+    xmlns:tools="http://schemas.android.com/tools"
     app:cardCornerRadius="5dp"
-    app:contentPadding="8dp"
     app:cardElevation="1dp"
     app:cardMaxElevation="4dp"
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    android:foreground="?android:attr/selectableItemBackground">
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp">
         <ImageView
             android:id="@+id/playlist_img"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            app:layout_constraintDimensionRatio="4:3"
+            app:layout_constraintDimensionRatio="16:9"
             app:layout_constraintStart_toStartOf="parent"
             android:scaleType="centerCrop"/>
         <TextView
@@ -24,9 +29,9 @@
             android:layout_height="wrap_content"
             app:layout_constraintStart_toEndOf="@id/playlist_img"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            android:layout_marginStart="4dp"
-            android:text="playlist title"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginStart="8dp"
+            tools:text="playlist title"
             android:textSize="20sp"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.cardview.widget.CardView>

@@ -32,7 +32,7 @@ import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.PlayerResource
 import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadPageViewModel.MenuState
 import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
-import com.amoscyk.android.rewatchplayer.util.YouTubeThumbnailHelper
+import com.amoscyk.android.rewatchplayer.util.YouTubeVideoThumbnailHelper
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.download_file_list_item.view.*
@@ -93,7 +93,7 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
         mAdapter = DownloadedFileAdapter()
         viewModel.videoMeta.observe(this, Observer { metas ->
             metas.firstOrNull()?.let { res ->
-                mIvPreview.load(YouTubeThumbnailHelper.getStandardUrl(res.videoMeta.videoId))
+                mIvPreview.load(YouTubeVideoThumbnailHelper.getStandardUrl(res.videoMeta.videoId))
                 mTvTitle.text = res.videoMeta.title
                 mTvAuthor.text = res.videoMeta.channelTitle
                 mTvVideoId.text = res.videoMeta.videoId

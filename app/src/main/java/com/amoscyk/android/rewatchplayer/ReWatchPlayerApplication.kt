@@ -2,13 +2,19 @@ package com.amoscyk.android.rewatchplayer
 
 import android.app.Activity
 import android.app.Application
+import android.graphics.Color
 import android.util.Log
+import androidx.core.provider.FontRequest
+import androidx.emoji.bundled.BundledEmojiCompatConfig
+import androidx.emoji.text.EmojiCompat
+import androidx.emoji.text.FontRequestEmojiCompatConfig
 import androidx.fragment.app.Fragment
 import androidx.room.Room
 import com.amoscyk.android.rewatchplayer.datasource.AppDatabase
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.service.YoutubeServiceProvider
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeOpenService
+import com.jakewharton.threetenabp.AndroidThreeTen
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
 
@@ -29,6 +35,8 @@ class ReWatchPlayerApplication: Application() {
         super.onCreate()
         Log.d("LOG", "application created")
 
+        AndroidThreeTen.init(this)
+
         _appDb = Room
             .databaseBuilder(this, AppDatabase::class.java, "app.db")
 //            .addMigrations()
@@ -37,6 +45,10 @@ class ReWatchPlayerApplication: Application() {
 
         _youtubeRepository = YoutubeRepository(youtubeServiceProvider.youtubeService,
             youtubeOpenService, _appDb)
+
+        BundledEmojiCompatConfig(this).let {
+            EmojiCompat.init(it)
+        }
     }
 
 }

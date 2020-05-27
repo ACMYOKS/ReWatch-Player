@@ -15,6 +15,9 @@ interface VideoMetaDao {
     @Query("SELECT * FROM video_metas WHERE bookmarked = 1")
     fun getBookmarked(): List<VideoMeta>
 
+    @Query("UPDATE video_metas SET bookmarked = NOT bookmarked WHERE video_id IN(:videoIds)")
+    fun toggleBookmarked(vararg videoIds: String): Int
+
     @Transaction
     @Query("SELECT * FROM video_metas")
     fun getAllWithPlayerResource(): List<VideoMetaWithPlayerResource>

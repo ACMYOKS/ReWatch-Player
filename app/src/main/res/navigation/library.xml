@@ -10,8 +10,8 @@
         android:name="com.amoscyk.android.rewatchplayer.ui.library.LibraryFragment"
         tools:layout="@layout/fragment_library" >
         <action
-            android:id="@+id/showVideoList"
-            app:destination="@id/videoListFragment" />
+            android:id="@+id/showChannelDetail"
+            app:destination="@id/channelFragment" />
     </fragment>
     <fragment
         android:id="@+id/videoListFragment"
@@ -20,5 +20,18 @@
         <argument
             android:name="playlist"
             app:argType="com.amoscyk.android.rewatchplayer.datasource.vo.RPPlaylist" />
+        <argument
+            android:name="enableEditOnLongClick"
+            app:argType="boolean" />
     </fragment>
+    <fragment
+        android:id="@+id/channelFragment"
+        android:name="com.amoscyk.android.rewatchplayer.ui.ChannelFragment"
+        tools:layout="@layout/fragment_channel">
+        <argument
+            android:name="channelId"
+            app:argType="string" />
+    </fragment>
+    <action android:id="@+id/showVideoListForPlaylist"
+        app:destination="@id/videoListFragment"/>
 </navigation>

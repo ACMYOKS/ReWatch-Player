@@ -22,5 +22,6 @@ data class VideoDetails(
     val channelId: String = "",
     val author: String = "",
     val shortDescription: String = "",
+    val lengthSeconds: String = "",
     val keywords: List<String> = listOf()
 )

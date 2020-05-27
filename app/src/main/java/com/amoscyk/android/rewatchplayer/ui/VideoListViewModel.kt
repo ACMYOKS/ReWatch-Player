@@ -1,12 +1,10 @@
 package com.amoscyk.android.rewatchplayer.ui
 
-import android.util.Log
 import androidx.lifecycle.*
 import com.amoscyk.android.rewatchplayer.datasource.PlaylistItemListResponseResource
 import com.amoscyk.android.rewatchplayer.datasource.VideoListResponseResource
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.datasource.vo.*
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class VideoListViewModel(

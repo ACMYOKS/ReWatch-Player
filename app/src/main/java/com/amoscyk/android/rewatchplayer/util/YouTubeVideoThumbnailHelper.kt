@@ -4,7 +4,7 @@ import com.amoscyk.android.rewatchplayer.AppConstant
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPThumbnail
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPThumbnailDetails
 
-object YouTubeThumbnailHelper {
+object YouTubeVideoThumbnailHelper {
     private const val DEFAULT = AppConstant.YOUTUBE_IMG_API_URL + "/%s/default.jpg"
     private const val HQ_DEFAULT = AppConstant.YOUTUBE_IMG_API_URL + "/%s/hqdefault.jpg"
     private const val MQ_DEFAULT = AppConstant.YOUTUBE_IMG_API_URL + "/%s/mqdefault.jpg"

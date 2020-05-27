@@ -13,12 +13,14 @@ data class RPSearchResult(
     val publishingChannelId: String,
     val channelTitle: String
 ) {
+    // FIXME: never assume search result is video
     fun toRPVideo() = RPVideo(
         id = videoId!!,
         title = title,
         channelId = publishingChannelId,
         channelTitle = channelTitle,
         description = description,
+        duration = "",
         thumbnails = thumbnails,
         tags = listOf()
     )

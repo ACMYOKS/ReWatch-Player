@@ -2,11 +2,12 @@ package com.amoscyk.android.rewatchplayer.ui
 
 import android.graphics.Rect
 import android.view.View
+import androidx.annotation.Px
 import androidx.recyclerview.widget.RecyclerView
 
 class CommonListDecoration(
-    private val verticalSpace: Int,
-    private val horizontalSpace: Int
+    @Px private val verticalSpace: Int,
+    @Px private val horizontalSpace: Int
 ): RecyclerView.ItemDecoration() {
 
     override fun getItemOffsets(

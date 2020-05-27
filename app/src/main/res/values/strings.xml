@@ -11,8 +11,20 @@
     <string name="player_archive_option_video">Video Resolution</string>
     <string name="player_archive_option_audio">Audio Quality</string>
 
+    <!-- Library -->
+    <string name="library_list_channel">Channel</string>
+    <string name="library_list_playlist">Playlist</string>
+    <string name="library_list_bookmarked">Bookmarked</string>
+
+    <!-- Channel -->
+    <string name="channel_subscriber_count">%1$d subscribers</string>
+    <string name="channel_video_count">%1$d videos</string>
+    <string name="channel_uploaded_title">Uploaded</string>
+    <string name="channel_playlist_title">Playlist</string>
+
     <!-- Common string -->
     <string name="confirm_text">confirm</string>
+    <string name="empty_list">No Item!</string>
 
     <!-- Setting -->
     <string name="setting_account">Account</string>

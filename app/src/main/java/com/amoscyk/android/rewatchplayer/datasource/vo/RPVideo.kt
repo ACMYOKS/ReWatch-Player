@@ -12,6 +12,7 @@ data class RPVideo(
     val channelId: String,
     val channelTitle: String,
     val description: String,
+    val duration: String,
     val thumbnails: RPThumbnailDetails,
     val tags: List<String>
 ): Parcelable {
@@ -21,6 +22,7 @@ data class RPVideo(
         channelId = channelId,
         channelTitle = channelTitle,
         description = description,
+        duration = duration,
         thumbnails = thumbnails,
         tags = tags,
         itags = listOf(),
@@ -34,6 +36,7 @@ fun Video.toRPVideo() = RPVideo(
     channelId = snippet.channelId,
     channelTitle = snippet.channelTitle,
     description = snippet.description,
+    duration = contentDetails.duration,
     thumbnails = snippet.thumbnails.toRPThumbnailDetails(),
     tags = snippet.tags ?: listOf()
 )

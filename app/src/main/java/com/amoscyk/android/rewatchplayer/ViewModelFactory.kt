@@ -5,6 +5,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
+import com.amoscyk.android.rewatchplayer.ui.ChannelViewModel
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel
 import com.amoscyk.android.rewatchplayer.ui.VideoListViewModel
 import com.amoscyk.android.rewatchplayer.ui.account.SettingsViewModel
@@ -39,6 +40,9 @@ class ViewModelFactory(
             }
             modelClass.isAssignableFrom(LibraryViewModel::class.java) -> {
                 return LibraryViewModel(youtubeRepository) as T
+            }
+            modelClass.isAssignableFrom(ChannelViewModel::class.java) -> {
+                return ChannelViewModel(youtubeRepository) as T
             }
             modelClass.isAssignableFrom(VideoListViewModel::class.java) -> {
                 return VideoListViewModel(youtubeRepository) as T

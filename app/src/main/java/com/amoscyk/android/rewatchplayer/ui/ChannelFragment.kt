@@ -1,0 +1,274 @@
+package com.amoscyk.android.rewatchplayer.ui
+
+import android.content.Context
+import android.graphics.Color
+import android.os.Bundle
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.TextView
+import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.drawable.toBitmap
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Observer
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
+import androidx.navigation.ui.setupWithNavController
+import androidx.palette.graphics.Palette
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.transition.Fade
+import androidx.transition.TransitionManager
+import coil.Coil
+import coil.api.load
+import coil.request.LoadRequest
+import coil.transform.BlurTransformation
+import coil.transform.CircleCropTransformation
+import com.amoscyk.android.rewatchplayer.AppConstant
+import com.amoscyk.android.rewatchplayer.R
+import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
+import com.amoscyk.android.rewatchplayer.datasource.vo.RPPlaylist
+import com.amoscyk.android.rewatchplayer.datasource.vo.Status
+import com.amoscyk.android.rewatchplayer.util.dpToPx
+import com.amoscyk.android.rewatchplayer.util.setForegroundItemColor
+import com.amoscyk.android.rewatchplayer.util.withEmoji
+import com.amoscyk.android.rewatchplayer.viewModelFactory
+import kotlinx.android.synthetic.main.fragment_channel.view.*
+
+class ChannelFragment: ReWatchPlayerFragment() {
+
+    private var mRootView: View? = null
+    private val mCollapsingToolbar by lazy { mRootView!!.collapsing_toolbar }
+    private val mToolbar by lazy { mRootView!!.toolbar }
+    private val mIvBanner by lazy { mRootView!!.iv_banner }
+    private val mIvThumbnail by lazy { mRootView!!.iv_thumbnail }
+    private val mTvChannelName by lazy { mRootView!!.tv_title }
+    private val mTvSubscriberCount by lazy { mRootView!!.tv_subscriber_count }
+    private val mTvVideoCount by lazy { mRootView!!.tv_video_count }
+    private val mTvDescription by lazy { mRootView!!.tv_description }
+    private val mBtnToggleDetail by lazy { mRootView!!.btn_toggle_description }
+    private val mRvUploaded by lazy { mRootView!!.rv_uploaded }
+    private val mRvPlaylist by lazy { mRootView!!.rv_playlist }
+    private val mLoadingUploaded by lazy { mRootView!!.loading_upload }
+    private val mLoadingPlaylist by lazy { mRootView!!.loading_playlist }
+    private val mEmptyViewUploaded by lazy { mRootView!!.empty_view1 }
+    private val mEmptyViewPlaylist by lazy { mRootView!!.empty_view2 }
+
+    private val mUploadedAdapter = PlaylistAdapter(itemOnClick = {
+        findNavController().navigate(VideoListFragmentDirections.showVideoListForPlaylist(it, true))
+    })
+    private val mPlaylistAdapter = PlaylistAdapter(itemOnClick = {
+        findNavController().navigate(VideoListFragmentDirections.showVideoListForPlaylist(it, true))
+    }, onReloadNeeded = {
+        viewModel.loadMorePlaylist()
+    })
+
+    private val viewModel by viewModels<ChannelViewModel> { viewModelFactory }
+    private val args by navArgs<ChannelFragmentArgs>()
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+
+        viewModel.channelRes.observe(this, Observer { res ->
+            when (res.status) {
+                Status.SUCCESS -> {
+                    res.data?.firstOrNull()?.let { info ->
+                        mCollapsingToolbar.title = info.title.withEmoji()
+                        mToolbar.title = info.title.withEmoji()
+                        mTvChannelName.text = info.title.withEmoji()
+                        mTvDescription.text = info.description.withEmoji()
+                        mTvSubscriberCount.text = getString(R.string.channel_subscriber_count).format(info.subscriberCount)
+                        mTvVideoCount.text = getString(R.string.channel_video_count).format(info.videoCount)
+                        mIvThumbnail.load(info.thumbnails.default?.url) {
+                            transformations(CircleCropTransformation())
+                        }
+                        mIvBanner.load(info.bannerMobileImageUrl)
+                        LoadRequest.Builder(requireContext())
+                            .allowHardware(false)       // disable hardware to allow getting bitmap from drawable
+                            .transformations(BlurTransformation(requireContext()))
+                            .data(info.bannerMobileImageUrl)
+                            .target { drawable ->
+                                mIvBanner.setImageDrawable(drawable)
+                                runCatching {
+                                    val bitmap = drawable.toBitmap()
+                                    val palette = Palette.from(bitmap).generate()
+                                    palette.dominantSwatch?.let {
+                                        val rgbTextColor = ColorUtils.compositeColors(it.titleTextColor, Color.WHITE)       // flatten alpha value
+                                        mCollapsingToolbar.apply {
+                                            setContentScrimColor(it.rgb)
+                                            setCollapsedTitleTextColor(rgbTextColor)
+                                        }
+                                        mToolbar.setForegroundItemColor(rgbTextColor)
+                                    }
+                                }
+                            }
+                            .build()
+                            .also { Coil.imageLoader(requireContext()).execute(it) }
+                        viewModel.setUploadedListId(info.uploads)
+                    }
+                }
+                Status.ERROR -> {
+
+                }
+                Status.LOADING -> {
+
+                }
+            }
+        })
+
+        viewModel.uploadedVideoRes.observe(this, Observer {
+            when (it.status) {
+                Status.SUCCESS -> {
+                    if (mUploadedAdapter.itemCount == 0) {
+                        mLoadingUploaded.hide()
+                    }
+                    mUploadedAdapter.updateList(it.data.orEmpty())
+                    mEmptyViewUploaded.visibility =
+                        if (mUploadedAdapter.itemCount == 0) View.VISIBLE
+                        else View.GONE
+                }
+                Status.ERROR -> {
+                    if (mUploadedAdapter.itemCount == 0) {
+                        mLoadingUploaded.hide()
+                    }
+                    mEmptyViewUploaded.visibility =
+                        if (mUploadedAdapter.itemCount == 0) View.VISIBLE
+                        else View.GONE
+                    Log.e(AppConstant.TAG, it.stringMessage)
+                }
+                Status.LOADING -> {
+                    if (mUploadedAdapter.itemCount == 0) {
+                        mLoadingUploaded.show()
+                    }
+                    mEmptyViewUploaded.visibility = View.GONE
+                }
+            }
+        })
+
+        viewModel.featuredPlaylistRes.observe(this, Observer {
+            when (it.status) {
+                Status.SUCCESS -> {
+                    // need disable load more if end of list reached to prevent infinite loading
+                    if (mPlaylistAdapter.itemCount == 0) {
+                        mLoadingPlaylist.hide()
+                    }
+                    mPlaylistAdapter.onUpdateFinish()
+                    mPlaylistAdapter.updateList(it.data.orEmpty())
+                    mEmptyViewPlaylist.visibility =
+                        if (mPlaylistAdapter.itemCount == 0) View.VISIBLE
+                        else View.GONE
+                }
+                Status.ERROR -> {
+                    if (mPlaylistAdapter.itemCount == 0) {
+                        mLoadingPlaylist.hide()
+                    }
+                    mPlaylistAdapter.onUpdateFinish()
+                    Log.e(AppConstant.TAG, it.stringMessage)
+                    mEmptyViewPlaylist.visibility =
+                        if (mPlaylistAdapter.itemCount == 0) View.VISIBLE
+                        else View.GONE
+                }
+                Status.LOADING -> {
+                    if (mPlaylistAdapter.itemCount == 0) {
+                        mLoadingPlaylist.show()
+                    }
+                    mEmptyViewPlaylist.visibility = View.GONE
+                }
+            }
+        })
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
+                              savedInstanceState: Bundle?): View? {
+        if (mRootView == null) {
+            mRootView = inflater.inflate(R.layout.fragment_channel, container, false)
+            setupViews()
+        }
+        return mRootView
+    }
+
+    override fun onStart() {
+        super.onStart()
+        viewModel.setChannelId(args.channelId)
+    }
+
+    private fun setupViews() {
+        mCollapsingToolbar.apply {
+            setupWithNavController(mToolbar, findNavController())
+            setExpandedTitleColor(Color.TRANSPARENT)
+        }
+        mBtnToggleDetail.setOnClickListener {
+            it.isSelected = !it.isSelected
+            TransitionManager.beginDelayedTransition(mRootView as ViewGroup, Fade())
+            mTvDescription.visibility = if (it.isSelected) View.VISIBLE else View.GONE
+        }
+        mBtnToggleDetail.isSelected = false
+        mTvDescription.visibility = View.GONE
+        mRvUploaded.apply {
+            adapter = mUploadedAdapter
+            layoutManager = LinearLayoutManager(requireContext())
+            addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(14f).toInt()))
+        }
+        mRvPlaylist.apply {
+            adapter = mPlaylistAdapter
+            layoutManager = LinearLayoutManager(requireContext())
+            addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(14f).toInt()))
+        }
+    }
+
+    private class PlaylistAdapter(
+        private val itemOnClick: ((RPPlaylist) -> Unit)? = null,
+        private val onReloadNeeded: (() -> Unit)? = null
+    ) : RecyclerView.Adapter<PlaylistAdapter.ViewHolder>() {
+        private val list = arrayListOf<RPPlaylist>()
+        private val reloadThresholdMilli = 5000L     // after trigger reload, disable trigger for this period of time
+        private var disableReloadUntil = -1L
+
+        override fun getItemCount(): Int {
+            return list.size
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            return ViewHolder(LayoutInflater.from(parent.context)
+                .inflate(R.layout.playlist_list_item, parent, false))
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val item = list[position]
+            holder.bind(item)
+            if (position == itemCount - 1) {
+                val current = System.currentTimeMillis()
+                if (current >= disableReloadUntil) {
+                    onReloadNeeded?.invoke()
+                    disableReloadUntil = current + reloadThresholdMilli
+                }
+            }
+        }
+
+        fun onUpdateFinish() {
+            disableReloadUntil = -1L
+        }
+
+        fun updateList(newList: List<RPPlaylist>) {
+            list.apply { clear(); addAll(newList) }
+            notifyDataSetChanged()
+        }
+
+        private inner class ViewHolder(view: View): RecyclerView.ViewHolder(view) {
+            val thumbnailImg = itemView.findViewById<ImageView>(R.id.playlist_img)
+            val titleTv = itemView.findViewById<TextView>(R.id.playlist_title_tv)
+            init {
+                itemView.setOnClickListener {
+                    itemOnClick?.invoke(list[adapterPosition])
+                }
+            }
+
+            fun bind(playlist: RPPlaylist) {
+                thumbnailImg.load(playlist.thumbnails.default?.url)
+                titleTv.text = playlist.title
+            }
+        }
+    }
+}

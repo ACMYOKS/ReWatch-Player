@@ -23,6 +23,7 @@ import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.ui.MainActivity
+import com.amoscyk.android.rewatchplayer.ui.MainViewModel
 import com.amoscyk.android.rewatchplayer.ui.VideoListAdapter
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
@@ -46,6 +47,7 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
 
     private val mVideoListAdapter = VideoListAdapter()
 
+    private val mainViewModel by viewModels<MainViewModel> { viewModelFactory }
     private val viewModel by viewModels<VideoSearchViewModel> { viewModelFactory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,11 +63,7 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
 
                 }
                 Status.SUCCESS -> {
-//                    var string = ""
-//                    it.data!!.forEach { result ->
-//                        string += "title:${result.title} videoId:${result.videoId}\n"
-//                    }
-//                    mTextView.text = string
+                    // FIXME: get video from video api instead of direct conversion
                     resource.data!!
                         .map { searchResult -> searchResult.toRPVideo() }
                         .let { list -> mVideoListAdapter.submitList(list.map { it.toVideoMeta() }) }

@@ -170,13 +170,24 @@ class MainActivity : ReWatchPlayerActivity() {
 //            }.show()
         })
 
+        viewModel.needShowArchiveOption.observe(this, Observer { event ->
+            event.getContentIfNotHandled { mArchiveOptionDialog?.show() }
+        })
+
+        viewModel.bookmarkToggled.observe(this, Observer {
+            viewModel.videoMeta.value?.apply {
+                bookmarked = !bookmarked
+                setBookmarkButton(bookmarked)
+            }
+        })
+
         viewModel.searchVideoResource.observe(this, Observer { res ->
             when (res.status) {
                 Status.LOADING -> {
                     Toast.makeText(this, "Checking...", Toast.LENGTH_SHORT).show()
                 }
                 Status.SUCCESS -> {
-                    viewModel.prepareVideoResource2(this, res.data!!)
+                    viewModel.playVideoForId(this, res.data!!)
                 }
                 Status.ERROR -> {
                     Toast.makeText(
@@ -540,14 +551,15 @@ class MainActivity : ReWatchPlayerActivity() {
                 inflateMenu(R.menu.player_option_menu)
                 setOnMenuItemClickListener {
                     when (it.itemId) {
-                        R.id.bookmark -> {
-                            viewModel.updateBookmarkStatus(true)
-                        }
-                        R.id.remove_bookmark -> {
-                            viewModel.updateBookmarkStatus(false)
+                        R.id.bookmark, R.id.remove_bookmark -> {
+                            viewModel.videoMeta.value?.videoId?.let { vid ->
+                                viewModel.toggleBookmarkStatus(vid)
+                            }
                         }
                         R.id.archive -> {
-                            mArchiveOptionDialog?.show()
+                            viewModel.videoMeta.value?.videoId?.let { vid ->
+                                showArchiveOption(vid)
+                            }
                         }
                         R.id.rotation -> {
                             handleRotation()
@@ -639,7 +651,15 @@ class MainActivity : ReWatchPlayerActivity() {
             it.playWhenReady = playWhenReady
             it.seekTo(currentWindow, playbackPosition)
         }
-        viewModel.prepareVideoResource2(this, videoId)
+        viewModel.playVideoForId(this, videoId)
+    }
+
+    fun showArchiveOption(videoId: String) {
+        viewModel.showArchiveOption(videoId)
+    }
+
+    fun toggleBookmarkStatus(videoId: String) {
+        viewModel.toggleBookmarkStatus(videoId)
     }
 
     private fun showPlayerView() {

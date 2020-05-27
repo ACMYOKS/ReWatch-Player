@@ -12,16 +12,16 @@
             android:title="refresh"
             android:icon="@drawable/ic_refresh_white"
             app:showAsAction="always"/>
-        <item
-            android:id="@+id/show_playlists"
-            android:title="show playlists"
-            android:icon="@drawable/ic_view_list_white"
-            app:showAsAction="always" />
-        <item
-            android:id="@+id/show_bookmark_list"
-            android:title="show bookmark items"
-            android:icon="@drawable/ic_bookmark_border_white"
-            app:showAsAction="always" />
+<!--        <item-->
+<!--            android:id="@+id/show_playlists"-->
+<!--            android:title="show playlists"-->
+<!--            android:icon="@drawable/ic_view_list_white"-->
+<!--            app:showAsAction="always" />-->
+<!--        <item-->
+<!--            android:id="@+id/show_bookmark_list"-->
+<!--            android:title="show bookmark items"-->
+<!--            android:icon="@drawable/ic_bookmark_border_white"-->
+<!--            app:showAsAction="always" />-->
         <item
             android:id="@+id/settings"
             android:title="settings"

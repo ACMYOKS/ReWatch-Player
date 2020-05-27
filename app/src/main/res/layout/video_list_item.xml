@@ -9,7 +9,11 @@
     <androidx.cardview.widget.CardView
         android:id="@+id/card_view"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="5dp"
+        app:cardElevation="1dp"
+        app:cardMaxElevation="4dp"
+        android:foreground="?android:attr/selectableItemBackground">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -32,16 +36,34 @@
                 app:layout_constraintWidth_percent="0.4" />
 
             <TextView
+                android:id="@+id/duration_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintEnd_toEndOf="@id/thumbnail"
+                app:layout_constraintBottom_toBottomOf="@id/thumbnail"
+                android:layout_marginEnd="4dp"
+                android:layout_marginBottom="4dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:paddingStart="2dp"
+                android:paddingEnd="2dp"
+                android:background="#AA000000"
+                android:textColor="@android:color/white"
+                android:textSize="12sp"
+                tools:text="00:00"/>
+
+            <TextView
                 android:id="@+id/title_tv"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_marginEnd="8dp"
+                app:layout_goneMarginEnd="0dp"
                 android:ellipsize="end"
                 android:maxLines="3"
                 android:textColor="@android:color/white"
                 android:textSize="18sp"
-                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/checkbox_select"
                 app:layout_constraintStart_toEndOf="@id/thumbnail"
                 app:layout_constraintTop_toTopOf="parent"
                 tools:text="title here" />
@@ -59,6 +81,38 @@
                 app:layout_constraintStart_toStartOf="@id/title_tv"
                 app:layout_constraintTop_toBottomOf="@id/title_tv"
                 tools:text="channel name" />
+
+            <ImageView
+                android:id="@+id/iv_bookmark"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:padding="12dp"
+                app:layout_constraintTop_toBottomOf="@id/channel_title_tv"
+                app:layout_constraintEnd_toStartOf="@id/iv_archive"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:src="@drawable/ic_bookmark_selectable"
+                android:scaleType="fitCenter"/>
+
+            <ImageView
+                android:id="@+id/iv_archive"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:padding="12dp"
+                app:layout_constraintTop_toBottomOf="@id/channel_title_tv"
+                app:layout_constraintEnd_toEndOf="@id/channel_title_tv"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:src="@drawable/ic_file_download_white"
+                android:scaleType="fitCenter"/>
+
+            <CheckBox
+                android:id="@+id/checkbox_select"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                tools:visibility="visible"/>
 
             <androidx.core.widget.ContentLoadingProgressBar
                 android:layout_width="wrap_content"

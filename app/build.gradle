@@ -43,6 +43,8 @@ dependencies {
     def appcompat_version = "1.1.0"
     def core_version = "1.1.0"
     def fragment_version = "1.1.0"
+    def palette_version = "1.0.0"
+    def emoji_version = "1.0.0"
     def constraintlayout_version = "2.0.0-beta4"
     def lifecycle_version = "2.1.0"
     def lifecycle_runtime_ktx_version = "2.2.0-rc01"
@@ -53,7 +55,7 @@ dependencies {
     def easypermission_version = "3.0.0"
     def moshi_version = "1.9.1"
     def retrofit_version = "2.3.0"
-    def coil_version = "0.6.1"
+    def coil_version = "0.11.0"
     def exoplayer_version = "2.10.8"
 
     implementation fileTree(dir: "libs", include: ["*.jar"])
@@ -65,6 +67,8 @@ dependencies {
     implementation "androidx.constraintlayout:constraintlayout:$constraintlayout_version"
     implementation "androidx.fragment:fragment:$fragment_version"
     implementation "androidx.fragment:fragment-ktx:$fragment_version"
+    implementation "androidx.palette:palette:$palette_version"
+    implementation "androidx.emoji:emoji-bundled:$emoji_version"
 
     implementation "androidx.legacy:legacy-support-v4:1.0.0"
 
@@ -102,6 +106,8 @@ dependencies {
     kapt "com.squareup.moshi:moshi-kotlin-codegen:$moshi_version"
 
     implementation "io.coil-kt:coil:$coil_version"
+
+    implementation 'com.jakewharton.threetenabp:threetenabp:1.2.4'
 
     // youtube url extractor dependency
     implementation "com.github.HaarigerHarald:android-youtubeExtractor:master-SNAPSHOT"

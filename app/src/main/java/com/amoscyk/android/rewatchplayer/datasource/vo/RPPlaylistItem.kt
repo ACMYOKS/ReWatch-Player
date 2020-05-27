@@ -16,12 +16,14 @@ data class RPPlaylistItem(
     val position: Long,
     val videoId: String
 ) {
+    // FIXME: never assume playlistItem is video
     fun toRPVideo() = RPVideo(
         id = videoId,
         title = title,
         channelId = channelId,
         channelTitle = channelTitle,
         description = description,
+        duration = "",
         thumbnails = thumbnails,
         tags = listOf()
     )

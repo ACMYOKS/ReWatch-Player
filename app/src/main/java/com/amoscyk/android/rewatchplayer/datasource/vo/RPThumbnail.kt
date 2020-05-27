@@ -14,8 +14,8 @@ data class RPThumbnail(
 fun Thumbnail?.toRPThumbnail(): RPThumbnail? {
     if (this == null) return null
     return RPThumbnail(
-        url,
-        width,
-        height
+        url.orEmpty(),
+        width ?: -1,
+        height ?: -1
     )
 }
