@@ -13,14 +13,15 @@ import kotlinx.coroutines.withContext
 class PlaylistItemListResponseResource private constructor(
     private val request: YouTube.PlaylistItems.List
 ) {
-    private val _resource = MutableLiveData<Resource<List<RPPlaylistItem>>>()
+    private val _resource = MutableLiveData<Resource<ListResponseHolder<RPPlaylistItem>>>()
         .apply { Resource.loading(null) }
-    val resource: LiveData<Resource<List<RPPlaylistItem>>> = _resource
+    val resource: LiveData<Resource<ListResponseHolder<RPPlaylistItem>>> = _resource
 
     private var _endOfListReached = false
     val endOfListReached: Boolean
         get() = _endOfListReached
     private var _pageToken: String? = null
+    private var listResponse = ListResponseHolder<RPPlaylistItem>()
 
     private suspend fun startRequest() {
         withContext(Dispatchers.IO) {
@@ -34,7 +35,8 @@ class PlaylistItemListResponseResource private constructor(
                 if (_pageToken == null) {
                     _endOfListReached = true
                 }
-                _resource.postValue(Resource.success(result.items))
+                listResponse = ListResponseHolder(result.items)
+                _resource.postValue(Resource.success(listResponse))
             } catch (e: GooglePlayServicesAvailabilityIOException) {
                 Log.d("LOG", "play service error")
                 e.printStackTrace()
@@ -49,12 +51,13 @@ class PlaylistItemListResponseResource private constructor(
 
     suspend fun loadMoreResource() {
         if (_pageToken == null) {       // reach end of list
-            _resource.postValue(Resource.success(_resource.value?.data))
+            listResponse = listResponse.addNew(emptyList())
+            _resource.postValue(Resource.success(listResponse))
             return
         }
         withContext(Dispatchers.IO) {
             // pass the previous list into the loading resource
-            _resource.postValue(Resource.loading(_resource.value?.data))
+            _resource.postValue(Resource.loading(listResponse))
             Log.d("LOG", "start load more playlist item request")
             try {
                 val response = request.setPageToken(_pageToken).execute()
@@ -64,11 +67,8 @@ class PlaylistItemListResponseResource private constructor(
                 if (_pageToken == null) {
                     _endOfListReached = true
                 }
-                val newList = ArrayList<RPPlaylistItem>().apply {
-                    addAll(_resource.value?.data.orEmpty())
-                    addAll(result.items)
-                }
-                _resource.postValue(Resource.success(newList))
+                listResponse = listResponse.addNew(result.items)
+                _resource.postValue(Resource.success(listResponse))
             } catch (e: GooglePlayServicesAvailabilityIOException) {
                 Log.d("LOG", "error: ${e.localizedMessage}")
             } catch (e: UserRecoverableAuthIOException) {

@@ -32,11 +32,11 @@ class DownloadManagerViewModel(
     val menuState: LiveData<MenuState> = _menuState
 
     init {
-        _videoMeta.observeForever(videoMetaObserver)
+        _videoMetas.observeForever(videoMetaObserver)
     }
 
     override fun onCleared() {
-        _videoMeta.removeObserver(videoMetaObserver)
+        _videoMetas.removeObserver(videoMetaObserver)
     }
 
     fun setEditMode(isOn: Boolean) {
@@ -61,7 +61,7 @@ class DownloadManagerViewModel(
 
     fun getSelectedVideoMetas(): List<VideoMetaWithPlayerResource> {
         val ids = viewStatus.filterValues { it.isSelected }.keys
-        return _videoMeta.value.orEmpty().filter { ids.contains(it.videoMeta.videoId) }
+        return _videoMetas.value.orEmpty().filter { ids.contains(it.videoMeta.videoId) }
     }
 
     suspend fun deleteSelectedPlayerResource(context: Context): Resource<Unit> {

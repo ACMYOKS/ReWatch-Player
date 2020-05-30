@@ -2,9 +2,7 @@ package com.amoscyk.android.rewatchplayer.datasource
 
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPThumbnailDetails
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
-import com.amoscyk.android.rewatchplayer.datasource.vo.local.PlayerResource
-import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
-import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMetaWithPlayerResource
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.*
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeExtractor
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeOpenService
 import com.google.api.services.youtube.YouTube
@@ -30,11 +28,36 @@ class YoutubeRepository(
         return SearchListResponseResource.build(request)
     }
 
+    suspend fun getVideoSearchResult(
+        query: String,
+        pageToken: String? = null,
+        maxResults: Long = MAX_VIDEO_RESULTS
+    ): RPSearchListResponse = withContext(Dispatchers.IO) {
+        ytApiService.search().list("id,snippet").apply {
+            q = query
+            type = "video"
+            setMaxResults(maxResults)
+            pageToken?.let { setPageToken(it) }
+        }.getResponse()
+    }
+
     suspend fun loadPlaylistResultResourceByPlaylistId(playlistIds: List<String>, maxResults: Long = MAX_PLAYLIST_RESULTS): PlaylistListResponseResource {
         val request = ytApiService.playlists().list("id,snippet,contentDetails")
             .setId(playlistIds.joinToString(","))
             .setMaxResults(maxResults)
         return PlaylistListResponseResource.build(request)
+    }
+
+    suspend fun getPlaylistsByPlaylistId(
+        playlistIds: List<String>,
+        pageToken: String? = null,
+        maxResults: Long = MAX_PLAYLIST_RESULTS
+    ): RPPlaylistListResponse = withContext(Dispatchers.IO) {
+        ytApiService.playlists().list("id,snippet,contentDetails").apply {
+            id = playlistIds.joinToString(",")
+            setMaxResults(maxResults)
+            pageToken?.let { setPageToken(pageToken) }
+        }.getResponse()
     }
 
     suspend fun loadPlaylistResultResourceByChannelId(channelId: String, maxResults: Long = MAX_PLAYLIST_RESULTS): PlaylistListResponseResource {
@@ -44,11 +67,34 @@ class YoutubeRepository(
         return PlaylistListResponseResource.build(request)
     }
 
+    suspend fun getPlaylistsByChannelId(
+        channelId: String,
+        pageToken: String? = null,
+        maxResults: Long = MAX_PLAYLIST_RESULTS
+    ): RPPlaylistListResponse = withContext(Dispatchers.IO) {
+        ytApiService.playlists().list("id,snippet,contentDetails").apply {
+            setChannelId(channelId)
+            setMaxResults(maxResults)
+            pageToken?.let { setPageToken(pageToken) }
+        }.getResponse()
+    }
+
     suspend fun loadUserPlaylistResultResource(maxResults: Long = MAX_PLAYLIST_RESULTS): PlaylistListResponseResource {
         val request = ytApiService.playlists().list("id,snippet,contentDetails")
             .setMine(true)
             .setMaxResults(maxResults)
         return PlaylistListResponseResource.build(request)
+    }
+
+    suspend fun getUserPlaylist(
+        pageToken: String? = null,
+        maxResults: Long = MAX_PLAYLIST_RESULTS
+    ): RPPlaylistListResponse = withContext(Dispatchers.IO) {
+        ytApiService.playlists().list("id,snippet,contentDetails").apply {
+            mine = true
+            setMaxResults(maxResults)
+            pageToken?.let { setPageToken(pageToken) }
+        }.getResponse()
     }
 
     suspend fun loadPlaylistItemForPlaylist(id: String, maxResults: Long = MAX_VIDEO_RESULTS): PlaylistItemListResponseResource {
@@ -58,11 +104,35 @@ class YoutubeRepository(
         return PlaylistItemListResponseResource.build(request)
     }
 
+    suspend fun getPlaylistItemForPlaylist(
+        playlistId: String,
+        pageToken: String? = null,
+        maxResults: Long = MAX_VIDEO_RESULTS
+    ): RPPlaylistItemListResponse = withContext(Dispatchers.IO) {
+        ytApiService.playlistItems().list("id,snippet").apply {
+            setPlaylistId(playlistId)
+            setMaxResults(maxResults)
+            pageToken?.let { setPageToken(it) }
+        }.getResponse()
+    }
+
     suspend fun loadVideoResultResource(videoIds: List<String>, maxResults: Long = MAX_VIDEO_RESULTS): VideoListResponseResource {
         val request = ytApiService.videos().list("id,snippet,contentDetails")
             .setId(videoIds.joinToString(","))
             .setMaxResults(maxResults)
         return VideoListResponseResource.build(request)
+    }
+
+    suspend fun getVideosById(
+        videoIds: List<String>,
+        pageToken: String? = null,
+        maxResults: Long = MAX_VIDEO_RESULTS
+    ): RPVideoListResponse = withContext(Dispatchers.IO) {
+        ytApiService.videos().list("id,snippet,contentDetails").apply {
+            id = videoIds.joinToString(",")
+            setMaxResults(maxResults)
+            pageToken?.let { setPageToken(it) }
+        }.getResponse()
     }
 
     suspend fun loadSubscribedChannelResource(maxResults: Long = MAX_CHANNEL_RESULTS): SubscriptionListResponseResource {
@@ -72,12 +142,36 @@ class YoutubeRepository(
         return SubscriptionListResponseResource.build(request)
     }
 
+    suspend fun getUserSubscribedChannels(
+        pageToken: String? = null,
+        maxResults: Long = MAX_CHANNEL_RESULTS
+    ): RPSubscriptionListResponse = withContext(Dispatchers.IO) {
+        ytApiService.subscriptions().list("id,snippet").apply {
+            mine = true
+            setMaxResults(maxResults)
+            pageToken?.let { setPageToken(it) }
+        }.getResponse()
+    }
+
     suspend fun loadChannelResource(channelIds: List<String>, maxResults: Long = MAX_CHANNEL_RESULTS): ChannelListResponseResource {
         val request = ytApiService.channels().list("snippet,contentDetails,statistics,brandingSettings")
             .setId(channelIds.joinToString(","))
             .setMaxResults(maxResults)
         return ChannelListResponseResource.build(request)
     }
+
+    suspend fun getChannelsById(
+        ids: List<String>,
+        pageToken: String? = null,
+        maxResults: Long = MAX_CHANNEL_RESULTS
+    ): RPChannelListResponse = withContext(Dispatchers.IO) {
+        ytApiService.channels().list("snippet,contentDetails,statistics,brandingSettings").apply {
+            id = ids.joinToString(",")
+            setMaxResults(maxResults)
+            pageToken?.let { setPageToken(it) }
+        }.getResponse()
+    }
+
 
     suspend fun checkVideoIdExist(videoId: String): Boolean? {
         return withContext(Dispatchers.IO) {

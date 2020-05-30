@@ -9,6 +9,7 @@ import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.core.widget.ContentLoadingProgressBar
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.api.load
@@ -18,6 +19,8 @@ import com.amoscyk.android.rewatchplayer.util.DateTimeHelper
 import com.amoscyk.android.rewatchplayer.util.YouTubeVideoThumbnailHelper
 
 class VideoListAdapter: ListAdapter<VideoMeta, VideoListAdapter.ViewHolder>(DIFF_CALLBACK) {
+
+    private var recyclerView: RecyclerView? = null
 
     var isEditMode = false
         private set
@@ -31,6 +34,8 @@ class VideoListAdapter: ListAdapter<VideoMeta, VideoListAdapter.ViewHolder>(DIFF
     private var onItemLongClick: ((position: Int, meta: VideoMeta) -> Boolean)? = null
     private var onArchiveClick: ((position: Int, meta: VideoMeta) -> Unit)? = null
     private var onBookmarkClick: ((position: Int, meta: VideoMeta) -> Unit)? = null
+    private var onLoadMoreNeeded: (() -> Unit)? = null
+    private var isInfiniteLoadEnabled = true
 
     private val viewStatusMap = hashMapOf<String, ViewStatus>()
 
@@ -43,6 +48,29 @@ class VideoListAdapter: ListAdapter<VideoMeta, VideoListAdapter.ViewHolder>(DIFF
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val video = getItem(position)
         holder.bind(video, position)
+    }
+
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
+        this.recyclerView = recyclerView
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                if (isInfiniteLoadEnabled) {
+                    if (dy > 0) {
+                        (recyclerView.layoutManager as? LinearLayoutManager)?.apply {
+                            if (findLastCompletelyVisibleItemPosition() == itemCount - 1) {
+                                onLoadMoreNeeded?.invoke()
+                            }
+                        }
+                    }
+                }
+            }
+        })
+    }
+
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView)
+        this.recyclerView = null
     }
 
     // show/hide progress bar when there is item to load or not
@@ -65,6 +93,10 @@ class VideoListAdapter: ListAdapter<VideoMeta, VideoListAdapter.ViewHolder>(DIFF
             isBookmarkable = value
             notifyDataSetChanged()
         }
+    }
+
+    fun setEnableInfiniteLoad(value: Boolean) {
+        isInfiniteLoadEnabled = value
     }
 
     fun setEditMode(value: Boolean) {
@@ -92,6 +124,7 @@ class VideoListAdapter: ListAdapter<VideoMeta, VideoListAdapter.ViewHolder>(DIFF
     fun setOnItemLongClickListener(l: ((position: Int, meta: VideoMeta) -> Boolean)?) { onItemLongClick = l }
     fun setOnArchiveClickListener(l: ((position: Int, meta: VideoMeta) -> Unit)?) { onArchiveClick = l }
     fun setOnBookmarkClickListener(l: ((position: Int, meta: VideoMeta) -> Unit)?) { onBookmarkClick = l }
+    fun setOnLoadMoreNeeded(l: (() -> Unit)?) { onLoadMoreNeeded = l }
 
     private data class ViewStatus(var isSelected: Boolean = false)
 
@@ -136,8 +169,8 @@ class VideoListAdapter: ListAdapter<VideoMeta, VideoListAdapter.ViewHolder>(DIFF
             else progressBar.hide()
             checkbox.visibility = if (isEditMode) View.VISIBLE else View.GONE
             checkbox.isChecked = viewStatusMap[video.videoId]!!.isSelected
-            archiveBtn.visibility = if (isArchivable) View.VISIBLE else View.GONE
-            bookmarkBtn.visibility = if (isBookmarkable) View.VISIBLE else View.GONE
+            archiveBtn.visibility = if (isEditMode || !isArchivable) View.GONE else View.VISIBLE
+            bookmarkBtn.visibility = if (isEditMode || !isBookmarkable) View.GONE else View.VISIBLE
             bookmarkBtn.isSelected = video.bookmarked
         }
 

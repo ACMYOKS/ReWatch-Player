@@ -31,7 +31,9 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             android:layout_marginStart="8dp"
+            android:maxLines="3"
+            android:ellipsize="end"
             tools:text="playlist title"
-            android:textSize="20sp"/>
+            android:textSize="18sp"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.cardview.widget.CardView>

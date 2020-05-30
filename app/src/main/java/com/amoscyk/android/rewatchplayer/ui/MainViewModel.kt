@@ -79,6 +79,9 @@ class MainViewModel(
     private var _currentVideoMeta = MutableLiveData<VideoMetaWithPlayerResource>()
     val videoMeta: LiveData<VideoMeta> = _currentVideoMeta.map { it.videoMeta }
 
+    private val _archiveResult = MutableLiveData<Resource<ArchiveResult>>()
+    val archiveResult: LiveData<Resource<ArchiveResult>> = _archiveResult
+
     //    private val adaptiveVideoTagPriorityList = listOf(266, 264, 299, 137, 298, 136, 135, 134, 133)
     private val adaptiveVideoTagPriorityList = listOf(298, 136, 135, 134, 133, 160, 299, 137, 264, 138, 266)
     private val adaptiveAudioTagPriorityList = listOf(141, 140, 139)
@@ -320,54 +323,71 @@ class MainViewModel(
         }
     }
 
-    suspend fun archiveVideo(context: Context, videoTag: Int?, audioTag: Int?): Resource<Int> {
-        _currentVideoMeta.value?.videoMeta?.videoId?.let { videoId ->
-            val dlMngr = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-            val count = listOf(videoTag, audioTag).fold(0) { acc, tag ->
-                if (tag != null) {
-                    var shouldDl = false
-                    val filename = FileDownloadHelper.getFilename(videoId, tag)
-                    val playerRes = youtubeRepository.getPlayerResource(arrayOf(videoId))
-                    if (playerRes.count { it.itag == tag } == 0) {
-                        // there is no existing resource, can try download
-                        shouldDl = true
-                    } else {
-                        // resource record exist, check if file already exist
-                        if (FileDownloadHelper.getFileByName(context, filename).exists()) {
-                            // file already existed
-                            Log.d(AppConstant.TAG, "$TAG: file existed already, do not download again")
-                        } else {
-                            // file not exist, start download flow
-                            Log.d(AppConstant.TAG, "$TAG: file not exist, start download")
+    fun archiveVideo(context: Context, videoTag: Int?, audioTag: Int?) {
+        viewModelScope.launch {
+            _currentVideoMeta.value?.videoMeta?.videoId?.let { videoId ->
+                val dlMngr = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                val count = listOf(videoTag, audioTag).fold(0) { acc, tag ->
+                    if (tag != null) {
+                        var shouldDl = false
+                        val filename = FileDownloadHelper.getFilename(videoId, tag)
+                        val playerRes = youtubeRepository.getPlayerResource(arrayOf(videoId))
+                        if (playerRes.count { it.itag == tag } == 0) {
+                            // there is no existing resource, can try download
                             shouldDl = true
-                        }
-                    }
-                    if (shouldDl) {
-                        if (!_allUrlMap.containsKey(tag)) {
-                            // try refresh url map
-                            _allUrlMap = fetchUrlMap(videoId)
-                            if (!_allUrlMap.containsKey(tag)) {
-                                // emit error message
-                                return Resource.error("cannot find url for $videoId with itag $tag", 0)
+                        } else {
+                            // resource record exist, check if file already exist
+                            if (FileDownloadHelper.getFileByName(context, filename).exists()) {
+                                // file already existed
+                                Log.d(
+                                    AppConstant.TAG,
+                                    "$TAG: file existed already, do not download again"
+                                )
+                            } else {
+                                // file not exist, start download flow
+                                Log.d(AppConstant.TAG, "$TAG: file not exist, start download")
+                                shouldDl = true
                             }
                         }
-                        val vRequest = DownloadManager.Request(Uri.parse(_allUrlMap[tag]))
-                        vRequest.setDestinationInExternalFilesDir(context, FileDownloadHelper.DIR_DOWNLOAD, filename)
-                        vRequest.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_ONLY_COMPLETION)
-                        vRequest.setTitle(videoId)
-                        val id = dlMngr.enqueue(vRequest)
-                        youtubeRepository.addPlayerResource(videoId, tag,
-                            FileDownloadHelper.getDir(context).absolutePath, filename, 0,
-                            isAdaptive = (videoTag != null && audioTag != null),
-                            isVideo = tag == videoTag, downloadId = id)
-                        return@fold acc + 1
+                        if (shouldDl) {
+                            if (!_allUrlMap.containsKey(tag)) {
+                                // try refresh url map
+                                _allUrlMap = fetchUrlMap(videoId)
+                                if (!_allUrlMap.containsKey(tag)) {
+                                    // emit error message
+                                    _archiveResult.value = Resource.error(
+                                        "cannot find url for $videoId with itag $tag",
+                                        ArchiveResult(videoId, listOfNotNull(videoTag, audioTag), 0)
+                                    )
+                                    return@launch
+                                }
+                            }
+                            val vRequest = DownloadManager.Request(Uri.parse(_allUrlMap[tag]))
+                            vRequest.setDestinationInExternalFilesDir(
+                                context,
+                                FileDownloadHelper.DIR_DOWNLOAD,
+                                filename
+                            )
+                            vRequest.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_ONLY_COMPLETION)
+                            vRequest.setTitle(videoId)
+                            val id = dlMngr.enqueue(vRequest)
+                            youtubeRepository.addPlayerResource(
+                                videoId, tag,
+                                FileDownloadHelper.getDir(context).absolutePath, filename, 0,
+                                isAdaptive = (videoTag != null && audioTag != null),
+                                isVideo = tag == videoTag, downloadId = id
+                            )
+                            return@fold acc + 1
+                        }
                     }
+                    return@fold acc
                 }
-                return@fold acc
+                _archiveResult.value = Resource.success(ArchiveResult(videoId, listOfNotNull(videoTag, audioTag), count))
+                return@launch
             }
-            return Resource.success(count)
+            _archiveResult.value =
+                Resource.error("no video id", ArchiveResult("", listOfNotNull(videoTag, audioTag), 0))
         }
-        return Resource.error("no video id", 0)
     }
 
     fun toggleBookmarkStatus(videoId: String) {
@@ -423,6 +443,12 @@ class MainViewModel(
         val channelId: String,
         val author: String,
         val description: String
+    )
+
+    data class ArchiveResult(
+        val videoId: String,
+        val itags: List<Int>,
+        val taskCount: Int
     )
 
     data class VideoQualitySelection(

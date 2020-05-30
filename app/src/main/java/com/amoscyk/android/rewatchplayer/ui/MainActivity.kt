@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -37,6 +38,7 @@ import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.bottom_sheet_dialog_user_option.view.*
 import kotlinx.android.synthetic.main.dialog_achive_option.view.*
 import kotlinx.coroutines.launch
@@ -272,26 +274,7 @@ class MainActivity : ReWatchPlayerActivity() {
                         val aKey =
                             mAtagList.map { it.key }[mArchiveOptionDialogView!!.spinner_audio_quality.selectedItemPosition]
                         val aTag = mAtagList[aKey]?.itag
-                        viewModel.archiveVideo(this@MainActivity, vTag, aTag).let { result ->
-                            when (result.status) {
-                                Status.SUCCESS -> {
-                                    Toast.makeText(
-                                        this@MainActivity,
-                                        "has new download task: ${result.data!!}",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                                Status.ERROR -> {
-                                    Toast.makeText(
-                                        this@MainActivity,
-                                        result.stringMessage,
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                                else -> {
-                                }
-                            }
-                        }
+                        viewModel.archiveVideo(this@MainActivity, vTag, aTag)
                     }
                 }
                 setNegativeButton("cancel") { _, _ -> }
@@ -321,6 +304,27 @@ class MainActivity : ReWatchPlayerActivity() {
                 it.videoFile?.let { filename -> getResFileUriIfExist(filename) },
                 it.audioFile?.let { filename -> getResFileUriIfExist(filename) }
             )
+        })
+
+        viewModel.archiveResult.observe(this, Observer { result ->
+            when (result.status) {
+                Status.SUCCESS -> {
+                    Snackbar.make(
+                        getContentView(),
+                        "has new download task: ${result.data!!.taskCount}",
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                }
+                Status.ERROR -> {
+                    Snackbar.make(
+                        getContentView(),
+                        result.stringMessage,
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                }
+                else -> {
+                }
+            }
         })
 
 //        viewModel.availableITag.observe(this, Observer { itags ->
@@ -500,17 +504,27 @@ class MainActivity : ReWatchPlayerActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
 
-        Log.d("MOMO", "config change")
-
         when (newConfig.orientation) {
             Configuration.ORIENTATION_LANDSCAPE -> {
                 mPlayerLayout.setEnableTransition(!mPlayerLayout.isFullscreen)
                 if (mPlayerLayout.isSmall) {
                     mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.FULLSCREEN)
                 }
+                hideSystemUI()
             }
             Configuration.ORIENTATION_PORTRAIT -> {
                 mPlayerLayout.setEnableTransition(true)
+                showSystemUI()
+            }
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        if (hasFocus) {
+            // set system ui visibility when activity window regain focus from dialog/popup
+            when (resources.configuration.orientation) {
+                Configuration.ORIENTATION_PORTRAIT -> showSystemUI()
+                Configuration.ORIENTATION_LANDSCAPE -> hideSystemUI()
             }
         }
     }

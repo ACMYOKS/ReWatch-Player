@@ -1,5 +1,6 @@
 package com.amoscyk.android.rewatchplayer.ui.downloads
 
+import android.annotation.SuppressLint
 import android.app.DownloadManager
 import android.content.Context
 import android.database.ContentObserver
@@ -14,9 +15,9 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.Toolbar
-import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -30,6 +31,7 @@ import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.datasource.vo.DownloadStatus
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.PlayerResource
+import com.amoscyk.android.rewatchplayer.ui.MainViewModel
 import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadPageViewModel.MenuState
 import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
 import com.amoscyk.android.rewatchplayer.util.YouTubeVideoThumbnailHelper
@@ -42,13 +44,13 @@ import kotlinx.coroutines.launch
 class DownloadFileDetailFragment: ReWatchPlayerFragment() {
 
     private var mRootView: View? = null
-    private val mToolbar: Toolbar by lazy { mRootView!!.toolbar }
-    private val mRvFileStatus: RecyclerView by lazy { mRootView!!.rv_download_status }
-    private val mDetailContainer: ConstraintLayout by lazy { mRootView!!.detail_container }
-    private val mIvPreview: ImageView by lazy { mRootView!!.iv_preview }
-    private val mTvTitle: TextView by lazy { mRootView!!.tv_title }
-    private val mTvAuthor: TextView by lazy { mRootView!!.tv_author }
-    private val mTvVideoId: TextView by lazy { mRootView!!.tv_video_id }
+    private val mToolbar by lazy { mRootView!!.toolbar }
+    private val mRvFileStatus by lazy { mRootView!!.rv_download_status }
+    private val mDetailContainer by lazy { mRootView!!.detail_container }
+    private val mIvPreview by lazy { mRootView!!.iv_preview }
+    private val mTvTitle by lazy { mRootView!!.tv_title }
+    private val mTvAuthor by lazy { mRootView!!.tv_author }
+    private val mTvVideoId by lazy { mRootView!!.tv_video_id }
     private lateinit var mDlMngr: DownloadManager
     private lateinit var mDlObserver: DownloadProgressObserver
     private val mDlHandler = Handler(Looper.getMainLooper())
@@ -72,6 +74,7 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
             .create()
     }
 
+    private val mainViewModel by activityViewModels<MainViewModel> { viewModelFactory }
     private val viewModel: DownloadFileDetailViewModel by viewModels { viewModelFactory }
     private val navArgs: DownloadFileDetailFragmentArgs by navArgs()
 
@@ -91,7 +94,7 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
         mDlMngr = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         mDlObserver = DownloadProgressObserver(mDlHandler)
         mAdapter = DownloadedFileAdapter()
-        viewModel.videoMeta.observe(this, Observer { metas ->
+        viewModel.videoMetas.observe(this, Observer { metas ->
             metas.firstOrNull()?.let { res ->
                 mIvPreview.load(YouTubeVideoThumbnailHelper.getStandardUrl(res.videoMeta.videoId))
                 mTvTitle.text = res.videoMeta.title
@@ -113,6 +116,45 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
         viewModel.isEditMode.observe(this, Observer {
             mOnBackPressedCallback.isEnabled = it
             mAdapter?.setEditMode(it)
+        })
+        object : MediatorLiveData<String>() {
+            var totalSize = 0
+            var selectedSize = 0
+            var isEditMode = false
+            init {
+                addSource(viewModel.totalSize) {
+                    totalSize = it
+                    emitString()
+                }
+                addSource(viewModel.selectedSize) {
+                    selectedSize = it
+                    emitString()
+                }
+                addSource(viewModel.isEditMode) {
+                    isEditMode = it
+                    emitString()
+                }
+            }
+            fun emitString() {
+                this.value = if (isEditMode) {
+                    selectedSize.toStringInMB() + "/" + totalSize.toStringInMB()
+                } else {
+                    totalSize.toStringInMB()
+                }
+            }
+        }.observe(this, Observer {
+            mToolbar.title = it
+        })
+        mainViewModel.archiveResult.observe(this, Observer {
+            when (it.status) {
+                Status.SUCCESS -> {
+                    viewModel.getVideoMetaWithPlayerResource(listOf(it.data!!.videoId))
+                }
+                Status.ERROR -> {
+
+                }
+                else -> {}
+            }
         })
     }
 
@@ -177,6 +219,7 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
         }
     }
 
+    private fun Int.toStringInMB(): String = "%.2fMB".format(this / 1_000_000f)
     private fun PlayerResource.toExt(): PlayerResourceExt {
         return PlayerResourceExt(
             videoId = videoId,
@@ -260,8 +303,8 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
                 selectBox.setOnCheckedChangeListener { buttonView, isChecked ->
                     val item = getItem(adapterPosition)
                     checkStatus[item.downloadId] = isChecked
-                    if (isChecked) viewModel.selectDownloadedItem(item.downloadId)
-                    else viewModel.deselectDownloadedItem(item.downloadId)
+                    if (isChecked) viewModel.selectDownloadedItem(listOf(item.downloadId))
+                    else viewModel.deselectDownloadedItem(listOf(item.downloadId))
                 }
             }
 
@@ -277,6 +320,7 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
                 }
             }
 
+            @SuppressLint("SetTextI18n")
             fun setViewForFileSize(totalFileSize: Int, currentFileSize: Int) {
                 if (currentFileSize < totalFileSize) {
                     setViewForDownloadCompleted(false)
@@ -291,7 +335,6 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
                 }
             }
 
-            private fun Int.toStringInMB(): String = "%.2fMB".format(this / 1_000_000f)
         }
     }
 

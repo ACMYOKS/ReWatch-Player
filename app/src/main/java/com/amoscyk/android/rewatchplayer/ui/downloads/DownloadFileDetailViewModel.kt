@@ -21,14 +21,25 @@ class DownloadFileDetailViewModel(
 
     private var viewStatus = hashMapOf<Long, ViewStatus>()      // downloadId -> viewStatus
     private val downloadStatusObserver = Observer<Map<Long, DownloadStatus>> {
+        var sum = 0
         it.forEach {
-            if (viewStatus[it.key] == null) viewStatus[it.key] = ViewStatus(false)
+            if (viewStatus[it.key] == null) {
+                viewStatus[it.key] = ViewStatus(false)
+            }
+            sum += it.value.totalByte
+        }
+        if (sum != _totalSize.value) {
+            _totalSize.value = sum
         }
     }
     private val _menuState = MutableLiveData(MenuState.NORMAL)
     val menuState: LiveData<MenuState> = _menuState
     private val _isEditMode = MutableLiveData(false)
     val isEditMode: LiveData<Boolean> = _isEditMode
+    private val _totalSize = MutableLiveData(0)
+    val totalSize: LiveData<Int> = _totalSize
+    private val _selectedSize = MutableLiveData(0)
+    val selectedSize: LiveData<Int> = _selectedSize
 
     init {
         _downloadStatus.observeForever(downloadStatusObserver)
@@ -43,24 +54,40 @@ class DownloadFileDetailViewModel(
         if (_isEditMode.value != isOn) {
             _isEditMode.value = isOn
             if (!isOn) {
-                viewStatus.keys.forEach { deselectDownloadedItem(it) }
+                deselectDownloadedItem(viewStatus.keys.toList())
             }
         }
     }
 
-    fun selectDownloadedItem(id: Long) {
+    fun selectDownloadedItem(ids: List<Long>) {
         setEditMode(true)
-        viewStatus[id]?.isSelected = true
+        _selectedSize.value = _selectedSize.value!! + ids.sumBy {
+            viewStatus[it]?.let { status ->
+                if (!status.isSelected) {
+                    viewStatus[it]?.isSelected = true
+                    return@sumBy _downloadStatus.value?.getValue(it)?.totalByte ?: 0
+                }
+            }
+            return@sumBy 0
+        }
         handleMenuState()
     }
 
-    fun deselectDownloadedItem(id: Long) {
-        viewStatus[id]?.isSelected = false
+    fun deselectDownloadedItem(ids: List<Long>) {
+        _selectedSize.value = _selectedSize.value!! - ids.sumBy {
+            viewStatus[it]?.let { status ->
+                if (status.isSelected) {
+                    status.isSelected = false
+                    return@sumBy _downloadStatus.value?.getValue(it)?.totalByte ?: 0
+                }
+            }
+            return@sumBy 0
+        }
         handleMenuState()
     }
 
     suspend fun deleteSelectedPlayerResources(context: Context): Resource<Unit> {
-        _videoMeta.value?.firstOrNull()?.let { videoMeta ->
+        _videoMetas.value?.firstOrNull()?.let { videoMeta ->
             val downloadIds = viewStatus.filterValues { it.isSelected }.keys.toLongArray()
             val res = videoMeta.playerResources.filter { downloadIds.contains(it.downloadId) }
             val dbCount = youtubeRepository.deletePlayerResource(downloadIds)

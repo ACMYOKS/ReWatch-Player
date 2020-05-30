@@ -119,7 +119,7 @@
                 android:layout_marginTop="8dp"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:textSize="26sp"
+                android:textSize="20sp"
                 android:text="@string/channel_uploaded_title"/>
             <androidx.core.widget.ContentLoadingProgressBar
                 android:id="@+id/loading_upload"
@@ -152,7 +152,7 @@
                 android:layout_marginTop="8dp"
                 android:paddingStart="14dp"
                 android:paddingEnd="14dp"
-                android:textSize="26sp"
+                android:textSize="20sp"
                 android:text="@string/channel_playlist_title"/>
             <androidx.core.widget.ContentLoadingProgressBar
                 android:id="@+id/loading_playlist"

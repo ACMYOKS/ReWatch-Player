@@ -55,10 +55,14 @@ class LibraryFragment : ReWatchPlayerFragment() {
     private lateinit var mTypeSpinnerAdapter: ListTypeAdapter
     private val mChannelListAdapter = SubscriptionListAdapter(onItemClick = {
         findNavController().navigate(LibraryFragmentDirections.showChannelDetail(it.channelId))
-    })
+    }).apply {
+        setOnLoadMoreNeeded { viewModel.loadMoreChannels() }
+    }
     private val mPlaylistAdapter = PlaylistListAdapter(itemOnClick = {
         findNavController().navigate(LibraryFragmentDirections.showVideoListForPlaylist(it, true))
-    })
+    }).apply {
+        setOnLoadMoreNeeded { viewModel.loadMorePlaylists() }
+    }
     private val mBookmarkListAdapter = VideoListAdapter().apply {
         setArchivable(true)
         setOnArchiveClickListener { position, meta ->
@@ -97,69 +101,47 @@ class LibraryFragment : ReWatchPlayerFragment() {
             setMenuItemVisibility(isEditMode)
             setListForDisplayMode(it)
         })
-        viewModel.channelList.observe(this, Observer { resource ->
-            when (resource.status) {
-                Status.SUCCESS -> {
-                    if (mChannelListAdapter.itemCount == 0) {
-                        loadingView.hide()
-                    }
-                    mChannelListAdapter.submitList(resource.data)
-                }
-                Status.ERROR -> {
-                    if (mChannelListAdapter.itemCount == 0) {
-                        loadingView.hide()
-                    }
-                    (resource.message as? Exception)?.let { exception ->
-                        Log.d("LOG", exception.message ?: "has exception")
-                    }
-                }
-                Status.LOADING -> {
+        viewModel.channelList.observe(this, Observer {
+            mChannelListAdapter.submitList(it.accumulatedItems + it.newItems)
+            mChannelListAdapter.setEnableInfiniteLoad(!it.isEndOfList)
+        })
+        viewModel.playlistList.observe(this, Observer {
+            mPlaylistAdapter.submitList(it.accumulatedItems + it.newItems)
+            mPlaylistAdapter.setEnableInfiniteLoad(!it.isEndOfList)
+        })
+        viewModel.bookmarkList.observe(this, Observer {
+            mBookmarkListAdapter.submitList(it.map { it.videoMeta })
+        })
+        viewModel.showLoadingChannel.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                if (it) {
                     if (mChannelListAdapter.itemCount == 0) {
                         loadingView.show()
                     }
+                } else {
+                    loadingView.hide()
                 }
             }
         })
-        viewModel.playlistList.observe(this, Observer { resource ->
-            when (resource.status) {
-                Status.SUCCESS -> {
-                    if (mPlaylistAdapter.itemCount == 0) {
-                        loadingView.hide()
-                    }
-                    mPlaylistAdapter.submitList(resource.data)
-                }
-                Status.ERROR -> {
-                    if (mPlaylistAdapter.itemCount == 0) {
-                        loadingView.hide()
-                    }
-                    (resource.message as? Exception)?.let { exception ->
-                        Log.d("LOG", exception.message ?: "has exception")
-                    }
-                }
-                Status.LOADING -> {
+        viewModel.showLoadingPlaylist.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                if (it) {
                     if (mPlaylistAdapter.itemCount == 0) {
                         loadingView.show()
                     }
+                } else {
+                    loadingView.hide()
                 }
             }
         })
-        viewModel.bookmarkList.observe(this, Observer { res ->
-            when (res.status) {
-                Status.SUCCESS -> {
-                    if (mBookmarkListAdapter.itemCount == 0) {
-                        loadingView.hide()
-                    }
-                    mBookmarkListAdapter.submitList(res.data?.map { it.videoMeta })
-                }
-                Status.ERROR -> {
-                    if (mBookmarkListAdapter.itemCount == 0) {
-                        loadingView.hide()
-                    }
-                }
-                Status.LOADING -> {
+        viewModel.showLoadingBookmarked.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                if (it) {
                     if (mBookmarkListAdapter.itemCount == 0) {
                         loadingView.show()
                     }
+                } else {
+                    loadingView.hide()
                 }
             }
         })
@@ -230,33 +212,11 @@ class LibraryFragment : ReWatchPlayerFragment() {
             layoutManager = LinearLayoutManager(requireContext())
             addItemDecoration(DividerItemDecoration(requireContext(), RecyclerView.VERTICAL))
             adapter = mChannelListAdapter
-            addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    if (dy > 0) {
-                        (layoutManager as? LinearLayoutManager)?.apply {
-                            if (findLastCompletelyVisibleItemPosition() == itemCount - 1) {
-                                viewModel.loadMoreChannels()
-                            }
-                        }
-                    }
-                }
-            })
         }
         playlistList.apply {
             layoutManager = LinearLayoutManager(requireContext())
             addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(8f).toInt()))
             adapter = mPlaylistAdapter
-            addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    if (dy > 0) {
-                        (layoutManager as? LinearLayoutManager)?.apply {
-                            if (findLastCompletelyVisibleItemPosition() == itemCount - 1) {
-                                viewModel.loadMorePlaylists()
-                            }
-                        }
-                    }
-                }
-            })
         }
         bookmarkList.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -326,7 +286,8 @@ class LibraryFragment : ReWatchPlayerFragment() {
         private val list = listOf(
             Pair(R.string.library_list_channel, R.drawable.ic_subscriptions_white),
             Pair(R.string.library_list_playlist, R.drawable.ic_view_list_white),
-            Pair(R.string.library_list_bookmarked, R.drawable.ic_bookmark_border_white))
+            Pair(R.string.library_list_bookmarked, R.drawable.ic_bookmark_white)
+        )
 
         override fun getCount(): Int {
             return list.size

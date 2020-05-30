@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.toBitmap
 import androidx.fragment.app.viewModels
@@ -58,7 +59,7 @@ class ChannelFragment: ReWatchPlayerFragment() {
 
     private val mUploadedAdapter = PlaylistAdapter(itemOnClick = {
         findNavController().navigate(VideoListFragmentDirections.showVideoListForPlaylist(it, true))
-    })
+    }).apply { setEnableInfiniteLoad(false) }
     private val mPlaylistAdapter = PlaylistAdapter(itemOnClick = {
         findNavController().navigate(VideoListFragmentDirections.showVideoListForPlaylist(it, true))
     }, onReloadNeeded = {
@@ -71,112 +72,74 @@ class ChannelFragment: ReWatchPlayerFragment() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
 
-        viewModel.channelRes.observe(this, Observer { res ->
-            when (res.status) {
-                Status.SUCCESS -> {
-                    res.data?.firstOrNull()?.let { info ->
-                        mCollapsingToolbar.title = info.title.withEmoji()
-                        mToolbar.title = info.title.withEmoji()
-                        mTvChannelName.text = info.title.withEmoji()
-                        mTvDescription.text = info.description.withEmoji()
-                        mTvSubscriberCount.text = getString(R.string.channel_subscriber_count).format(info.subscriberCount)
-                        mTvVideoCount.text = getString(R.string.channel_video_count).format(info.videoCount)
-                        mIvThumbnail.load(info.thumbnails.default?.url) {
-                            transformations(CircleCropTransformation())
-                        }
-                        mIvBanner.load(info.bannerMobileImageUrl)
-                        LoadRequest.Builder(requireContext())
-                            .allowHardware(false)       // disable hardware to allow getting bitmap from drawable
-                            .transformations(BlurTransformation(requireContext()))
-                            .data(info.bannerMobileImageUrl)
-                            .target { drawable ->
-                                mIvBanner.setImageDrawable(drawable)
-                                runCatching {
-                                    val bitmap = drawable.toBitmap()
-                                    val palette = Palette.from(bitmap).generate()
-                                    palette.dominantSwatch?.let {
-                                        val rgbTextColor = ColorUtils.compositeColors(it.titleTextColor, Color.WHITE)       // flatten alpha value
-                                        mCollapsingToolbar.apply {
-                                            setContentScrimColor(it.rgb)
-                                            setCollapsedTitleTextColor(rgbTextColor)
-                                        }
-                                        mToolbar.setForegroundItemColor(rgbTextColor)
-                                    }
+        viewModel.showLoadingChannel.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+
+            }
+        })
+
+        viewModel.channelList.observe(this, Observer { res ->
+            res.items.firstOrNull()?.let { info ->
+                mCollapsingToolbar.title = info.title.withEmoji()
+                mToolbar.title = info.title.withEmoji()
+                mTvChannelName.text = info.title.withEmoji()
+                mTvDescription.text = info.description.withEmoji()
+                mTvSubscriberCount.text = getString(R.string.channel_subscriber_count).format(info.subscriberCount)
+                mTvVideoCount.text = getString(R.string.channel_video_count).format(info.videoCount)
+                mIvThumbnail.load(info.thumbnails.run { standard?.url ?: default?.url }) {
+                    transformations(CircleCropTransformation())
+                }
+                LoadRequest.Builder(requireContext())
+                    .allowHardware(false)       // disable hardware to allow getting bitmap from drawable
+                    .transformations(BlurTransformation(requireContext()))
+                    .data(info.bannerMobileImageUrl)
+                    .target { drawable ->
+                        mIvBanner.setImageDrawable(drawable)
+                        runCatching {
+                            val bitmap = drawable.toBitmap()
+                            val palette = Palette.from(bitmap).generate()
+                            palette.dominantSwatch?.let {
+                                val rgbTextColor = ColorUtils.compositeColors(it.titleTextColor, Color.WHITE)       // flatten alpha value
+                                mCollapsingToolbar.apply {
+                                    setContentScrimColor(it.rgb)
+                                    setCollapsedTitleTextColor(rgbTextColor)
                                 }
+                                mToolbar.setForegroundItemColor(rgbTextColor)
                             }
-                            .build()
-                            .also { Coil.imageLoader(requireContext()).execute(it) }
-                        viewModel.setUploadedListId(info.uploads)
+                        }
                     }
-                }
-                Status.ERROR -> {
-
-                }
-                Status.LOADING -> {
-
-                }
+                    .build()
+                    .also { Coil.imageLoader(requireContext()).execute(it) }
+                viewModel.setUploadedListId(info.uploads)
             }
         })
 
-        viewModel.uploadedVideoRes.observe(this, Observer {
-            when (it.status) {
-                Status.SUCCESS -> {
-                    if (mUploadedAdapter.itemCount == 0) {
-                        mLoadingUploaded.hide()
-                    }
-                    mUploadedAdapter.updateList(it.data.orEmpty())
-                    mEmptyViewUploaded.visibility =
-                        if (mUploadedAdapter.itemCount == 0) View.VISIBLE
-                        else View.GONE
-                }
-                Status.ERROR -> {
-                    if (mUploadedAdapter.itemCount == 0) {
-                        mLoadingUploaded.hide()
-                    }
-                    mEmptyViewUploaded.visibility =
-                        if (mUploadedAdapter.itemCount == 0) View.VISIBLE
-                        else View.GONE
-                    Log.e(AppConstant.TAG, it.stringMessage)
-                }
-                Status.LOADING -> {
-                    if (mUploadedAdapter.itemCount == 0) {
-                        mLoadingUploaded.show()
-                    }
-                    mEmptyViewUploaded.visibility = View.GONE
-                }
+        viewModel.showLoadingUploaded.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                if (it) mLoadingUploaded.show() else mLoadingUploaded.hide()
             }
         })
 
-        viewModel.featuredPlaylistRes.observe(this, Observer {
-            when (it.status) {
-                Status.SUCCESS -> {
-                    // need disable load more if end of list reached to prevent infinite loading
-                    if (mPlaylistAdapter.itemCount == 0) {
-                        mLoadingPlaylist.hide()
-                    }
-                    mPlaylistAdapter.onUpdateFinish()
-                    mPlaylistAdapter.updateList(it.data.orEmpty())
-                    mEmptyViewPlaylist.visibility =
-                        if (mPlaylistAdapter.itemCount == 0) View.VISIBLE
-                        else View.GONE
-                }
-                Status.ERROR -> {
-                    if (mPlaylistAdapter.itemCount == 0) {
-                        mLoadingPlaylist.hide()
-                    }
-                    mPlaylistAdapter.onUpdateFinish()
-                    Log.e(AppConstant.TAG, it.stringMessage)
-                    mEmptyViewPlaylist.visibility =
-                        if (mPlaylistAdapter.itemCount == 0) View.VISIBLE
-                        else View.GONE
-                }
-                Status.LOADING -> {
-                    if (mPlaylistAdapter.itemCount == 0) {
-                        mLoadingPlaylist.show()
-                    }
-                    mEmptyViewPlaylist.visibility = View.GONE
-                }
+        viewModel.uploadedList.observe(this, Observer {
+            mUploadedAdapter.insertList(it.items)
+            mEmptyViewUploaded.visibility =
+                if (mUploadedAdapter.itemCount == 0) View.VISIBLE
+                else View.GONE
+        })
+
+        viewModel.showLoadingPlaylist.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                if (it) mLoadingPlaylist.show() else mLoadingPlaylist.hide()
             }
+        })
+
+        viewModel.featuredList.observe(this, Observer {
+            mPlaylistAdapter.onUpdateFinish()
+            mPlaylistAdapter.insertList(it.newItems)
+            mPlaylistAdapter.setEnableInfiniteLoad(!it.isEndOfList)
+            mEmptyViewPlaylist.visibility =
+                if (mPlaylistAdapter.itemCount == 0) View.VISIBLE
+                else View.GONE
         })
     }
 
@@ -225,6 +188,7 @@ class ChannelFragment: ReWatchPlayerFragment() {
         private val list = arrayListOf<RPPlaylist>()
         private val reloadThresholdMilli = 5000L     // after trigger reload, disable trigger for this period of time
         private var disableReloadUntil = -1L
+        private var enableInfiniteLoad = true
 
         override fun getItemCount(): Int {
             return list.size
@@ -238,7 +202,7 @@ class ChannelFragment: ReWatchPlayerFragment() {
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val item = list[position]
             holder.bind(item)
-            if (position == itemCount - 1) {
+            if (enableInfiniteLoad && position == itemCount - 1) {
                 val current = System.currentTimeMillis()
                 if (current >= disableReloadUntil) {
                     onReloadNeeded?.invoke()
@@ -247,11 +211,20 @@ class ChannelFragment: ReWatchPlayerFragment() {
             }
         }
 
+        fun setEnableInfiniteLoad(value: Boolean) {
+            enableInfiniteLoad = value
+        }
+
         fun onUpdateFinish() {
             disableReloadUntil = -1L
         }
 
-        fun updateList(newList: List<RPPlaylist>) {
+        fun insertList(newList: List<RPPlaylist>) {
+            list.apply { addAll(newList) }
+            notifyDataSetChanged()
+        }
+
+        fun setList(newList: List<RPPlaylist>) {
             list.apply { clear(); addAll(newList) }
             notifyDataSetChanged()
         }

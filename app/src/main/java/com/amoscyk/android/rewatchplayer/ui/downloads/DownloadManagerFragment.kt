@@ -7,11 +7,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.Toolbar
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
@@ -21,22 +22,26 @@ import androidx.recyclerview.widget.*
 import coil.api.load
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
+import com.amoscyk.android.rewatchplayer.datasource.vo.DownloadStatus
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMetaWithPlayerResource
+import com.amoscyk.android.rewatchplayer.ui.MainViewModel
 import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadPageViewModel.MenuState
 import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
 import com.amoscyk.android.rewatchplayer.util.YouTubeVideoThumbnailHelper
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.download_manager_fragment_list_item.view.*
+import kotlinx.android.synthetic.main.fragment_download_manager.view.*
 import kotlinx.coroutines.launch
 
 class DownloadManagerFragment : ReWatchPlayerFragment() {
 
     private var rootView: View? = null
-    private lateinit var toolbar: Toolbar
-    private lateinit var rvDownloadStatus: RecyclerView
-    private lateinit var mListAdapter: DownloadItemAdapter
+    private val toolbar by lazy { rootView!!.toolbar }
+    private val rvDownloadStatus by lazy { rootView!!.rv_download_status }
+    private val mEmptyView by lazy { rootView!!.empty_view }
+    private var mListAdapter: DownloadItemAdapter? = null
     private val mDialogDelete by lazy {
         AlertDialog.Builder(requireContext())
             .setMessage("Are you sure to remove the selected items?")
@@ -56,7 +61,10 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
             .create()
     }
 
+    private val mainViewModel by activityViewModels<MainViewModel> { viewModelFactory }
     private val viewModel by viewModels<DownloadManagerViewModel> { viewModelFactory }
+
+    private var downloadStatusMap = mapOf<Long, DownloadStatus>()
 
     private val mOnBackPressedCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
@@ -73,15 +81,32 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
         super.onAttach(context)
         mListAdapter = DownloadItemAdapter()
 
-        viewModel.videoMeta.observe(this, Observer { meta ->
-            mListAdapter.submitList(meta)
+        viewModel.videoMetas.observe(this, Observer { meta ->
+            viewModel.updateDownloadStatus(requireContext())
+            mListAdapter?.submitList(meta)
+            mEmptyView.visibility = if (meta.isEmpty()) View.VISIBLE else View.GONE
         })
         viewModel.isEditMode.observe(this, Observer {
-            mListAdapter.setEditMode(it)
+            mListAdapter?.setEditMode(it)
             mOnBackPressedCallback.isEnabled = it
         })
         viewModel.menuState.observe(this, Observer {
             it?.let { setMenuItemForState(it) }
+        })
+        viewModel.downloadStatus.observe(this, Observer {
+            downloadStatusMap = it
+            mListAdapter?.notifyDataSetChanged()
+        })
+        mainViewModel.archiveResult.observe(this, Observer {
+            when (it.status) {
+                Status.SUCCESS -> {
+                    viewModel.getVideoMetaContainsPlayerResource()
+                }
+                Status.ERROR -> {
+
+                }
+                else -> {}
+            }
         })
     }
 
@@ -103,13 +128,11 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
 
     override fun onResume() {
         super.onResume()
-        requireActivity().apply {
-            viewModel.getVideoMetaContainsPlayerResource()
-        }
+        viewModel.getVideoMetaContainsPlayerResource()
     }
 
     private fun setupViews() {
-        toolbar = rootView!!.findViewById<Toolbar>(R.id.toolbar).apply {
+        toolbar.apply {
             inflateMenu(R.menu.downloaded_video_option_menu)
             setOnMenuItemClickListener {
                 when (it.itemId) {
@@ -127,7 +150,7 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
                 true
             }
         }
-        rvDownloadStatus = rootView!!.findViewById<RecyclerView>(R.id.rv_download_status).apply {
+        rvDownloadStatus.apply {
             adapter = mListAdapter
             layoutManager = LinearLayoutManager(requireContext())
             addItemDecoration(DividerItemDecoration(requireContext(), RecyclerView.VERTICAL))
@@ -145,7 +168,7 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
                 }
                 MenuState.SELECT_SINGLE -> {
                     delete.isVisible = true
-                    details.isVisible = true
+                    details.isVisible = false
                 }
                 MenuState.SELECT_MULTI -> {
                     delete.isVisible = true
@@ -154,6 +177,8 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
             }
         }
     }
+
+    private fun Int.toStringInMB(): String = "%.2fMB".format(this / 1_000_000f)
 
     private inner class DownloadItemAdapter: ListAdapter<VideoMetaWithPlayerResource, DownloadItemAdapter.ViewHolder>(DIFF_CALLBACK) {
         private val checkStatus = hashMapOf<String, Boolean>()
@@ -178,6 +203,15 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
                 }
                 checkBox.isChecked = checkStatus[item.videoMeta.videoId]!!
                 checkBox.visibility = if (isEditMode) View.VISIBLE else View.GONE
+                btnPlay.visibility = if (isEditMode) View.GONE else View.VISIBLE
+                val dlIds = item.playerResources.map { it.downloadId }
+                var sum = 0
+                downloadStatusMap.forEach {
+                    if (dlIds.contains(it.key)) {
+                        sum += it.value.totalByte
+                    }
+                }
+                tvFileSize.text = sum.toStringInMB()
             }
         }
 
@@ -194,14 +228,20 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
             val tvTitle: TextView = itemView.tv_title
             val tvAuthor: TextView = itemView.tv_author
             val tvQuality: TextView = itemView.tv_quality
+            val tvFileSize: TextView = itemView.tv_total_size
             val checkBox: CheckBox = itemView.checkbox_select
+            val btnPlay: ImageButton = itemView.btn_play
 
             init {
                 itemView.setOnClickListener {
                     if (viewModel.isEditMode.value == true) {
                         checkBox.isChecked = !checkBox.isChecked
                     } else {
-                        mainActivity?.playVideoForId(getItem(adapterPosition).videoMeta.videoId)
+                        findNavController().navigate(
+                            DownloadManagerFragmentDirections.showDownloadedFile(
+                                getItem(adapterPosition).videoMeta.videoId
+                            )
+                        )
                     }
                 }
                 itemView.setOnLongClickListener {
@@ -211,6 +251,9 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
                         checkBox.isChecked = true
                     }
                     true
+                }
+                btnPlay.setOnClickListener {
+                    mainActivity?.playVideoForId(getItem(adapterPosition).videoMeta.videoId)
                 }
                 checkBox.setOnCheckedChangeListener { buttonView, isChecked ->
                     val item = getItem(adapterPosition)

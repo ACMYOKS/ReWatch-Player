@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.api.load
@@ -18,6 +19,10 @@ class SubscriptionListAdapter(
     private val onItemClick: ((RPSubscription) -> Unit)? = null
 ): ListAdapter<RPSubscription, SubscriptionListAdapter.ViewHolder>(DIFF_CALLBACK) {
 
+    private var recyclerView: RecyclerView? = null
+    private var isInfiniteLoadEnabled = true
+    private var onLoadMoreNeeded: (() -> Unit)? = null
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.subscription_list_item, parent, false)
         return ViewHolder(view)
@@ -26,6 +31,37 @@ class SubscriptionListAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position)
         holder.bind(item)
+    }
+
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
+        this.recyclerView = recyclerView
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                if (isInfiniteLoadEnabled) {
+                    if (dy > 0) {
+                        (recyclerView.layoutManager as? LinearLayoutManager)?.apply {
+                            if (findLastCompletelyVisibleItemPosition() == itemCount - 1) {
+                                onLoadMoreNeeded?.invoke()
+                            }
+                        }
+                    }
+                }
+            }
+        })
+    }
+
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView)
+        this.recyclerView = null
+    }
+
+    fun setEnableInfiniteLoad(value: Boolean) {
+        isInfiniteLoadEnabled = value
+    }
+
+    fun setOnLoadMoreNeeded(l: (() -> Unit)?) {
+        onLoadMoreNeeded = l
     }
 
     inner class ViewHolder(itemView: View): RecyclerView.ViewHolder(itemView) {
