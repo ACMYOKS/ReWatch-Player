@@ -12,11 +12,6 @@
         android:icon="@drawable/ic_bookmark_white"
         app:showAsAction="always"/>
     <item
-        android:id="@+id/archive"
-        android:title="archive video"
-        android:icon="@drawable/ic_archive_white"
-        app:showAsAction="always"/>
-    <item
         android:id="@+id/rotation"
         android:title="screen rotation"
         android:icon="@drawable/ic_screen_rotation_white"
@@ -24,6 +19,6 @@
     <item
         android:id="@+id/other_action"
         android:title="more"
-        android:icon="@drawable/ic_arrow_drop_down_white"
+        android:icon="@drawable/ic_more_vert_white"
         app:showAsAction="always"/>
 </menu>

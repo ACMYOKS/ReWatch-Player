@@ -1,5 +1,7 @@
 package com.amoscyk.android.rewatchplayer.ui.player
 
+import android.graphics.Color
+import android.graphics.PorterDuff
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -44,7 +46,10 @@ class PlayerOptionAdapter(
         }
 
         fun bind(option: PlayerOption) {
-            imageView.setImageResource(option.imgResId)
+            imageView.apply {
+                setImageResource(option.imgResId)
+                setColorFilter(Color.WHITE)
+            }
             titleTv.text = option.title
             switchCheck.apply {
                 visibility = if (option.checked == null) View.GONE else View.VISIBLE

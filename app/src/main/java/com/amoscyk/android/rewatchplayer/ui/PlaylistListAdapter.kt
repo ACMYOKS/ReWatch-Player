@@ -32,6 +32,10 @@ class PlaylistListAdapter(
         holder.bind(item)
     }
 
+    override fun getItemId(position: Int): Long {
+        return getItem(position).id.hashCode().toLong()
+    }
+
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
         super.onAttachedToRecyclerView(recyclerView)
         this.recyclerView = recyclerView

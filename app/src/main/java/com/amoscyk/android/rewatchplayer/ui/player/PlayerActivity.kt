@@ -2,8 +2,6 @@ package com.amoscyk.android.rewatchplayer.ui.player
 
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
-import android.view.View
 import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -26,10 +24,8 @@ import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import kotlinx.android.synthetic.main.bottom_sheet_dialog_archive_option.*
-import kotlinx.android.synthetic.main.bottom_sheet_dialog_archive_option.view.*
 import kotlinx.android.synthetic.main.bottom_sheet_dialog_user_option.view.*
-import kotlinx.android.synthetic.main.dialog_achive_option.view.*
+import kotlinx.android.synthetic.main.dialog_archive_option.view.*
 import java.io.File
 
 class PlayerActivity : ReWatchPlayerActivity() {
@@ -317,10 +313,10 @@ class PlayerActivity : ReWatchPlayerActivity() {
                     R.id.remove_bookmark -> {
                         viewModel.updateBookmarkStatus(false)
                     }
-                    R.id.archive -> {
+//                    R.id.archive -> {
 //                        mArchiveOptionDialog.show()
-                        showArchiveOptions()
-                    }
+//                        showArchiveOptions()
+//                    }
                     R.id.other_action -> {
                         mOptionDialog.show()
                     }
@@ -390,7 +386,7 @@ class PlayerActivity : ReWatchPlayerActivity() {
 
     private fun showArchiveOptions() {
         AlertDialog.Builder(this).apply {
-            val contentView = layoutInflater.inflate(R.layout.dialog_achive_option, null, false)
+            val contentView = layoutInflater.inflate(R.layout.dialog_archive_option, null, false)
             contentView.apply {
                 spinner_video_quality.apply {
                     adapter = ArrayAdapter<String>(this@PlayerActivity,

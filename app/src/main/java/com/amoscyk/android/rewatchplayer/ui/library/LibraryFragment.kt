@@ -4,11 +4,11 @@ package com.amoscyk.android.rewatchplayer.ui.library
 import android.content.Context
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.*
 import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.view.ActionMode
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.edit
 import androidx.core.widget.ContentLoadingProgressBar
@@ -21,7 +21,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
-import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.ui.CommonListDecoration
 import com.amoscyk.android.rewatchplayer.ui.PlaylistListAdapter
 import com.amoscyk.android.rewatchplayer.ui.SubscriptionListAdapter
@@ -33,6 +32,7 @@ import com.google.android.material.snackbar.Snackbar
 class LibraryFragment : ReWatchPlayerFragment() {
 
     private var rootView: View? = null
+    private var actionMode: ActionMode? = null
     private lateinit var toolbar: Toolbar
     private lateinit var typeSpinner: Spinner
     private lateinit var loadPlaylistBtn: Button
@@ -43,10 +43,30 @@ class LibraryFragment : ReWatchPlayerFragment() {
     private lateinit var loadingView: ContentLoadingProgressBar
     private val viewModel by viewModels<LibraryViewModel> { viewModelFactory }
 
-    private val mOnBackPressedCallback = object : OnBackPressedCallback(false) {
-        override fun handleOnBackPressed() {
+    private val actionModeCallback = object : ActionMode.Callback {
+        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
+            mode.menuInflater.inflate(R.menu.library_action_mode_menu, menu)
+            return true
+        }
+
+        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
+            return false
+        }
+
+        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
+            when (item.itemId) {
+                R.id.confirm_delete -> {
+                    viewModel.removeBookmark(mBookmarkListAdapter.getSelectedItemsId())
+                }
+            }
+            return true
+        }
+
+        override fun onDestroyActionMode(mode: ActionMode) {
+            if (actionMode != null) actionMode = null
             viewModel.setEditMode(false)
         }
+
     }
 
     private var currentDisplayMode = LibraryViewModel.DisplayMode.CHANNEL
@@ -57,11 +77,14 @@ class LibraryFragment : ReWatchPlayerFragment() {
         findNavController().navigate(LibraryFragmentDirections.showChannelDetail(it.channelId))
     }).apply {
         setOnLoadMoreNeeded { viewModel.loadMoreChannels() }
+    }.apply {
+        setHasStableIds(true)
     }
     private val mPlaylistAdapter = PlaylistListAdapter(itemOnClick = {
         findNavController().navigate(LibraryFragmentDirections.showVideoListForPlaylist(it, true))
     }).apply {
         setOnLoadMoreNeeded { viewModel.loadMorePlaylists() }
+        setHasStableIds(true)
     }
     private val mBookmarkListAdapter = VideoListAdapter().apply {
         setArchivable(true)
@@ -71,6 +94,7 @@ class LibraryFragment : ReWatchPlayerFragment() {
         setOnItemClickListener { position, meta ->
             if (isEditMode) {
                 toggleItemSelection(position)
+                actionMode?.title = getSelectedItemsId().size.toString()
             } else {
                 mainActivity?.playVideoForId(meta.videoId)
             }
@@ -78,27 +102,34 @@ class LibraryFragment : ReWatchPlayerFragment() {
         setOnItemLongClickListener { position, meta ->
             viewModel.setEditMode(true)
             toggleItemSelection(position)
+            actionMode?.title = getSelectedItemsId().size.toString()
             true
         }
+        setHasStableIds(true)
     }
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
 
-        requireActivity().onBackPressedDispatcher.addCallback(mOnBackPressedCallback)
-
         mTypeSpinnerAdapter = ListTypeAdapter(context)
 
         viewModel.editMode.observe(this, Observer {
             isEditMode = it
-            mOnBackPressedCallback.isEnabled = it
-            setMenuItemVisibility(it)
+//            mOnBackPressedCallback.isEnabled = it
+//            setMenuItemVisibility(it)
             mBookmarkListAdapter.setEditMode(it)
+            if (it) {
+                actionMode = (requireActivity() as AppCompatActivity).startSupportActionMode(
+                    actionModeCallback
+                )
+            } else {
+                actionMode?.finish()
+            }
         })
         viewModel.currentDisplayMode.observe(this, Observer {
             currentDisplayMode = it
             typeSpinner.setSelection(it.ordinal)
-            setMenuItemVisibility(isEditMode)
+//            setMenuItemVisibility(isEditMode)
             setListForDisplayMode(it)
         })
         viewModel.channelList.observe(this, Observer {
@@ -143,6 +174,17 @@ class LibraryFragment : ReWatchPlayerFragment() {
                 } else {
                     loadingView.hide()
                 }
+            }
+        })
+        viewModel.bookmarkRemoveCount.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                Snackbar.make(
+                    view!!,
+                    getString(R.string.library_bookmark_removed, it),
+                    Snackbar.LENGTH_SHORT
+                ).show()
+                viewModel.setEditMode(false)
+                viewModel.refreshList()
             }
         })
     }
@@ -237,20 +279,31 @@ class LibraryFragment : ReWatchPlayerFragment() {
     }
 
     private fun setupOptionMenu() {
-        toolbar.inflateMenu(R.menu.library_option_menu)
-        toolbar.setOnMenuItemClickListener {
-            when (it.itemId) {
-                R.id.refresh_list -> {
-                    viewModel.refreshList()
+//        toolbar.inflateMenu(R.menu.library_option_menu)
+//        toolbar.setOnMenuItemClickListener {
+//            when (it.itemId) {
+//                R.id.refresh_list -> {
+//                    viewModel.refreshList()
+//                }
+//                R.id.edit_item -> {
+//                    viewModel.setEditMode(true)
+//                }
+//                R.id.confirm_delete -> {
+//                    viewModel.setEditMode(false)
+//                }
+//            }
+//            true
+//        }
+        toolbar.apply {
+            inflateMenu(R.menu.library_option_menu2)
+            setOnMenuItemClickListener {
+                when (it.itemId) {
+                    R.id.refresh_list -> {
+                        viewModel.refreshList()
+                    }
                 }
-                R.id.edit_item -> {
-                    viewModel.setEditMode(true)
-                }
-                R.id.confirm_delete -> {
-                    viewModel.setEditMode(false)
-                }
+                true
             }
-            true
         }
     }
 
@@ -274,12 +327,12 @@ class LibraryFragment : ReWatchPlayerFragment() {
         }
     }
 
-    private fun setMenuItemVisibility(isEditMode: Boolean) {
-        with(toolbar.menu) {
-            setGroupVisible(R.id.library_option_group, !isEditMode)
-            setGroupVisible(R.id.library_edit_group, isEditMode)
-        }
-    }
+//    private fun setMenuItemVisibility(isEditMode: Boolean) {
+//        with(toolbar.menu) {
+//            setGroupVisible(R.id.library_option_group, !isEditMode)
+//            setGroupVisible(R.id.library_edit_group, isEditMode)
+//        }
+//    }
 
     private class ListTypeAdapter(context: Context): ArrayAdapter<String>(context,
         R.layout.list_type_adapter_view, R.id.tv_type) {

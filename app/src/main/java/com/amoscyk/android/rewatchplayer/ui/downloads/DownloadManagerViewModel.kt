@@ -28,8 +28,8 @@ class DownloadManagerViewModel(
     }
     private val _isEditMode = MutableLiveData(false)
     val isEditMode: LiveData<Boolean> = _isEditMode
-    private val _menuState = MutableLiveData(MenuState.NORMAL)
-    val menuState: LiveData<MenuState> = _menuState
+    private val _selectedItems = MutableLiveData<List<VideoMetaWithPlayerResource>>()
+    val selectedItems: LiveData<List<VideoMetaWithPlayerResource>> = _selectedItems
 
     init {
         _videoMetas.observeForever(videoMetaObserver)
@@ -51,12 +51,12 @@ class DownloadManagerViewModel(
     fun selectVideoMeta(videoId: String) {
         setEditMode(true)
         viewStatus[videoId]?.isSelected = true
-        handleMenuState()
+        updateSelectedItems()
     }
 
     fun deselectVideoMeta(videoId: String) {
         viewStatus[videoId]?.isSelected = false
-        handleMenuState()
+        updateSelectedItems()
     }
 
     fun getSelectedVideoMetas(): List<VideoMetaWithPlayerResource> {
@@ -91,11 +91,10 @@ class DownloadManagerViewModel(
         return Resource.success(null)
     }
 
-    private fun handleMenuState() {
-        _menuState.value = when (getSelectedCount()) {
-            0 -> MenuState.NORMAL
-            1 -> MenuState.SELECT_SINGLE
-            else -> MenuState.SELECT_MULTI
+    private fun updateSelectedItems() {
+        _videoMetas.value?.let {
+            val keys = viewStatus.filterValues { it.isSelected }.keys
+            _selectedItems.value = it.filter { it.videoMeta.videoId in keys }
         }
     }
 

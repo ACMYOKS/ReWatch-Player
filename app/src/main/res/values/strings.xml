@@ -5,16 +5,35 @@
     <string name="main_bottom_nav_title_home">Home</string>
     <string name="main_bottom_nav_title_library">Library</string>
     <string name="main_bottom_nav_title_downloads">Downloads</string>
-    <string name="main_bottom_nav_title_account">Account</string>
+    <string name="main_bottom_nav_title_account">Settings</string>
 
     <!-- Player -->
     <string name="player_archive_option_video">Video Resolution</string>
     <string name="player_archive_option_audio">Audio Quality</string>
+    <string name="player_option_info">information</string>
+    <string name="player_option_resolution">resolution</string>
+    <string name="player_option_archive">archive</string>
+    <string name="player_option_speed">speed</string>
+    <string name="player_option_share">share</string>
+    <string name="player_dialog_speed_title">Speed</string>
+    <string name="player_archive_option_title">Archive</string>
+    <string name="player_quality_option_title">Resolution</string>
+    <string name="player_share_title">Share link</string>
+
+    <string name="player_video_info_title">Information</string>
+    <string name="player_video_info_video_title">title</string>
+    <string name="player_video_info_channel_title">channel</string>
+    <string name="player_video_info_video_id">video id</string>
+    <string name="player_video_info_description">description</string>
+    <string name="player_video_info_video_tags">tags</string>
+    <string name="player_video_info_view_channel">view channel</string>
 
     <!-- Library -->
     <string name="library_list_channel">Channel</string>
     <string name="library_list_playlist">Playlist</string>
     <string name="library_list_bookmarked">Bookmarked</string>
+    <string name="library_action_remove_bookmark">Remove bookmark</string>
+    <string name="library_bookmark_removed">%1$d bookmark(s) removed</string>
 
     <!-- Channel -->
     <string name="channel_subscriber_count">%1$d subscribers</string>
@@ -22,9 +41,14 @@
     <string name="channel_uploaded_title">Uploaded</string>
     <string name="channel_playlist_title">Playlist</string>
 
+    <!-- Download -->
+    <string name="download_action_remove">Remove archive</string>
+
     <!-- Common string -->
-    <string name="confirm_text">confirm</string>
-    <string name="empty_list">No Item!</string>
+    <string name="confirm_text">OK</string>
+    <string name="cancel_text">Cancel</string>
+    <string name="default_text">Default</string>
+    <string name="empty_list">no item</string>
 
     <!-- Setting -->
     <string name="setting_account">Account</string>

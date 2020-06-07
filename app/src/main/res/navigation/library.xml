@@ -9,9 +9,6 @@
         android:id="@+id/libraryFragment"
         android:name="com.amoscyk.android.rewatchplayer.ui.library.LibraryFragment"
         tools:layout="@layout/fragment_library" >
-        <action
-            android:id="@+id/showChannelDetail"
-            app:destination="@id/channelFragment" />
     </fragment>
     <fragment
         android:id="@+id/videoListFragment"
@@ -32,6 +29,8 @@
             android:name="channelId"
             app:argType="string" />
     </fragment>
+    <action android:id="@+id/showChannelDetail"
+        app:destination="@id/channelFragment"/>
     <action android:id="@+id/showVideoListForPlaylist"
         app:destination="@id/videoListFragment"/>
 </navigation>

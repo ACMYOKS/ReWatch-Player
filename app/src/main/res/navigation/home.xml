@@ -17,4 +17,28 @@
         android:id="@+id/videoSearchFragment"
         android:name="com.amoscyk.android.rewatchplayer.ui.home.VideoSearchFragment"
         tools:layout="@layout/fragment_video_search" />
+    <fragment
+        android:id="@+id/channelFragment"
+        android:name="com.amoscyk.android.rewatchplayer.ui.ChannelFragment"
+        tools:layout="@layout/fragment_channel">
+        <argument
+            android:name="channelId"
+            app:argType="string" />
+    </fragment>
+    <action android:id="@+id/showChannelDetail"
+        app:destination="@id/channelFragment"/>
+    <fragment
+        android:id="@+id/videoListFragment"
+        android:name="com.amoscyk.android.rewatchplayer.ui.VideoListFragment"
+        tools:layout="@layout/fragment_video_list" >
+        <argument
+            android:name="playlist"
+            app:argType="com.amoscyk.android.rewatchplayer.datasource.vo.RPPlaylist" />
+        <argument
+            android:name="enableEditOnLongClick"
+            app:argType="boolean" />
+    </fragment>
+
+    <action android:id="@+id/showVideoListForPlaylist"
+        app:destination="@id/videoListFragment"/>
 </navigation>

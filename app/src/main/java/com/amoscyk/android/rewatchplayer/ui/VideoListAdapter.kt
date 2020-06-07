@@ -50,6 +50,10 @@ class VideoListAdapter: ListAdapter<VideoMeta, VideoListAdapter.ViewHolder>(DIFF
         holder.bind(video, position)
     }
 
+    override fun getItemId(position: Int): Long {
+        return getItem(position).videoId.hashCode().toLong()
+    }
+
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
         super.onAttachedToRecyclerView(recyclerView)
         this.recyclerView = recyclerView
@@ -119,6 +123,9 @@ class VideoListAdapter: ListAdapter<VideoMeta, VideoListAdapter.ViewHolder>(DIFF
             }
         }
     }
+
+    fun getSelectedItemsId(): List<String> =
+        viewStatusMap.filterValues { it.isSelected }.keys.toList()
 
     fun setOnItemClickListener(l: ((position: Int, meta: VideoMeta) -> Unit)?) { onItemClick = l }
     fun setOnItemLongClickListener(l: ((position: Int, meta: VideoMeta) -> Boolean)?) { onItemLongClick = l }

@@ -7,11 +7,27 @@
     android:orientation="vertical"
     tools:context=".ui.MainPageFragment">
 
-    <FrameLayout
-        android:id="@+id/main_page_nav_host_fragment"
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:id="@+id/content_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"/>
+        android:layout_weight="1">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+        <FrameLayout
+            android:id="@+id/main_page_nav_host_fragment"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+        <View
+            android:id="@+id/player_view_padding"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:visibility="gone"/>
+        </LinearLayout>
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/main_bottom_nav"

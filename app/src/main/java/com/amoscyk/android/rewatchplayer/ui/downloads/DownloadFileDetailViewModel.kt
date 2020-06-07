@@ -21,7 +21,7 @@ class DownloadFileDetailViewModel(
 
     private var viewStatus = hashMapOf<Long, ViewStatus>()      // downloadId -> viewStatus
     private val downloadStatusObserver = Observer<Map<Long, DownloadStatus>> {
-        var sum = 0
+        var sum = 0L
         it.forEach {
             if (viewStatus[it.key] == null) {
                 viewStatus[it.key] = ViewStatus(false)
@@ -32,14 +32,14 @@ class DownloadFileDetailViewModel(
             _totalSize.value = sum
         }
     }
-    private val _menuState = MutableLiveData(MenuState.NORMAL)
-    val menuState: LiveData<MenuState> = _menuState
     private val _isEditMode = MutableLiveData(false)
     val isEditMode: LiveData<Boolean> = _isEditMode
-    private val _totalSize = MutableLiveData(0)
-    val totalSize: LiveData<Int> = _totalSize
-    private val _selectedSize = MutableLiveData(0)
-    val selectedSize: LiveData<Int> = _selectedSize
+    private val _totalSize = MutableLiveData(0L)
+    val totalSize: LiveData<Long> = _totalSize
+    private val _selectedSize = MutableLiveData(0L)
+    val selectedSize: LiveData<Long> = _selectedSize
+    private val _selectedCount = MutableLiveData(0)
+    val selectedCount: LiveData<Int> = _selectedCount
 
     init {
         _downloadStatus.observeForever(downloadStatusObserver)
@@ -70,7 +70,7 @@ class DownloadFileDetailViewModel(
             }
             return@sumBy 0
         }
-        handleMenuState()
+        _selectedCount.value = getSelectedCount()
     }
 
     fun deselectDownloadedItem(ids: List<Long>) {
@@ -83,7 +83,7 @@ class DownloadFileDetailViewModel(
             }
             return@sumBy 0
         }
-        handleMenuState()
+        _selectedCount.value = getSelectedCount()
     }
 
     suspend fun deleteSelectedPlayerResources(context: Context): Resource<Unit> {
@@ -115,14 +115,6 @@ class DownloadFileDetailViewModel(
             return Resource.success(null)
         }
         return Resource.error("no video meta", null)
-    }
-
-    private fun handleMenuState() {
-        _menuState.value = when (getSelectedCount()) {
-            0 -> MenuState.NORMAL
-            1 -> MenuState.SELECT_SINGLE
-            else -> MenuState.SELECT_MULTI
-        }
     }
 
     private fun getSelectedCount() = viewStatus.values.count { it.isSelected }

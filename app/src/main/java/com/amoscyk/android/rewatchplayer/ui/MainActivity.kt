@@ -15,10 +15,11 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.view.ActionMode
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.lifecycle.Observer
-import androidx.lifecycle.lifecycleScope
+import androidx.navigation.findNavController
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -27,12 +28,12 @@ import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerActivity
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel.ResponseActionType
+import com.amoscyk.android.rewatchplayer.ui.account.StartupAccountFragmentDirections
+import com.amoscyk.android.rewatchplayer.ui.library.LibraryFragmentDirections
 import com.amoscyk.android.rewatchplayer.ui.player.*
 import com.amoscyk.android.rewatchplayer.util.*
 import com.amoscyk.android.rewatchplayer.viewModelFactory
-import com.google.android.exoplayer2.DefaultLoadControl
-import com.google.android.exoplayer2.ExoPlayerFactory
-import com.google.android.exoplayer2.SimpleExoPlayer
+import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.source.MergingMediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
@@ -40,8 +41,7 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.bottom_sheet_dialog_user_option.view.*
-import kotlinx.android.synthetic.main.dialog_achive_option.view.*
-import kotlinx.coroutines.launch
+import kotlinx.android.synthetic.main.dialog_archive_option.view.*
 import java.io.File
 
 
@@ -51,14 +51,10 @@ class MainActivity : ReWatchPlayerActivity() {
 
     // player option view
     private lateinit var mOptionDialog: BottomSheetDialog
-    private lateinit var mResolutionDialog: BottomSheetDialog
-    private lateinit var mAudioQualityDialog: BottomSheetDialog
-    private var mResOptionDialog: AlertDialog? = null
-    private var mResOptionDialogView: View? = null
-    private var mArchiveOptionDialog: AlertDialog? = null
-    private var mArchiveOptionDialogView: View? = null
-    private lateinit var mResolutionRv: RecyclerView
-    private lateinit var mQualityRv: RecyclerView
+    private var mVideoInfoDialog: VideoInfoBottomSheetDialog? = null
+    private var mArchiveOptionDialog: ArchiveOptionDialog? = null
+    private var mResOptionDialog: VideoQualityOptionDialog? = null
+    private var mPlaybackSpeedDialog: PlaybackSpeedDialog? = null
 
     private var mVtagList = LinkedHashMap<Int, YouTubeStreamFormatCode.StreamFormat>()
     private var mAtagList = LinkedHashMap<Int, YouTubeStreamFormatCode.StreamFormat>()
@@ -66,45 +62,43 @@ class MainActivity : ReWatchPlayerActivity() {
     // player option view related class
     private val mOptionAdapter = PlayerOptionAdapter({ option, position ->
         if (position == 0) {
-//            mResolutionDialog.show()
-            mResOptionDialog?.show()
+            mVideoInfoDialog?.show()
             mOptionDialog.dismiss()
         } else if (position == 1) {
-            mAudioQualityDialog.show()
+            mResOptionDialog?.show()
             mOptionDialog.dismiss()
-        }
-    }, { isChecked, position ->
-        if (position == 2) {
-
+        } else if (position == 2) {
+            viewModel.videoMeta.value?.videoId?.let { vid ->
+                showArchiveOption(vid)
+                mOptionDialog.dismiss()
+            }
+        } else if (position == 3) {
+            viewModel.playbackParams.value?.speed?.let { speed ->
+                mPlaybackSpeedDialog?.apply {
+                    setPlaybackMultiplier(speed)
+                    show()
+                }
+            }
+            mOptionDialog.dismiss()
+        } else if (position == 3) {
+            mOptionDialog.dismiss()
+            Intent.createChooser(Intent().apply {
+                action = Intent.ACTION_SEND
+                putExtra(Intent.EXTRA_TEXT, "https://youtu.be/" + viewModel.videoMeta.value!!.videoId)
+                type = "text/plain"
+            }, getString(R.string.player_share_title)).also { startActivity(it) }
         }
     })
-    private val mResSelectionAdapter = PlayerSelectionAdapter({
-        mResolutionDialog.dismiss()
-        exoPlayer?.let { player ->
-            // save playback state
-            playWhenReady = player.playWhenReady
-            currentWindow = player.currentWindowIndex
-            playbackPosition = player.currentPosition
-        }
-//        viewModel.setVideoFormat(true, it.item.itag)
 
-    }, SELECTION_DIFF_CALLBACK)
-    private val mAudioSelectionAdapter = PlayerSelectionAdapter({
-        mAudioQualityDialog.dismiss()
-        exoPlayer?.let { player ->
-            // save playback state
-            playWhenReady = player.playWhenReady
-            currentWindow = player.currentWindowIndex
-            playbackPosition = player.currentPosition
-        }
-//        viewModel.setVideoFormat(false, it.item.itag)
-    }, SELECTION_DIFF_CALLBACK)
-
-    private val extraPlayerOptions = listOf(
-        PlayerOption("resolution", R.drawable.ic_bookmark_border_white),
-        PlayerOption("audio quality", R.drawable.ic_arrow_drop_down_white),
-        PlayerOption("online mode", R.drawable.ic_arrow_drop_down_white, true)
-    )
+    private val extraPlayerOptions by lazy {
+        listOf(
+            PlayerOption(getString(R.string.player_option_info), R.drawable.ic_info),
+            PlayerOption(getString(R.string.player_option_resolution), R.mipmap.ic_action_resolution),
+            PlayerOption(getString(R.string.player_option_archive), R.drawable.ic_archive_white),
+            PlayerOption(getString(R.string.player_option_speed), R.drawable.ic_slow_motion_video),
+            PlayerOption(getString(R.string.player_option_share), R.drawable.ic_share)
+        )
+    }
 
     private val viewModel by viewModels<MainViewModel> { viewModelFactory }
 
@@ -124,6 +118,18 @@ class MainActivity : ReWatchPlayerActivity() {
     private val progressiveSrcFactory: ProgressiveMediaSource.Factory by lazy {
         ProgressiveMediaSource.Factory(defaultFactory)
     }
+
+    private val mPlayerListener = object : Player.EventListener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (isPlaying) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            } else {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+        }
+    }
+
+    private var mPlayerSizeListeners = ArrayList<VideoPlayerLayout.PlayerSizeListener>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -156,22 +162,6 @@ class MainActivity : ReWatchPlayerActivity() {
             })
         }
 
-        viewModel.isOnlineMode.observe(this, Observer {
-            runOnUiThread {
-                // prevent call notifyItemChanged before recycler view finished layout
-                extraPlayerOptions[2].checked = it
-                mOptionAdapter.notifyItemChanged(2)
-            }
-        })
-        viewModel.requestOnlineMode.observe(this, Observer { msg ->
-//            AlertDialog.Builder(this).apply {
-//                setMessage(msg)
-//                setPositiveButton("ok") { _, _ -> viewModel.setOnlineMode(this@MainActivity, true) }
-//                setNegativeButton("cancel") { _, _ -> }
-//                create()
-//            }.show()
-        })
-
         viewModel.needShowArchiveOption.observe(this, Observer { event ->
             event.getContentIfNotHandled { mArchiveOptionDialog?.show() }
         })
@@ -201,92 +191,42 @@ class MainActivity : ReWatchPlayerActivity() {
             }
         })
 
-        viewModel.videoMeta.observe(this, Observer {
-            mPlayerLayout.setTitle(it.title)
-            setBookmarkButton(it.bookmarked)
-            val itags = it.itags
+        viewModel.videoMeta.observe(this, Observer { meta ->
+            mPlayerLayout.setTitle(meta.title)
+            setBookmarkButton(meta.bookmarked)
+            val itags = meta.itags
             mVtagList = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMATS.filter {
                 itags.contains(it.key)
             })
             mAtagList = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_AUDIO_FORMATS.filter {
                 itags.contains(it.key)
             })
-            mResOptionDialog = AlertDialog.Builder(this).apply {
-                mResOptionDialogView =
-                    layoutInflater.inflate(R.layout.dialog_achive_option, null, false)
-                mResOptionDialogView!!.apply {
-                    spinner_video_quality.apply {
-                        adapter = ArrayAdapter<String>(this@MainActivity,
-                            android.R.layout.simple_spinner_dropdown_item,
-                            mVtagList.map { it.value.resolution }
-                        )
+            mResOptionDialog?.apply {
+                setVideoTags(mVtagList.keys.toList())
+                setAudioVTags(mAtagList.keys.toList())
+            }
+            mArchiveOptionDialog?.apply {
+                setVideoTags(mVtagList.keys.toList())
+                setAudioVTags(mAtagList.keys.toList())
+            }
+            mVideoInfoDialog?.apply {
+                setVideoMeta(meta)
+                setViewChannelButtonOnClickListener(View.OnClickListener {
+                    dismiss()
+                    findNavController(R.id.main_page_nav_host_fragment)
+                        .navigate(LibraryFragmentDirections.showChannelDetail(meta.channelId))
+                    if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                        handleRotation()
                     }
-                    spinner_audio_quality.apply {
-                        adapter = ArrayAdapter<String>(this@MainActivity,
-                            android.R.layout.simple_spinner_dropdown_item,
-                            mAtagList.map { it.value.bitrate }
-                        )
-                    }
-                }
-                setView(mResOptionDialogView)
-                setTitle("Select quality")
-                setPositiveButton("ok") { _, _ ->
-                    // save playback state
-                    exoPlayer?.let {
-                        playWhenReady = it.playWhenReady
-                        currentWindow = it.currentWindowIndex
-                        playbackPosition = it.currentPosition
-                    }
-                    val vKey =
-                        mVtagList.map { it.key }[mResOptionDialogView!!.spinner_video_quality.selectedItemPosition]
-                    val vTag = mVtagList[vKey]?.itag
-                    val aKey =
-                        mAtagList.map { it.key }[mResOptionDialogView!!.spinner_audio_quality.selectedItemPosition]
-                    val aTag = mAtagList[aKey]?.itag
-                    viewModel.setQuality(vTag, aTag)
-                }
-                setNegativeButton("cancel") { _, _ -> }
-            }.create()
-            mArchiveOptionDialog = AlertDialog.Builder(this).apply {
-                mArchiveOptionDialogView =
-                    layoutInflater.inflate(R.layout.dialog_achive_option, null, false)
-                mArchiveOptionDialogView!!.apply {
-                    spinner_video_quality.apply {
-                        adapter = ArrayAdapter<String>(this@MainActivity,
-                            android.R.layout.simple_spinner_dropdown_item,
-                            mVtagList.map { it.value.resolution }
-                        )
-                    }
-                    spinner_audio_quality.apply {
-                        adapter = ArrayAdapter<String>(this@MainActivity,
-                            android.R.layout.simple_spinner_dropdown_item,
-                            mAtagList.map { it.value.bitrate }
-                        )
-                    }
-                }
-                setView(mArchiveOptionDialogView)
-                setTitle("Archive options")
-                setPositiveButton("ok") { _, _ ->
-                    lifecycleScope.launch {
-                        val vKey =
-                            mVtagList.map { it.key }[mArchiveOptionDialogView!!.spinner_video_quality.selectedItemPosition]
-                        val vTag = mVtagList[vKey]?.itag
-                        val aKey =
-                            mAtagList.map { it.key }[mArchiveOptionDialogView!!.spinner_audio_quality.selectedItemPosition]
-                        val aTag = mAtagList[aKey]?.itag
-                        viewModel.archiveVideo(this@MainActivity, vTag, aTag)
-                    }
-                }
-                setNegativeButton("cancel") { _, _ -> }
-            }.create()
+                    mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.SMALL)
+                })
+            }
         })
 
         viewModel.selectedTags.observe(this, Observer {
-            val vPos = mVtagList.keys.toList().indexOf(it.vTag)
-            val aPos = mAtagList.keys.toList().indexOf(it.aTag)
-            mResOptionDialogView?.apply {
-                if (vPos >= 0) spinner_video_quality.setSelection(vPos)
-                if (aPos >= 0) spinner_audio_quality.setSelection(aPos)
+            mResOptionDialog?.apply {
+                it.vTag?.let { setCurrentVTag(it) }
+                it.aTag?.let { setCurrentATag(it) }
             }
         })
 
@@ -309,118 +249,39 @@ class MainActivity : ReWatchPlayerActivity() {
         viewModel.archiveResult.observe(this, Observer { result ->
             when (result.status) {
                 Status.SUCCESS -> {
-                    Snackbar.make(
-                        getContentView(),
-                        "has new download task: ${result.data!!.taskCount}",
-                        Snackbar.LENGTH_SHORT
-                    ).show()
+                    getMainFragment()?.contentContainer?.let {
+                        Snackbar.make(
+                            it,
+                            "has new download task: ${result.data!!.taskCount}",
+                            Snackbar.LENGTH_SHORT
+                        ).show()
+                    }
                 }
                 Status.ERROR -> {
-                    Snackbar.make(
-                        getContentView(),
-                        result.stringMessage,
-                        Snackbar.LENGTH_SHORT
-                    ).show()
+                    getMainFragment()?.contentContainer?.let {
+                        Snackbar.make(
+                            it,
+                            result.stringMessage,
+                            Snackbar.LENGTH_SHORT
+                        ).show()
+                    }
                 }
                 else -> {
                 }
             }
         })
 
-//        viewModel.availableITag.observe(this, Observer { itags ->
-//            availableVFormats =
-//                LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMATS.filter {
-//                    itags.contains(it.key)
-//                })
-//            availableAFormats =
-//                LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_AUDIO_FORMATS.filter {
-//                    itags.contains(it.key)
-//                })
-//            mResOptionDialog = AlertDialog.Builder(this).apply {
-//                val contentView = layoutInflater.inflate(R.layout.dialog_achive_option, null, false)
-//                contentView.apply {
-//                    spinner_video_quality.apply {
-//                        adapter = ArrayAdapter<String>(this@MainActivity,
-//                            android.R.layout.simple_spinner_dropdown_item,
-//                            availableVFormats.map { it.value.resolution }
-//                        )
-//                    }
-//                    spinner_audio_quality.apply {
-//                        adapter = ArrayAdapter<String>(this@MainActivity,
-//                            android.R.layout.simple_spinner_dropdown_item,
-//                            availableAFormats.map { it.value.bitrate }
-//                        )
-//                    }
-//                }
-//                setView(contentView)
-//                setTitle("Select quality")
-//                setPositiveButton("ok") { _, _ ->
-//                    // save playback state
-//                    exoPlayer?.let {
-//                        playWhenReady = it.playWhenReady
-//                        currentWindow = it.currentWindowIndex
-//                        playbackPosition = it.currentPosition
-//                    }
-//                    val vKey = availableVFormats.map { it.key }[contentView.spinner_video_quality.selectedItemPosition]
-//                    val vTag = availableVFormats[vKey]?.itag
-//                    val aKey = availableAFormats.map { it.key }[contentView.spinner_audio_quality.selectedItemPosition]
-//                    val aTag = availableAFormats[aKey]?.itag
-//                    viewModel.setQuality(vTag, aTag)
-//                }
-//                setNegativeButton("cancel") { _, _ -> }
-//            }.create()
-//            mArchiveOptionDialog = AlertDialog.Builder(this).apply {
-//                val contentView = layoutInflater.inflate(R.layout.dialog_achive_option, null, false)
-//                contentView.apply {
-//                    spinner_video_quality.apply {
-//                        adapter = ArrayAdapter<String>(this@MainActivity,
-//                            android.R.layout.simple_spinner_dropdown_item,
-//                            availableVFormats.map { it.value.resolution }
-//                        )
-//                    }
-//                    spinner_audio_quality.apply {
-//                        adapter = ArrayAdapter<String>(this@MainActivity,
-//                            android.R.layout.simple_spinner_dropdown_item,
-//                            availableAFormats.map { it.value.bitrate }
-//                        )
-//                    }
-//                }
-//                setView(contentView)
-//                setTitle("Archive options")
-//                setPositiveButton("ok") { _, _ ->
-//                    lifecycleScope.launch {
-//                        val vKey = availableVFormats.map { it.key }[contentView.spinner_video_quality.selectedItemPosition]
-//                        val vTag = availableVFormats[vKey]?.itag
-//                        val aKey = availableAFormats.map { it.key }[contentView.spinner_audio_quality.selectedItemPosition]
-//                        val aTag = availableAFormats[aKey]?.itag
-//                        viewModel.archiveVideo(this@MainActivity, vTag, aTag).let { result ->
-//                            when (result.status) {
-//                                Status.SUCCESS -> {
-//                                    Toast.makeText(this@MainActivity,
-//                                        "has new download task: ${result.data!!}",
-//                                        Toast.LENGTH_SHORT).show()
-//                                }
-//                                Status.ERROR -> {
-//                                    Toast.makeText(this@MainActivity,
-//                                        result.stringMessage,
-//                                        Toast.LENGTH_SHORT).show()
-//                                }
-//                                else -> {}
-//                            }
-//                        }
-//                    }
-//                }
-//                setNegativeButton("cancel") { _, _ -> }
-//            }.create()
+        viewModel.playbackParams.observe(this, Observer {
+            exoPlayer?.playbackParameters = it
+        })
+
+//        viewModel.videoResSelection.observe(this, Observer {
+//            mResSelectionAdapter.apply { submitList(it) }
 //        })
-
-        viewModel.videoResSelection.observe(this, Observer {
-            mResSelectionAdapter.apply { submitList(it) }
-        })
-
-        viewModel.audioQualitySelection.observe(this, Observer {
-            mAudioSelectionAdapter.apply { submitList(it) }
-        })
+//
+//        viewModel.audioQualitySelection.observe(this, Observer {
+//            mAudioSelectionAdapter.apply { submitList(it) }
+//        })
 
         viewModel.responseAction.observe(this, Observer { res ->
             when (res.status) {
@@ -510,7 +371,8 @@ class MainActivity : ReWatchPlayerActivity() {
                 if (mPlayerLayout.isSmall) {
                     mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.FULLSCREEN)
                 }
-                hideSystemUI()
+                if (mPlayerLayout.isFullscreen) hideSystemUI()
+                else showSystemUI()
             }
             Configuration.ORIENTATION_PORTRAIT -> {
                 mPlayerLayout.setEnableTransition(true)
@@ -524,9 +386,22 @@ class MainActivity : ReWatchPlayerActivity() {
             // set system ui visibility when activity window regain focus from dialog/popup
             when (resources.configuration.orientation) {
                 Configuration.ORIENTATION_PORTRAIT -> showSystemUI()
-                Configuration.ORIENTATION_LANDSCAPE -> hideSystemUI()
+                Configuration.ORIENTATION_LANDSCAPE -> {
+                    if (mPlayerLayout.isFullscreen) hideSystemUI()
+                    else showSystemUI()
+                }
             }
         }
+    }
+
+    override fun onSupportActionModeStarted(mode: ActionMode) {
+        super.onSupportActionModeStarted(mode)
+        getMainFragment()?.onSupportActionModeStarted(mode)
+    }
+
+    override fun onSupportActionModeFinished(mode: ActionMode) {
+        super.onSupportActionModeFinished(mode)
+        getMainFragment()?.onSupportActionModeFinished(mode)
     }
 
     private fun initPlayer() {
@@ -542,10 +417,9 @@ class MainActivity : ReWatchPlayerActivity() {
                     }
                 })
             mPlayerLayout.setPlayer(exoPlayer)
-            exoPlayer?.let { player ->
-                player.playWhenReady = playWhenReady
-                player.seekTo(currentWindow, playbackPosition)
-            }
+            exoPlayer!!.playWhenReady = playWhenReady
+            exoPlayer!!.seekTo(currentWindow, playbackPosition)
+            exoPlayer!!.addListener(mPlayerListener)
         }
     }
 
@@ -554,6 +428,7 @@ class MainActivity : ReWatchPlayerActivity() {
             playWhenReady = exoPlayer!!.playWhenReady
             playbackPosition = exoPlayer!!.currentPosition
             currentWindow = exoPlayer!!.currentWindowIndex
+            exoPlayer!!.removeListener(mPlayerListener)
             exoPlayer!!.release()
             exoPlayer = null
         }
@@ -568,11 +443,6 @@ class MainActivity : ReWatchPlayerActivity() {
                         R.id.bookmark, R.id.remove_bookmark -> {
                             viewModel.videoMeta.value?.videoId?.let { vid ->
                                 viewModel.toggleBookmarkStatus(vid)
-                            }
-                        }
-                        R.id.archive -> {
-                            viewModel.videoMeta.value?.videoId?.let { vid ->
-                                showArchiveOption(vid)
                             }
                         }
                         R.id.rotation -> {
@@ -592,6 +462,7 @@ class MainActivity : ReWatchPlayerActivity() {
                     start: VideoPlayerLayout.PlayerSize,
                     end: VideoPlayerLayout.PlayerSize
                 ) {
+                    mPlayerSizeListeners.forEach { it.onStart(start, end) }
                     if (start == VideoPlayerLayout.PlayerSize.DISMISS && end == VideoPlayerLayout.PlayerSize.FULLSCREEN) {
                         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
                     }
@@ -601,15 +472,21 @@ class MainActivity : ReWatchPlayerActivity() {
                 override fun onComplete(current: VideoPlayerLayout.PlayerSize) {
                     // when there is transition, check if player size is fullscreen,
                     // if true then disable user transition when orientation is not portrait
+                    mPlayerSizeListeners.forEach { it.onComplete(current) }
                     when (current) {
                         VideoPlayerLayout.PlayerSize.FULLSCREEN -> {
-                            setEnableTransition(resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT)
+                            val orientation = resources.configuration.orientation
+                            setEnableTransition(orientation == Configuration.ORIENTATION_PORTRAIT)
+                            if (orientation == Configuration.ORIENTATION_LANDSCAPE) hideSystemUI()
+                            else showSystemUI()
                         }
                         VideoPlayerLayout.PlayerSize.SMALL -> {
                             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+                            showSystemUI()
                         }
                         VideoPlayerLayout.PlayerSize.DISMISS -> {
                             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                            showSystemUI()
                         }
                     }
                 }
@@ -621,19 +498,35 @@ class MainActivity : ReWatchPlayerActivity() {
                 layoutManager = LinearLayoutManager(this@MainActivity)
             }
         }
-        mResolutionDialog = PlayerBottomSheetDialogBuilder.createDialog(this) {
-            it.recycler_view.apply {
-                mResolutionRv = this
-                adapter = mResSelectionAdapter
-                layoutManager = LinearLayoutManager(this@MainActivity)
-            }
+        mVideoInfoDialog = VideoInfoBottomSheetDialog(this)
+        mResOptionDialog = VideoQualityOptionDialog(this).apply {
+            setOnQualityOptionSelectedListener(object : VideoQualityOptionDialog.OnQualityOptionSelectedListener {
+                override fun onQualityOptionSelected(vTag: Int, aTag: Int) {
+                    // save playback state
+                    exoPlayer?.let {
+                        playWhenReady = it.playWhenReady
+                        currentWindow = it.currentWindowIndex
+                        playbackPosition = it.currentPosition
+                    }
+                    viewModel.setQuality(vTag, aTag)
+                }
+            })
         }
-        mAudioQualityDialog = PlayerBottomSheetDialogBuilder.createDialog(this) {
-            it.recycler_view.apply {
-                mQualityRv = this
-                adapter = mAudioSelectionAdapter
-                layoutManager = LinearLayoutManager(this@MainActivity)
-            }
+        mArchiveOptionDialog = ArchiveOptionDialog(this).apply {
+            setOnArchiveOptionSelectedListener(object : ArchiveOptionDialog.OnArchiveOptionSelectedListener {
+                override fun onArchiveOptionSelected(vTag: Int, aTag: Int) {
+                    viewModel.archiveVideo(this@MainActivity, vTag, aTag)
+                }
+            })
+        }
+        mPlaybackSpeedDialog = PlaybackSpeedDialog(
+            this
+        ).apply {
+            setOnPlaybackSpeedChangeListener(object : PlaybackSpeedDialog.OnPlaybackSpeedChangeListener {
+                override fun onPlaybackSpeedChange(newPlaybackSpeed: Float) {
+                    viewModel.setPlaybackSpeed(newPlaybackSpeed)
+                }
+            })
         }
     }
 
@@ -664,6 +557,7 @@ class MainActivity : ReWatchPlayerActivity() {
         exoPlayer?.let {
             it.playWhenReady = playWhenReady
             it.seekTo(currentWindow, playbackPosition)
+            it.playbackParameters = viewModel.playbackParams.value!!
         }
         viewModel.playVideoForId(this, videoId)
     }
@@ -684,6 +578,14 @@ class MainActivity : ReWatchPlayerActivity() {
         mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.DISMISS)
     }
 
+    fun addPlayerSizeListener(listener: VideoPlayerLayout.PlayerSizeListener) {
+        mPlayerSizeListeners.add(listener)
+    }
+
+    fun removePlayerSizeListener(listener: VideoPlayerLayout.PlayerSizeListener) {
+        mPlayerSizeListeners.remove(listener)
+    }
+
     private fun prepareMediaResource(vararg uri: Uri?) {
         uri.mapNotNull { progressiveSrcFactory.createMediaSource(it) }.apply {
             when (size) {
@@ -700,6 +602,10 @@ class MainActivity : ReWatchPlayerActivity() {
         val file = File(FileDownloadHelper.getDir(this), filename)
         return if (file.exists()) file.toUri() else null
     }
+
+    fun getMainFragment(): MainPageFragment? =
+        supportFragmentManager.findFragmentById(R.id.root_nav_container)?.
+            childFragmentManager?.fragments?.firstOrNull() as? MainPageFragment
 
     companion object {
         const val TAG = "MainActivity"

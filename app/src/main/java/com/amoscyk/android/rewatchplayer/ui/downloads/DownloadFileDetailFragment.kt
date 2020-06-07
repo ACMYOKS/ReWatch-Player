@@ -9,12 +9,12 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.*
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.view.ActionMode
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.MediatorLiveData
@@ -35,10 +35,12 @@ import com.amoscyk.android.rewatchplayer.ui.MainViewModel
 import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadPageViewModel.MenuState
 import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
 import com.amoscyk.android.rewatchplayer.util.YouTubeVideoThumbnailHelper
+import com.amoscyk.android.rewatchplayer.util.formatReadableByteUnit
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.download_file_list_item.view.*
 import kotlinx.android.synthetic.main.fragment_download_file_detail.view.*
+import kotlinx.android.synthetic.main.fragment_home.*
 import kotlinx.coroutines.launch
 
 class DownloadFileDetailFragment: ReWatchPlayerFragment() {
@@ -73,27 +75,43 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
             .setNegativeButton("cancel") { _, _ -> }
             .create()
     }
+    private var actionMode: ActionMode? = null
+    private val actionModeCallback = object : ActionMode.Callback {
+        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
+            mode.menuInflater.inflate(R.menu.download_manager_action_mode_menu, menu)
+            return true
+        }
+
+        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
+            return false
+        }
+
+        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
+            when (item.itemId) {
+                R.id.delete -> {
+                    mDialogDelete.show()
+                }
+            }
+            return true
+        }
+
+        override fun onDestroyActionMode(mode: ActionMode) {
+            if (actionMode != null) actionMode = null
+            viewModel.setEditMode(false)
+        }
+    }
 
     private val mainViewModel by activityViewModels<MainViewModel> { viewModelFactory }
     private val viewModel: DownloadFileDetailViewModel by viewModels { viewModelFactory }
     private val navArgs: DownloadFileDetailFragmentArgs by navArgs()
 
-    private val mOnBackPressedCallback = object : OnBackPressedCallback(true) {
-        override fun handleOnBackPressed() {
-            viewModel.setEditMode(false)
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        requireActivity().onBackPressedDispatcher.addCallback(this, mOnBackPressedCallback)
-    }
-
     override fun onAttach(context: Context) {
         super.onAttach(context)
         mDlMngr = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         mDlObserver = DownloadProgressObserver(mDlHandler)
-        mAdapter = DownloadedFileAdapter()
+        mAdapter = DownloadedFileAdapter().apply {
+            setHasStableIds(true)
+        }
         viewModel.videoMetas.observe(this, Observer { metas ->
             metas.firstOrNull()?.let { res ->
                 mIvPreview.load(YouTubeVideoThumbnailHelper.getStandardUrl(res.videoMeta.videoId))
@@ -110,40 +128,37 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
         viewModel.downloadStatus.observe(this, Observer { status ->
             mAdapter?.updateDownloadProgress(status)
         })
-        viewModel.menuState.observe(this, Observer {
-            it?.let { setMenuItemForState(it) }
-        })
         viewModel.isEditMode.observe(this, Observer {
-            mOnBackPressedCallback.isEnabled = it
             mAdapter?.setEditMode(it)
+            if (it) {
+                actionMode = (requireActivity() as AppCompatActivity).startSupportActionMode(
+                    actionModeCallback
+                )
+            } else {
+                actionMode?.finish()
+            }
+        })
+        viewModel.totalSize.observe(this, Observer {
+            mToolbar.title = it.formatReadableByteUnit()
         })
         object : MediatorLiveData<String>() {
-            var totalSize = 0
-            var selectedSize = 0
-            var isEditMode = false
+            var selectedSize = 0L
+            var count = 0
             init {
-                addSource(viewModel.totalSize) {
-                    totalSize = it
-                    emitString()
-                }
                 addSource(viewModel.selectedSize) {
                     selectedSize = it
                     emitString()
                 }
-                addSource(viewModel.isEditMode) {
-                    isEditMode = it
+                addSource(viewModel.selectedCount) {
+                    count = it
                     emitString()
                 }
             }
             fun emitString() {
-                this.value = if (isEditMode) {
-                    selectedSize.toStringInMB() + "/" + totalSize.toStringInMB()
-                } else {
-                    totalSize.toStringInMB()
-                }
+                value = "$count (${selectedSize.formatReadableByteUnit()})"
             }
         }.observe(this, Observer {
-            mToolbar.title = it
+            actionMode?.title = it
         })
         mainViewModel.archiveResult.observe(this, Observer {
             when (it.status) {
@@ -205,21 +220,6 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
         }
     }
 
-    private fun setMenuItemForState(state: MenuState) {
-        with (mToolbar.menu) {
-            val delete = findItem(R.id.delete)
-            when (state) {
-                MenuState.NORMAL -> {
-                    delete.isVisible = false
-                }
-                MenuState.SELECT_SINGLE, MenuState.SELECT_MULTI -> {
-                    delete.isVisible = true
-                }
-            }
-        }
-    }
-
-    private fun Int.toStringInMB(): String = "%.2fMB".format(this / 1_000_000f)
     private fun PlayerResource.toExt(): PlayerResourceExt {
         return PlayerResourceExt(
             videoId = videoId,
@@ -257,6 +257,10 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
                 selectBox.isChecked = checkStatus[item.downloadId]!!
                 setViewForFileSize(item.totalFileSize, item.currentFileSize)
             }
+        }
+
+        override fun getItemId(position: Int): Long {
+            return getItem(position).downloadId
         }
 
         fun setEditMode(isOn: Boolean) {
@@ -324,14 +328,15 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
             fun setViewForFileSize(totalFileSize: Int, currentFileSize: Int) {
                 if (currentFileSize < totalFileSize) {
                     setViewForDownloadCompleted(false)
-                    tvFileSize.text = "${currentFileSize.toStringInMB()}/${totalFileSize.toStringInMB()}"
+                    tvFileSize.text =
+                        "${currentFileSize.toLong().formatReadableByteUnit()}/${totalFileSize.toLong().formatReadableByteUnit()}"
                     pbDownload.apply {
                         max = totalFileSize
                         progress = currentFileSize
                     }
                 } else {
                     setViewForDownloadCompleted(true)
-                    tvCompletedFileSize.text = totalFileSize.toStringInMB()
+                    tvCompletedFileSize.text = totalFileSize.toLong().formatReadableByteUnit()
                 }
             }
 

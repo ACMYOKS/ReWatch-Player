@@ -10,3 +10,24 @@ fun CharSequence.withEmoji(): CharSequence {
     return if (emojiCompat.loadState == EmojiCompat.LOAD_STATE_SUCCEEDED) emojiCompat.process(this)
     else this
 }
+
+fun Long.formatReadableByteUnit(): String {
+    var value = this.toDouble()
+    if (value < 1000) {
+        return "%.2fB".format(value)
+    }
+    value /= 1000
+    if (value < 1000) {
+        return "%.2fkB".format(value)
+    }
+    value /= 1000
+    if (value < 1000) {
+        return "%.2fMB".format(value)
+    }
+    value /= 1000
+    if (value < 1000) {
+        return "%.2fGB".format(value)
+    }
+    value /= 1000
+    return "%.2fTB".format(value)
+}

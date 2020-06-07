@@ -62,6 +62,9 @@ class LibraryViewModel(
     private val _showLoadingBookmarked = MutableLiveData<Event<Boolean>>()
     val showLoadingBookmarked: LiveData<Event<Boolean>> = _showLoadingBookmarked
 
+    private val _bookmarkRemoveCount = MutableLiveData<Event<Int>>()
+    val bookmarkRemoveCount: LiveData<Event<Int>> = _bookmarkRemoveCount
+
     init {
         _editMode.value = false
         _currentDisplayMode.value = DisplayMode.PLAYLISTS
@@ -276,6 +279,12 @@ class LibraryViewModel(
                 }
                 loadPlaylistLock.set(false)
             }
+        }
+    }
+
+    fun removeBookmark(videoIds: List<String>) {
+        viewModelScope.launch {
+            _bookmarkRemoveCount.value = Event(youtubeRepository.toggleBookmarked(videoIds.toTypedArray()))
         }
     }
 

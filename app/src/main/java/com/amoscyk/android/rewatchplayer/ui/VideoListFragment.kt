@@ -19,6 +19,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SimpleItemAnimator
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
@@ -61,13 +62,13 @@ class VideoListFragment : ReWatchPlayerFragment() {
                 mainActivity?.playVideoForId(meta.videoId)
             }
         }
-        setOnItemLongClickListener { position, meta ->
-            if (args.enableEditOnLongClick) {
-                viewModel.setEditMode(true)
-                toggleItemSelection(position)
-            }
-            true
-        }
+//        setOnItemLongClickListener { position, meta ->
+//            if (args.enableEditOnLongClick) {
+//                viewModel.setEditMode(true)
+//                toggleItemSelection(position)
+//            }
+//            true
+//        }
         setOnLoadMoreNeeded {
             viewModel.loadMoreVideos()
         }
@@ -95,7 +96,7 @@ class VideoListFragment : ReWatchPlayerFragment() {
                 if (mListAdapter.itemCount == 0) {
                     if (it) mLoadingView.show() else mLoadingView.hide()
                 } else {
-                    mListAdapter.setShowLoadingAtBottom(it)
+//                    mListAdapter.setShowLoadingAtBottom(it)
                 }
             }
         })
@@ -105,7 +106,7 @@ class VideoListFragment : ReWatchPlayerFragment() {
                 if (mListAdapter.itemCount == 0) {
                     if (it) mLoadingView.show() else mLoadingView.hide()
                 } else {
-                    mListAdapter.setShowLoadingAtBottom(it)
+//                    mListAdapter.setShowLoadingAtBottom(it)
                 }
             }
         })

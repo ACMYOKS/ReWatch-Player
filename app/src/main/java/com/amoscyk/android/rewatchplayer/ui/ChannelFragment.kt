@@ -164,7 +164,8 @@ class ChannelFragment: ReWatchPlayerFragment() {
         }
         mBtnToggleDetail.setOnClickListener {
             it.isSelected = !it.isSelected
-            TransitionManager.beginDelayedTransition(mRootView as ViewGroup, Fade())
+            TransitionManager.beginDelayedTransition(mRootView as ViewGroup,
+                Fade().apply { addTarget(mTvDescription) })
             mTvDescription.visibility = if (it.isSelected) View.VISIBLE else View.GONE
         }
         mBtnToggleDetail.isSelected = false

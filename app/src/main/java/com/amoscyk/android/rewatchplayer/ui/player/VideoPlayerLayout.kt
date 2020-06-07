@@ -13,6 +13,7 @@ import android.widget.TextView
 import androidx.appcompat.widget.Toolbar
 import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.constraintlayout.widget.ConstraintLayout
+import com.amoscyk.android.rewatchplayer.AppConstant
 import com.amoscyk.android.rewatchplayer.R
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.Player
@@ -74,7 +75,10 @@ class VideoPlayerLayout
         mCloseBtn.setOnClickListener {
             mMotionLayout.transitionToState(R.id.video_player_dismiss)
         }
-        mPlayerView.useController = false       // use custom handling controller
+        mPlayerView.apply {
+            useController = false       // use custom handling controller
+            setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+        }
         mTitleTv.isSelected = true              // enable marquee
         mSmallTitleTv.isSelected = true              // enable marquee
 
@@ -94,11 +98,11 @@ class VideoPlayerLayout
 
             override fun onTransitionCompleted(motionLayout: MotionLayout?, currentId: Int) {
                 if (currentId == R.id.video_player_fullscreen) {
-                    Log.d(TAG, "transition completed, is fullscreen, show control view")
+                    Log.d(AppConstant.TAG, "$TAG: transition completed, is fullscreen, show control view")
                     // sync visibility setting of player control view with motion layout
                     Handler().postDelayed({ mPlayerControlView.show() }, 0)
                 } else if (currentId == R.id.video_player_dismiss) {
-                    Log.d(TAG, "transition completed, is dismiss, stop video")
+                    Log.d(AppConstant.TAG, "TAG: transition completed, is dismiss, stop video")
                     mPlayerView.player.stop()
                 }
                 mSizeListener?.onComplete(PlayerSize.fromRes(currentId))
@@ -114,7 +118,7 @@ class VideoPlayerLayout
     override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
         val isInProgress = (mMotionLayout.progress > 0.0f && mMotionLayout.progress < 1.0f)
         val isInTarget = isTouchEventInsideTarget(mPlayerContainer, event)
-        Log.d(TAG, "intercept: isInProgress $isInProgress isInTarget $isInTarget")
+//        Log.d(AppConstant.TAG, "$TAG: intercept: isInProgress $isInProgress isInTarget $isInTarget")
         return if (isInProgress || isInTarget) {
             super.onInterceptTouchEvent(event)
         } else {
@@ -127,12 +131,12 @@ class VideoPlayerLayout
             return super.dispatchTouchEvent(ev)
         }
         if (isTouchEventInsideTarget(mPlayerView, ev)) {
-            Log.d(TAG, "touch inside click")
+//            Log.d(AppConstant.TAG, "$TAG: touch inside click")
             when (ev.action) {
                 MotionEvent.ACTION_DOWN -> {
                     startX = ev.x
                     startY = ev.y
-                    Log.d(TAG, "ACTION DOWN: $startX $startY")
+//                    Log.d(AppConstant.TAG, "$TAG: ACTION DOWN: $startX $startY")
                     return if (mEnableSlide) super.dispatchTouchEvent(ev) else true
                 }
 
@@ -144,14 +148,14 @@ class VideoPlayerLayout
                         toggleControlView()
                         return true
                     } else {
-                        Log.d(TAG, "ACTION UP, is not click")
+//                        Log.d(AppConstant.TAG, "$TAG: ACTION UP, is not click")
                     }
                 }
             }
         }
-        else {
-            Log.d(TAG, "not touch inside click")
-        }
+//        else {
+//            Log.d(AppConstant.TAG, "$TAG: not touch inside click")
+//        }
         return super.dispatchTouchEvent(ev)
     }
 

@@ -14,7 +14,8 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 fun BottomNavigationView.setupWithNavController(
     navGraphIds: List<Int>,
     fragmentManager: FragmentManager,
-    containerId: Int
+    containerId: Int,
+    requireAttach: Boolean
 ) {
     val graphIdToTagMap = SparseArray<String>()
     var firstFragmentTagId = 0
@@ -31,10 +32,12 @@ fun BottomNavigationView.setupWithNavController(
             firstFragmentTagId = graphId
         }
         graphIdToTagMap[graphId] = fragmentTag
-        if (this.selectedItemId == graphId) {
-            attachNavHostFragment(fragmentManager, navHostFrag, index == 0)
-        } else {
-            detachNavHostFragment(fragmentManager, navHostFrag)
+        if (requireAttach) {
+            if (this.selectedItemId == graphId) {
+                attachNavHostFragment(fragmentManager, navHostFrag, index == 0)
+            } else {
+                detachNavHostFragment(fragmentManager, navHostFrag)
+            }
         }
     }
 

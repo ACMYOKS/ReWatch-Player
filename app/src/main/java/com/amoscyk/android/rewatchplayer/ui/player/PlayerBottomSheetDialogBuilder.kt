@@ -1,4 +1,4 @@
-package com.amoscyk.android.rewatchplayer.ui
+package com.amoscyk.android.rewatchplayer.ui.player
 
 import android.content.Context
 import android.view.View

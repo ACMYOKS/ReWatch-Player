@@ -15,6 +15,8 @@ import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMetaWithPlayer
 import com.amoscyk.android.rewatchplayer.ui.player.PlayerSelection
 import com.amoscyk.android.rewatchplayer.ui.player.SelectableItemWithTitle
 import com.amoscyk.android.rewatchplayer.util.FileDownloadHelper
+import com.google.android.exoplayer2.PlaybackParameters
+import com.google.android.exoplayer2.offline.Download
 import kotlinx.coroutines.launch
 
 class MainViewModel(
@@ -50,6 +52,8 @@ class MainViewModel(
     private val _audioQualitySelection = MutableLiveData<List<PlayerSelection<VideoQualitySelection>>>()
     val audioQualitySelection: LiveData<List<PlayerSelection<VideoQualitySelection>>> = _audioQualitySelection
 
+    private val _playbackParams = MutableLiveData<PlaybackParameters>(PlaybackParameters.DEFAULT)
+    val playbackParams: LiveData<PlaybackParameters> = _playbackParams
 //    private var selectedVTag = -1
 //    private var selectedATag = -1
 //    private var isAdaptive = false
@@ -181,10 +185,19 @@ class MainViewModel(
             }.onSuccess {
                 runCatching {
                     getPreferredITagForPlaying(context).let { setQuality(it.vTag, it.aTag) }
+                    setPlaybackSpeed(1f)
                 }.onFailure {
                     _responseAction.value = Resource.error((it as? Exception)?.message,
                         ResponseActionType.DO_NOTHING)
                 }
+            }
+        }
+    }
+
+    fun setPlaybackSpeed(multiplier: Float) {
+        if (multiplier in 0.5f..2f) {
+            _playbackParams.value = _playbackParams.value!!.let {
+                PlaybackParameters(multiplier, it.pitch, it.skipSilence)
             }
         }
     }
@@ -362,15 +375,20 @@ class MainViewModel(
                                     return@launch
                                 }
                             }
-                            val vRequest = DownloadManager.Request(Uri.parse(_allUrlMap[tag]))
-                            vRequest.setDestinationInExternalFilesDir(
-                                context,
-                                FileDownloadHelper.DIR_DOWNLOAD,
-                                filename
-                            )
-                            vRequest.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_ONLY_COMPLETION)
-                            vRequest.setTitle(videoId)
-                            val id = dlMngr.enqueue(vRequest)
+                            val id = DownloadManager.Request(Uri.parse(_allUrlMap[tag])).let { req ->
+                                req.setDestinationInExternalFilesDir(
+                                    context,
+                                    FileDownloadHelper.DIR_DOWNLOAD,
+                                    filename
+                                )
+                                req.setAllowedNetworkTypes(
+                                    if (_isAllowedPlayUsingWifiOnly) DownloadManager.Request.NETWORK_WIFI
+                                    else DownloadManager.Request.NETWORK_WIFI or DownloadManager.Request.NETWORK_MOBILE
+                                )
+                                req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_ONLY_COMPLETION)
+                                req.setTitle(videoId)
+                                dlMngr.enqueue(req)
+                            }
                             youtubeRepository.addPlayerResource(
                                 videoId, tag,
                                 FileDownloadHelper.getDir(context).absolutePath, filename, 0,

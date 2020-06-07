@@ -3,15 +3,15 @@ package com.amoscyk.android.rewatchplayer.ui.downloads
 
 import android.content.Context
 import android.os.*
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.CheckBox
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.view.ActionMode
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
@@ -29,6 +29,7 @@ import com.amoscyk.android.rewatchplayer.ui.MainViewModel
 import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadPageViewModel.MenuState
 import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
 import com.amoscyk.android.rewatchplayer.util.YouTubeVideoThumbnailHelper
+import com.amoscyk.android.rewatchplayer.util.formatReadableByteUnit
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.download_manager_fragment_list_item.view.*
@@ -45,7 +46,7 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
     private val mDialogDelete by lazy {
         AlertDialog.Builder(requireContext())
             .setMessage("Are you sure to remove the selected items?")
-            .setPositiveButton("ok") { _, _ ->
+            .setPositiveButton(getString(R.string.confirm_text)) { _, _ ->
                 lifecycleScope.launch {
                     val result = viewModel.deleteSelectedPlayerResource(requireContext())
                     if (result.status == Status.SUCCESS) {
@@ -57,8 +58,34 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
                     }
                 }
             }
-            .setNegativeButton("cancel") { _, _ -> }
+            .setNegativeButton(getString(R.string.cancel_text)) { _, _ -> }
             .create()
+    }
+    private var actionMode: ActionMode? = null
+    private val actionModeCallback = object : ActionMode.Callback {
+        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
+            mode.menuInflater.inflate(R.menu.download_manager_action_mode_menu, menu)
+            return true
+        }
+
+        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
+            return false
+        }
+
+        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
+            when (item.itemId) {
+                R.id.delete -> {
+                    mDialogDelete.show()
+                }
+            }
+            return true
+        }
+
+        override fun onDestroyActionMode(mode: ActionMode) {
+            if (actionMode != null) actionMode = null
+            viewModel.setEditMode(false)
+        }
+
     }
 
     private val mainViewModel by activityViewModels<MainViewModel> { viewModelFactory }
@@ -66,20 +93,11 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
 
     private var downloadStatusMap = mapOf<Long, DownloadStatus>()
 
-    private val mOnBackPressedCallback = object : OnBackPressedCallback(false) {
-        override fun handleOnBackPressed() {
-            viewModel.setEditMode(false)
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        requireActivity().onBackPressedDispatcher.addCallback(this, mOnBackPressedCallback)
-    }
-
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        mListAdapter = DownloadItemAdapter()
+        mListAdapter = DownloadItemAdapter().apply {
+            setHasStableIds(true)
+        }
 
         viewModel.videoMetas.observe(this, Observer { meta ->
             viewModel.updateDownloadStatus(requireContext())
@@ -88,10 +106,21 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
         })
         viewModel.isEditMode.observe(this, Observer {
             mListAdapter?.setEditMode(it)
-            mOnBackPressedCallback.isEnabled = it
+            if (it) {
+                actionMode = (requireActivity() as AppCompatActivity).startSupportActionMode(
+                    actionModeCallback
+                )
+            } else {
+                actionMode?.finish()
+            }
         })
-        viewModel.menuState.observe(this, Observer {
-            it?.let { setMenuItemForState(it) }
+        viewModel.selectedItems.observe(this, Observer {
+            val downloadIds = it.flatMap { it.playerResources.map { it.downloadId } }
+            val totalSize = downloadStatusMap.values.fold(0) { acc, status ->
+                if (status.downloadId in downloadIds) acc + status.totalByte
+                else acc
+            }
+            actionMode?.title = "${it.size} (${totalSize.toLong().formatReadableByteUnit()})"
         })
         viewModel.downloadStatus.observe(this, Observer {
             downloadStatusMap = it
@@ -132,24 +161,6 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
     }
 
     private fun setupViews() {
-        toolbar.apply {
-            inflateMenu(R.menu.downloaded_video_option_menu)
-            setOnMenuItemClickListener {
-                when (it.itemId) {
-                    R.id.delete -> {
-                        mDialogDelete.show()
-                    }
-                    R.id.details -> {
-                        viewModel.getSelectedVideoMetas().firstOrNull()?.let {
-                            findNavController().navigate(
-                                DownloadManagerFragmentDirections.showDownloadedFile(it.videoMeta.videoId)
-                            )
-                        }
-                    }
-                }
-                true
-            }
-        }
         rvDownloadStatus.apply {
             adapter = mListAdapter
             layoutManager = LinearLayoutManager(requireContext())
@@ -157,28 +168,6 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
         }
     }
 
-    private fun setMenuItemForState(state: MenuState) {
-        with (toolbar.menu) {
-            val delete = findItem(R.id.delete)
-            val details = findItem(R.id.details)
-            when (state) {
-                MenuState.NORMAL -> {
-                    delete.isVisible = false
-                    details.isVisible = false
-                }
-                MenuState.SELECT_SINGLE -> {
-                    delete.isVisible = true
-                    details.isVisible = false
-                }
-                MenuState.SELECT_MULTI -> {
-                    delete.isVisible = true
-                    details.isVisible = false
-                }
-            }
-        }
-    }
-
-    private fun Int.toStringInMB(): String = "%.2fMB".format(this / 1_000_000f)
 
     private inner class DownloadItemAdapter: ListAdapter<VideoMetaWithPlayerResource, DownloadItemAdapter.ViewHolder>(DIFF_CALLBACK) {
         private val checkStatus = hashMapOf<String, Boolean>()
@@ -205,14 +194,18 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
                 checkBox.visibility = if (isEditMode) View.VISIBLE else View.GONE
                 btnPlay.visibility = if (isEditMode) View.GONE else View.VISIBLE
                 val dlIds = item.playerResources.map { it.downloadId }
-                var sum = 0
+                var sum = 0L
                 downloadStatusMap.forEach {
                     if (dlIds.contains(it.key)) {
                         sum += it.value.totalByte
                     }
                 }
-                tvFileSize.text = sum.toStringInMB()
+                tvFileSize.text = sum.formatReadableByteUnit()
             }
+        }
+
+        override fun getItemId(position: Int): Long {
+            return getItem(position).videoMeta.videoId.hashCode().toLong()
         }
 
         fun setEditMode(isOn: Boolean) {
