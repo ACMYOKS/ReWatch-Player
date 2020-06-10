@@ -1,34 +1,42 @@
 package com.amoscyk.android.rewatchplayer.ui
 
 import android.annotation.SuppressLint
+import android.app.PendingIntent
+import android.app.PictureInPictureParams
+import android.app.RemoteAction
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.drawable.Icon
 import android.net.ConnectivityManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.util.Rational
 import android.view.View
 import android.view.WindowManager
-import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.view.ActionMode
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.lifecycle.Observer
 import androidx.navigation.findNavController
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.amoscyk.android.rewatchplayer.AppConstant
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerActivity
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel.ResponseActionType
-import com.amoscyk.android.rewatchplayer.ui.account.StartupAccountFragmentDirections
 import com.amoscyk.android.rewatchplayer.ui.library.LibraryFragmentDirections
 import com.amoscyk.android.rewatchplayer.ui.player.*
 import com.amoscyk.android.rewatchplayer.util.*
@@ -41,7 +49,6 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.bottom_sheet_dialog_user_option.view.*
-import kotlinx.android.synthetic.main.dialog_archive_option.view.*
 import java.io.File
 
 
@@ -50,27 +57,22 @@ class MainActivity : ReWatchPlayerActivity() {
     private val mPlayerLayout by lazy { findViewById<VideoPlayerLayout>(R.id.video_player_layout) }
 
     // player option view
-    private lateinit var mOptionDialog: BottomSheetDialog
+    private var mOptionDialog: BottomSheetDialog? = null
     private var mVideoInfoDialog: VideoInfoBottomSheetDialog? = null
     private var mArchiveOptionDialog: ArchiveOptionDialog? = null
     private var mResOptionDialog: VideoQualityOptionDialog? = null
     private var mPlaybackSpeedDialog: PlaybackSpeedDialog? = null
 
-    private var mVtagList = LinkedHashMap<Int, YouTubeStreamFormatCode.StreamFormat>()
-    private var mAtagList = LinkedHashMap<Int, YouTubeStreamFormatCode.StreamFormat>()
-
     // player option view related class
     private val mOptionAdapter = PlayerOptionAdapter({ option, position ->
+        mOptionDialog?.dismiss()
         if (position == 0) {
             mVideoInfoDialog?.show()
-            mOptionDialog.dismiss()
         } else if (position == 1) {
             mResOptionDialog?.show()
-            mOptionDialog.dismiss()
         } else if (position == 2) {
             viewModel.videoMeta.value?.videoId?.let { vid ->
                 showArchiveOption(vid)
-                mOptionDialog.dismiss()
             }
         } else if (position == 3) {
             viewModel.playbackParams.value?.speed?.let { speed ->
@@ -79,9 +81,7 @@ class MainActivity : ReWatchPlayerActivity() {
                     show()
                 }
             }
-            mOptionDialog.dismiss()
-        } else if (position == 3) {
-            mOptionDialog.dismiss()
+        } else if (position == 4) {
             Intent.createChooser(Intent().apply {
                 action = Intent.ACTION_SEND
                 putExtra(Intent.EXTRA_TEXT, "https://youtu.be/" + viewModel.videoMeta.value!!.videoId)
@@ -101,8 +101,6 @@ class MainActivity : ReWatchPlayerActivity() {
     }
 
     private val viewModel by viewModels<MainViewModel> { viewModelFactory }
-
-    private var videoId: String? = null
 
     private var isWifiConnected = false
     private var isMobileDataConnected = false
@@ -130,6 +128,8 @@ class MainActivity : ReWatchPlayerActivity() {
     }
 
     private var mPlayerSizeListeners = ArrayList<VideoPlayerLayout.PlayerSizeListener>()
+
+    private var mPipActionReceiver: BroadcastReceiver? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -195,19 +195,19 @@ class MainActivity : ReWatchPlayerActivity() {
             mPlayerLayout.setTitle(meta.title)
             setBookmarkButton(meta.bookmarked)
             val itags = meta.itags
-            mVtagList = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMATS.filter {
+            val vTags = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMATS.filter {
                 itags.contains(it.key)
             })
-            mAtagList = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_AUDIO_FORMATS.filter {
+            val aTags = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_AUDIO_FORMATS.filter {
                 itags.contains(it.key)
             })
             mResOptionDialog?.apply {
-                setVideoTags(mVtagList.keys.toList())
-                setAudioVTags(mAtagList.keys.toList())
+                setVideoTags(vTags.keys.toList())
+                setAudioVTags(aTags.keys.toList())
             }
             mArchiveOptionDialog?.apply {
-                setVideoTags(mVtagList.keys.toList())
-                setAudioVTags(mAtagList.keys.toList())
+                setVideoTags(vTags.keys.toList())
+                setAudioVTags(aTags.keys.toList())
             }
             mVideoInfoDialog?.apply {
                 setVideoMeta(meta)
@@ -342,23 +342,44 @@ class MainActivity : ReWatchPlayerActivity() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            exoPlayer?.playWhenReady = false
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            exoPlayer?.playWhenReady = false
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
-
         releasePlayer()
     }
 
     @SuppressLint("SourceLockedOrientationActivity")
     override fun onBackPressed() {
         if (mPlayerLayout.isFullscreen) {
-            when (resources.configuration.orientation) {
-                Configuration.ORIENTATION_LANDSCAPE -> requestedOrientation =
-                    ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
-                Configuration.ORIENTATION_PORTRAIT -> mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.SMALL)
-                else -> super.onBackPressed()
+            if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
             }
+            mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.SMALL)
+        } else if (onBackPressedDispatcher.hasEnabledCallbacks()) {
+            onBackPressedDispatcher.onBackPressed()
+        } else if (shouldEnterPIPMode()) {
+            enterPIPMode()
         } else {
             super.onBackPressed()
+        }
+    }
+
+    override fun onUserLeaveHint() {
+        if (shouldEnterPIPMode()) {
+            enterPIPMode()
         }
     }
 
@@ -402,6 +423,48 @@ class MainActivity : ReWatchPlayerActivity() {
     override fun onSupportActionModeFinished(mode: ActionMode) {
         super.onSupportActionModeFinished(mode)
         getMainFragment()?.onSupportActionModeFinished(mode)
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration?
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (isInPictureInPictureMode) {
+                    setPictureInPictureParams(PictureInPictureParams.Builder().apply {
+                        if (exoPlayer?.isPlaying == true) {
+                            setPauseAction()
+                        } else {
+                            setPlayAction()
+                        }
+                    }.build())
+                mPlayerLayout.hideControlView()
+                mPipActionReceiver = object : BroadcastReceiver() {
+                    override fun onReceive(context: Context, intent: Intent) {
+                        when (intent.action) {
+                            ACTION_PIP_PLAY -> {
+                                exoPlayer?.playWhenReady = true
+                                setPictureInPictureParams(PictureInPictureParams.Builder()
+                                    .setPauseAction()
+                                    .build())
+                            }
+                            ACTION_PIP_PAUSE -> {
+                                exoPlayer?.playWhenReady = false
+                                setPictureInPictureParams(PictureInPictureParams.Builder()
+                                    .setPlayAction()
+                                    .build())
+                            }
+                        }
+                    }
+                }
+                registerReceiver(mPipActionReceiver, IntentFilter().apply {
+                    addAction(ACTION_PIP_PLAY)
+                    addAction(ACTION_PIP_PAUSE)
+                })
+            } else {
+                mPipActionReceiver?.let { unregisterReceiver(it) }
+            }
+        }
     }
 
     private fun initPlayer() {
@@ -449,7 +512,7 @@ class MainActivity : ReWatchPlayerActivity() {
                             handleRotation()
                         }
                         R.id.other_action -> {
-                            mOptionDialog.show()
+                            mOptionDialog?.show()
                         }
                     }
                     true
@@ -603,6 +666,37 @@ class MainActivity : ReWatchPlayerActivity() {
         return if (file.exists()) file.toUri() else null
     }
 
+    private fun shouldEnterPIPMode(): Boolean {
+        // show on top of other app according to user preference
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
+            return !mPlayerLayout.isDismiss
+        }
+        return false
+    }
+
+    private fun enterPIPMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            enterPictureInPictureMode(
+                PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build()
+            )
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun PictureInPictureParams.Builder.setPauseAction(): PictureInPictureParams.Builder =
+        setActions(listOf(RemoteAction(Icon.createWithResource(this@MainActivity,
+            R.drawable.exo_controls_pause), "Pause", "Pause video",
+            PendingIntent.getBroadcast(this@MainActivity, REQUEST_CODE_PIP_PAUSE,
+                Intent(ACTION_PIP_PAUSE), 0))))
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun PictureInPictureParams.Builder.setPlayAction(): PictureInPictureParams.Builder =
+        setActions(listOf(RemoteAction(Icon.createWithResource(this@MainActivity,
+            R.drawable.exo_controls_play), "Play", "Play video",
+            PendingIntent.getBroadcast(this@MainActivity, REQUEST_CODE_PIP_PLAY,
+                Intent(ACTION_PIP_PLAY), 0))))
+
     fun getMainFragment(): MainPageFragment? =
         supportFragmentManager.findFragmentById(R.id.root_nav_container)?.
             childFragmentManager?.fragments?.firstOrNull() as? MainPageFragment
@@ -610,6 +704,10 @@ class MainActivity : ReWatchPlayerActivity() {
     companion object {
         const val TAG = "MainActivity"
         const val EXTRA_VIDEO_ID = "com.amoscyk.android.rewatchplayer.extra.videoId"
+        private const val REQUEST_CODE_PIP_PLAY = 10001
+        private const val REQUEST_CODE_PIP_PAUSE = 10002
+        private const val ACTION_PIP_PLAY = "com.amoscyk.android.rewatchplayer.PIP_PLAY"
+        private const val ACTION_PIP_PAUSE = "com.amoscyk.android.rewatchplayer.PIP_PAUSE"
         private val SELECTION_DIFF_CALLBACK = object :
             DiffUtil.ItemCallback<PlayerSelection<MainViewModel.VideoQualitySelection>>() {
             override fun areItemsTheSame(

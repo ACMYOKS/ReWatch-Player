@@ -169,7 +169,7 @@ class VideoListAdapter: ListAdapter<VideoMeta, VideoListAdapter.ViewHolder>(DIFF
                 video.thumbnails.standard?.url
                     ?: YouTubeVideoThumbnailHelper.getStandardUrl(video.videoId)
             ) {
-                placeholder(R.drawable.ic_broken_image_white)
+                placeholder(R.drawable.ic_image)
                 error(R.drawable.ic_broken_image_white)
             }
             if (position == itemCount - 1 && shouldShowLoading) progressBar.show()

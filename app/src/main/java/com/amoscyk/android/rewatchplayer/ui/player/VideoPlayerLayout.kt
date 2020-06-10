@@ -163,6 +163,10 @@ class VideoPlayerLayout
         return false
     }
 
+    fun hideControlView() {
+        mPlayerControlView.hide()
+    }
+
     private fun toggleControlView() {
         if (mMotionLayout.currentState == R.id.video_player_fullscreen) {
             if (mPlayerControlView.isVisible) {

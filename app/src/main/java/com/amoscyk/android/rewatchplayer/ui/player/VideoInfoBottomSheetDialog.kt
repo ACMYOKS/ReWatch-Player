@@ -59,11 +59,7 @@ class VideoInfoBottomSheetDialog(context: Context) : BottomSheetDialog(context) 
     private fun refreshView() {
         videoMeta?.let { meta ->
             mTvVideoTitle?.text = meta.title
-            mTvChannelTitle?.text = meta.channelTitle.let {
-                SpannableString(it).apply {
-                    setSpan(UnderlineSpan(), 0, it.length, 0)
-                }
-            }
+            mTvChannelTitle?.text = meta.channelTitle
             mTvVideoId?.text = meta.videoId
             mTvDescription?.text = meta.description
             mChipGroupTags?.apply {

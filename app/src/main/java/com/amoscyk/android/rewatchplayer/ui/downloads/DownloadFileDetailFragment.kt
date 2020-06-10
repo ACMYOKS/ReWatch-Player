@@ -32,7 +32,6 @@ import com.amoscyk.android.rewatchplayer.datasource.vo.DownloadStatus
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.PlayerResource
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel
-import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadPageViewModel.MenuState
 import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
 import com.amoscyk.android.rewatchplayer.util.YouTubeVideoThumbnailHelper
 import com.amoscyk.android.rewatchplayer.util.formatReadableByteUnit
@@ -40,7 +39,6 @@ import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.download_file_list_item.view.*
 import kotlinx.android.synthetic.main.fragment_download_file_detail.view.*
-import kotlinx.android.synthetic.main.fragment_home.*
 import kotlinx.coroutines.launch
 
 class DownloadFileDetailFragment: ReWatchPlayerFragment() {
@@ -203,15 +201,6 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
     private fun setupView() {
         mToolbar.apply {
             setupWithNavController(findNavController())
-            inflateMenu(R.menu.downloaded_file_option_menu)
-            setOnMenuItemClickListener {
-                when (it.itemId) {
-                    R.id.delete -> {
-                        mDialogDelete.show()
-                    }
-                }
-                true
-            }
         }
         mRvFileStatus.apply {
             adapter = mAdapter

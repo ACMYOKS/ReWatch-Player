@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.view.ActionMode
+import androidx.navigation.findNavController
 import androidx.transition.AutoTransition
 import androidx.transition.Slide
 import androidx.transition.TransitionManager
@@ -89,18 +90,15 @@ class MainPageFragment : ReWatchPlayerFragment() {
     }
 
     private fun setupBottomNavigation(requireAttach: Boolean) {
-        rootView?.let { rootView ->
-            val bottomNav = rootView.findViewById<BottomNavigationView>(R.id.main_bottom_nav)
-            bottomNav.setupWithNavController(
-                listOf(
-                    R.navigation.home,
-                    R.navigation.library,
-                    R.navigation.downloads,
-                    R.navigation.settings),
-                childFragmentManager,
-                R.id.main_page_nav_host_fragment,
-                requireAttach
-            )
-        }
+        bottomNav.setupWithNavController(
+            listOf(
+                R.navigation.home,
+                R.navigation.library,
+                R.navigation.downloads,
+                R.navigation.settings),
+            childFragmentManager,
+            R.id.main_page_nav_host_fragment,
+            requireAttach
+        )
     }
 }
