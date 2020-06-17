@@ -182,7 +182,7 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
             val item = getItem(position)
             if (checkStatus[item.videoMeta.videoId] == null) checkStatus[item.videoMeta.videoId] = false
             holder.apply {
-                ivPreview.load(YouTubeVideoThumbnailHelper.getDefaultUrl(item.videoMeta.videoId))
+                ivPreview.load(YouTubeVideoThumbnailHelper.getStandardUrl(item.videoMeta.videoId))
                 tvTitle.text = item.videoMeta.title
                 tvAuthor.text = item.videoMeta.channelTitle
                 tvQuality.text = item.playerResources.joinToString { res ->
@@ -246,7 +246,7 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
                     true
                 }
                 btnPlay.setOnClickListener {
-                    mainActivity?.playVideoForId(getItem(adapterPosition).videoMeta.videoId)
+                    mainActivity?.playVideoForId(getItem(adapterPosition).videoMeta.videoId, forceFindFile = true)
                 }
                 checkBox.setOnCheckedChangeListener { buttonView, isChecked ->
                     val item = getItem(adapterPosition)

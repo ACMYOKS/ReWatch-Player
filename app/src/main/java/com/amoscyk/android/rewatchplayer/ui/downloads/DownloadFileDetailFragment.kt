@@ -11,7 +11,6 @@ import android.os.Looper
 import android.util.Log
 import android.view.*
 import android.widget.*
-import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
@@ -117,7 +116,9 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
                 mTvAuthor.text = res.videoMeta.channelTitle
                 mTvVideoId.text = res.videoMeta.videoId
                 mDetailContainer.setOnClickListener {
-                    mainActivity?.playVideoForId(res.videoMeta.videoId)
+                    if (viewModel.isEditMode.value == false) {
+                        mainActivity?.playVideoForId(res.videoMeta.videoId, forceFindFile = true)
+                    }
                 }
                 mAdapter?.submitList(res.playerResources.map { it.toExt() })
                 viewModel.updateDownloadStatus(requireContext())
@@ -215,7 +216,9 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
             downloadId = downloadId,
             itag = itag,
             totalFileSize = fileSize.toInt(),
-            currentFileSize = 0
+            currentFileSize = 0,
+            status = -1,
+            reason = -1
         )
     }
 
@@ -244,7 +247,7 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
                     let { it.resolution ?: it.bitrate }
                 selectBox.visibility = if (isEditMode) View.VISIBLE else View.GONE
                 selectBox.isChecked = checkStatus[item.downloadId]!!
-                setViewForFileSize(item.totalFileSize, item.currentFileSize)
+                setViewForExtraData(item.totalFileSize, item.currentFileSize, item.status, item.reason)
             }
         }
 
@@ -266,6 +269,8 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
                 status[item.downloadId]?.let {
                     item.currentFileSize = it.downloadedByte
                     item.totalFileSize = it.totalByte
+                    item.status = it.downloadStatus
+                    item.reason = it.statusReason
                     notifyItemChanged(i)
                 }
             }
@@ -275,6 +280,7 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
             val tvDescription: TextView = itemView.tv_description
             val tvFileSize: TextView = itemView.tv_file_size
             val tvCompletedFileSize: TextView = itemView.tv_completed_file_size
+            val tvStatusReason: TextView = itemView.tv_status_reason
             val pbDownload: ProgressBar = itemView.pb_download
             val selectBox: CheckBox = itemView.checkbox_select
 
@@ -314,7 +320,7 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
             }
 
             @SuppressLint("SetTextI18n")
-            fun setViewForFileSize(totalFileSize: Int, currentFileSize: Int) {
+            fun setViewForExtraData(totalFileSize: Int, currentFileSize: Int, status: Int, reason: Int) {
                 if (currentFileSize < totalFileSize) {
                     setViewForDownloadCompleted(false)
                     tvFileSize.text =
@@ -327,6 +333,52 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
                     setViewForDownloadCompleted(true)
                     tvCompletedFileSize.text = totalFileSize.toLong().formatReadableByteUnit()
                 }
+                if (status >= 0 && reason >= 0) {
+                    when (status) {
+                        DownloadManager.STATUS_PENDING -> {
+                            tvCompletedFileSize.visibility = View.GONE
+                            tvFileSize.visibility = View.GONE
+                            tvStatusReason.visibility = View.VISIBLE
+                            tvStatusReason.text = getString(R.string.download_status_pending)
+                        }
+                        DownloadManager.STATUS_PAUSED -> {
+                            tvCompletedFileSize.visibility = View.GONE
+                            tvFileSize.visibility = View.GONE
+                            tvStatusReason.visibility = View.VISIBLE
+                            tvStatusReason.text = getString(R.string.download_status_paused) + ": " +
+                                    getString(
+                                        when (reason) {
+                                            DownloadManager.PAUSED_QUEUED_FOR_WIFI -> R.string.download_reason_paused_queued_for_wifi
+                                            DownloadManager.PAUSED_WAITING_FOR_NETWORK -> R.string.download_reason_paused_waiting_for_network
+                                            DownloadManager.PAUSED_WAITING_TO_RETRY -> R.string.download_reason_paused_waiting_to_retry
+                                            else -> R.string.download_reason_paused_unknown
+                                        }
+                                    )
+                        }
+                        DownloadManager.STATUS_FAILED -> {
+                            tvCompletedFileSize.visibility = View.GONE
+                            tvFileSize.visibility = View.GONE
+                            tvStatusReason.visibility = View.VISIBLE
+                            tvStatusReason.text = getString(R.string.download_status_failed) + ": " +
+                                    getString(
+                                        when (reason) {
+                                            DownloadManager.ERROR_CANNOT_RESUME -> R.string.download_reason_error_cannot_resume
+                                            DownloadManager.ERROR_DEVICE_NOT_FOUND -> R.string.download_reason_error_device_not_found
+                                            DownloadManager.ERROR_FILE_ALREADY_EXISTS -> R.string.download_reason_error_file_already_exists
+                                            DownloadManager.ERROR_FILE_ERROR -> R.string.download_reason_error_file_error
+                                            DownloadManager.ERROR_HTTP_DATA_ERROR -> R.string.download_reason_error_http_data_error
+                                            DownloadManager.ERROR_INSUFFICIENT_SPACE -> R.string.download_reason_error_insufficient_space
+                                            DownloadManager.ERROR_TOO_MANY_REDIRECTS -> R.string.download_reason_error_too_many_redirect
+                                            DownloadManager.ERROR_UNHANDLED_HTTP_CODE -> R.string.download_reason_error_unhandled_http_code
+                                            else -> R.string.player_error_unknown
+                                        }
+                                    )
+                        }
+                        else -> { tvStatusReason.visibility = View.GONE }
+                    }
+                } else {
+                    tvStatusReason.visibility = View.GONE
+            }
             }
 
         }
@@ -337,7 +389,9 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
         var downloadId: Long,
         var itag: Int,
         var totalFileSize: Int,
-        var currentFileSize: Int
+        var currentFileSize: Int,
+        var status: Int,
+        var reason: Int
     )
 
     companion object {

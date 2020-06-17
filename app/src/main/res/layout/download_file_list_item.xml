@@ -38,6 +38,15 @@
         tools:text="100MB"
         android:textSize="18sp"
         tools:visibility="gone"/>
+    <TextView
+        android:id="@+id/tv_status_reason"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        app:layout_constraintTop_toBottomOf="@id/tv_completed_file_size"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/checkbox_select"
+        tools:text="status: no network"/>
     <ProgressBar
         android:id="@+id/pb_download"
         style="@style/Widget.AppCompat.ProgressBar.Horizontal"

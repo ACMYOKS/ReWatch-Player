@@ -6,13 +6,14 @@ import androidx.core.content.edit
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.service.YoutubeServiceProvider
 import com.amoscyk.android.rewatchplayer.util.PreferenceKey
 import com.amoscyk.android.rewatchplayer.util.appSharedPreference
 import com.amoscyk.android.rewatchplayer.util.putString
 import pub.devrel.easypermissions.EasyPermissions
 
-class StartupAccountViewModel : ViewModel() {
+class StartupAccountViewModel(private val youtubeRepository: YoutubeRepository) : ViewModel() {
     enum class SettingStage {
         REQUEST_GET_ACCOUNT_PERMISSION,
         REQUEST_USER_ACCOUNT,
@@ -33,15 +34,18 @@ class StartupAccountViewModel : ViewModel() {
                 SettingStageMessenger(SettingStage.REQUEST_USER_ACCOUNT, _accountName.value)
         } else {
             _settingStageMessenger.value =
-                SettingStageMessenger(SettingStage.REQUEST_GET_ACCOUNT_PERMISSION, _accountName.value)
+                SettingStageMessenger(
+                    SettingStage.REQUEST_GET_ACCOUNT_PERMISSION,
+                    _accountName.value
+                )
         }
     }
 
-    fun setUserAccountName(context: Context, youtubeServiceProvider: YoutubeServiceProvider, accountName: String) {
+    fun setUserAccountName(context: Context, accountName: String) {
         context.appSharedPreference.edit {
             putString(PreferenceKey.ACCOUNT_NAME, accountName)
         }
-        youtubeServiceProvider.credential.selectedAccountName = accountName
+        youtubeRepository.setAccountName(accountName)
         _accountName.value = accountName
         _settingStageMessenger.value =
             SettingStageMessenger(SettingStage.USER_ACCOUNT_SELECTED, _accountName.value)

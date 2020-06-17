@@ -1,4 +1,4 @@
-package com.amoscyk.android.rewatchplayer.ui.account
+package com.amoscyk.android.rewatchplayer.ui.setting
 
 import androidx.lifecycle.ViewModel
 

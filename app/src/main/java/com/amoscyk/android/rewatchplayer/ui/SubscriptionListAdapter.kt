@@ -78,8 +78,8 @@ class SubscriptionListAdapter(
 
         fun bind(item: RPSubscription) {
             thumbnail.load(item.thumbnails.default?.url) {
-                placeholder(R.drawable.ic_image)
-                error(R.drawable.ic_broken_image_white)
+                placeholder(R.drawable.ic_account_circle)
+                error(R.drawable.ic_account_circle)
                 transformations(CircleCropTransformation())
             }
             title.text = item.title

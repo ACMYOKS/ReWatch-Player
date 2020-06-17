@@ -225,6 +225,7 @@ class VideoPlayerLayout
     fun isTransitionEnabled(): Boolean = mEnableSlide
 
     val toolbar get() = mToolbar
+    val playerControlView get() = mPlayerControlView
 
     val isFullscreen get() = mMotionLayout.currentState == R.id.video_player_fullscreen
     val isSmall get() = mMotionLayout.currentState == R.id.video_player_small

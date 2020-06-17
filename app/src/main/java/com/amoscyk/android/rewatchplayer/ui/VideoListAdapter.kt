@@ -165,12 +165,9 @@ class VideoListAdapter: ListAdapter<VideoMeta, VideoListAdapter.ViewHolder>(DIFF
             titleTv.text = video.title
             channelTitleTv.text = video.channelTitle
             durationTv.text = DateTimeHelper.getDisplayString(video.duration)
-            thumbnailIv.load(
-                video.thumbnails.standard?.url
-                    ?: YouTubeVideoThumbnailHelper.getStandardUrl(video.videoId)
-            ) {
+            thumbnailIv.load(YouTubeVideoThumbnailHelper.getStandardUrl(video.videoId)) {
                 placeholder(R.drawable.ic_image)
-                error(R.drawable.ic_broken_image_white)
+                error(R.drawable.ic_image)
             }
             if (position == itemCount - 1 && shouldShowLoading) progressBar.show()
             else progressBar.hide()

@@ -19,7 +19,7 @@ import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.util.*
 import com.amoscyk.android.rewatchplayer.youtubeServiceProvider
-import kotlinx.android.synthetic.main.fragment_settings.view.*
+import kotlinx.android.synthetic.main.fragment_settings_legacy.view.*
 import kotlinx.android.synthetic.main.settings_header_view.view.*
 import kotlinx.android.synthetic.main.settings_item_view.view.*
 
@@ -95,7 +95,7 @@ class SettingsFragment : ReWatchPlayerFragment() {
         savedInstanceState: Bundle?
     ): View? {
         if (mRootView == null) {
-            mRootView = inflater.inflate(R.layout.fragment_settings, container, false)
+            mRootView = inflater.inflate(R.layout.fragment_settings_legacy, container, false)
             setupViews()
         }
         return mRootView

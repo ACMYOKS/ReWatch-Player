@@ -7,8 +7,8 @@
 
     <fragment
         android:id="@+id/accountFragment"
-        android:name="com.amoscyk.android.rewatchplayer.ui.account.SettingsFragment"
-        tools:layout="@layout/fragment_settings" />
+        android:name="com.amoscyk.android.rewatchplayer.ui.account.AppInfoFragment"
+        tools:layout="@layout/fragment_app_info" />
 
     <fragment
         android:id="@+id/channelFragment"

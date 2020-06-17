@@ -8,12 +8,10 @@ import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.ui.ChannelViewModel
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel
 import com.amoscyk.android.rewatchplayer.ui.VideoListViewModel
-import com.amoscyk.android.rewatchplayer.ui.account.SettingsViewModel
+import com.amoscyk.android.rewatchplayer.ui.setting.SettingsViewModel
 import com.amoscyk.android.rewatchplayer.ui.account.StartupAccountViewModel
 import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadFileDetailViewModel
-import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadManagerFragment
 import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadManagerViewModel
-import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadPageViewModel
 import com.amoscyk.android.rewatchplayer.ui.home.HomeViewModel
 import com.amoscyk.android.rewatchplayer.ui.home.VideoSearchViewModel
 import com.amoscyk.android.rewatchplayer.ui.library.LibraryViewModel
@@ -30,10 +28,10 @@ class ViewModelFactory(
                 return MainViewModel(youtubeRepository) as T
             }
             modelClass.isAssignableFrom(StartupAccountViewModel::class.java) -> {
-                return StartupAccountViewModel() as T
+                return StartupAccountViewModel(youtubeRepository) as T
             }
             modelClass.isAssignableFrom(HomeViewModel::class.java) -> {
-                return HomeViewModel() as T
+                return HomeViewModel(youtubeRepository) as T
             }
             modelClass.isAssignableFrom(VideoSearchViewModel::class.java) -> {
                 return VideoSearchViewModel(youtubeRepository) as T

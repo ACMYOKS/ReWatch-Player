@@ -3,6 +3,7 @@ package com.amoscyk.android.rewatchplayer.datasource
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPThumbnailDetails
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.*
+import com.amoscyk.android.rewatchplayer.service.YoutubeServiceProvider
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeExtractor
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeOpenService
 import com.google.api.services.youtube.YouTube
@@ -11,12 +12,17 @@ import kotlinx.coroutines.withContext
 import org.threeten.bp.Duration
 
 class YoutubeRepository(
-    private val ytApiService: YouTube,
+    private val ytApiServiceProvider: YoutubeServiceProvider,
     private val ytOpenService: YouTubeOpenService,
     private val appDatabase: AppDatabase
 ) {
 
     private val ytExtractor = YouTubeExtractor(ytOpenService)
+    private val ytApiService = ytApiServiceProvider.youtubeService
+
+    fun setAccountName(accountName: String) {
+        ytApiServiceProvider.credential.selectedAccountName = accountName
+    }
 
     suspend fun loadSearchResultResource(query: String, maxResults: Long = MAX_VIDEO_RESULTS): SearchListResponseResource {
         // TODO: obtain resource from db if record exists, and only request from api when db record

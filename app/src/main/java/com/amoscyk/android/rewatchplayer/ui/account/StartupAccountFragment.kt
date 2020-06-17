@@ -36,7 +36,7 @@ class StartupAccountFragment : Fragment(), EasyPermissions.PermissionCallbacks {
             when (it.stage) {
                 StartupAccountViewModel.SettingStage.REQUEST_GET_ACCOUNT_PERMISSION -> {
                     EasyPermissions.requestPermissions(this,
-                        "This app needs to access your Google account (via Contacts).",
+                        getString(R.string.settings_request_get_account_permission),
                         REQUEST_GET_ACCOUNT_PERMISSION,
                         Manifest.permission.GET_ACCOUNTS)
                 }
@@ -84,7 +84,7 @@ class StartupAccountFragment : Fragment(), EasyPermissions.PermissionCallbacks {
             REQUEST_ACCOUNT_PICKER -> {
                 if (resultCode == Activity.RESULT_OK) {
                     data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)?.let { accountName ->
-                        viewModel.setUserAccountName(requireContext(), youtubeServiceProvider, accountName)
+                        viewModel.setUserAccountName(requireContext(), accountName)
                     }
                 }
             }

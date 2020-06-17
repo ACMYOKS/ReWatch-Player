@@ -11,6 +11,7 @@ import android.widget.*
 import androidx.appcompat.widget.AppCompatSpinner
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
@@ -47,7 +48,7 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
 
     private val mVideoListAdapter = VideoListAdapter()
 
-    private val mainViewModel by viewModels<MainViewModel> { viewModelFactory }
+    private val mainViewModel by activityViewModels<MainViewModel> { viewModelFactory }
     private val viewModel by viewModels<VideoSearchViewModel> { viewModelFactory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -144,7 +145,8 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
                     query?.let {
                         when (mSpinner.selectedItemPosition) {
                             SearchCriteria.BY_ID.ordinal -> {
-                                viewModel.searchForVideoId(it)
+//                                viewModel.searchForVideoId(it)
+                                mainViewModel.playVideoForId(requireContext(), it, true)
                             }
                             SearchCriteria.BY_TITLE.ordinal -> {
                                 viewModel.searchForQuery(it)

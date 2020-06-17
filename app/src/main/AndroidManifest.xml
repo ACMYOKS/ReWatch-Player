@@ -16,9 +16,10 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".ui.player.PlayerActivity"
-            android:configChanges="orientation|screenLayout|screenSize">
-        </activity>
+        <activity android:name=".ui.setting.SettingsActivity"/>
+        <activity
+            android:name=".ui.player.PlayerActivity"
+            android:configChanges="orientation|screenLayout|screenSize"></activity>
         <activity
             android:name=".ui.MainActivity"
             android:configChanges="orientation|screenLayout|screenSize"
@@ -26,26 +27,31 @@
             android:windowSoftInputMode="adjustNothing">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="http"/>
-                <data android:scheme="https"/>
-                <data android:pathPrefix="/watch"/>
-                <data android:host="m.youtube.com"/>
-                <data android:host="www.youtube.com"/>
-                <data android:host="youtube.com"/>
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:pathPrefix="/watch" />
+                <data android:host="m.youtube.com" />
+                <data android:host="www.youtube.com" />
+                <data android:host="youtube.com" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="http"/>
-                <data android:scheme="https"/>
-                <data android:host="youtu.be"/>
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:host="youtu.be" />
             </intent-filter>
         </activity>
     </application>

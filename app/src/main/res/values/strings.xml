@@ -5,7 +5,7 @@
     <string name="main_bottom_nav_title_home">Home</string>
     <string name="main_bottom_nav_title_library">Library</string>
     <string name="main_bottom_nav_title_downloads">Downloads</string>
-    <string name="main_bottom_nav_title_account">Settings</string>
+    <string name="main_bottom_nav_title_about">About</string>
 
     <!-- Player -->
     <string name="player_archive_option_video">Video Resolution</string>
@@ -28,6 +28,18 @@
     <string name="player_video_info_video_tags">tags</string>
     <string name="player_video_info_view_channel">view channel</string>
 
+    <string name="player_alert_enable_stream_with_mobile_data">Mobile data connected. Enable play video using mobile data?</string>
+    <string name="player_alert_enable_stream_with_mobile_data_cancel">Not able to stream data with mobile data.</string>
+    <string name="player_error_title">Error</string>
+    <string name="player_error_no_video_id">No video ID</string>
+    <string name="player_error_no_video_meta">No video meta</string>
+    <string name="player_error_no_yt_info">No YTInfo</string>
+    <string name="player_error_no_available_quality">No available quality</string>
+    <string name="player_error_unknown">Unknown error</string>
+
+    <string name="player_archive_new_tasks">%1$d new task(s) added</string>
+    <string name="player_archive_no_new_tasks">required file(s) already exist</string>
+
     <!-- Library -->
     <string name="library_list_channel">Channel</string>
     <string name="library_list_playlist">Playlist</string>
@@ -43,6 +55,22 @@
 
     <!-- Download -->
     <string name="download_action_remove">Remove archive</string>
+    <string name="download_status_pending">Pending</string>
+    <string name="download_status_paused">Paused</string>
+    <string name="download_status_failed">Failed</string>
+    <string name="download_reason_paused_queued_for_wifi">Queued for WiFi</string>
+    <string name="download_reason_paused_unknown">Unknown</string>
+    <string name="download_reason_paused_waiting_for_network">Waiting for network</string>
+    <string name="download_reason_paused_waiting_to_retry">Waiting to retry</string>
+    <string name="download_reason_error_cannot_resume">Cannot resume</string>
+    <string name="download_reason_error_device_not_found">Device not found</string>
+    <string name="download_reason_error_file_already_exists">File already exists</string>
+    <string name="download_reason_error_file_error">File error</string>
+    <string name="download_reason_error_http_data_error">HTTP data error</string>
+    <string name="download_reason_error_insufficient_space">Insufficient space</string>
+    <string name="download_reason_error_too_many_redirect">Too many redirect</string>
+    <string name="download_reason_error_unhandled_http_code">Unhandled HTTP code</string>
+    <string name="download_reason_error_unknown">Unknown</string>
 
     <!-- Common string -->
     <string name="confirm_text">OK</string>
@@ -58,4 +86,50 @@
     <string name="setting_download">Download</string>
     <string name="setting_download_download_location">download location</string>
     <string name="setting_download_storage_used">storage used</string>
+
+    <string name="settings_request_get_account_permission">This app needs to access your Google account (via Contacts).</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_player_section">Player</string>
+    <string name="settings_download_section">Download</string>
+    <string name="settings_data_storage_section">Data and Storage</string>
+    <string name="settings_player_skip_forward">Skip forward</string>
+    <string name="settings_player_skip_backward">Skip backward</string>
+    <string-array name="player_skip_time_entries">
+        <item>5 seconds</item>
+        <item>10 seconds</item>
+        <item>15 seconds</item>
+        <item>30 seconds</item>
+        <item>1 minute</item>
+        <item>5 minutes</item>
+    </string-array>
+    <string name="settings_player_enable_pip">Enable picture-in-picture</string>
+    <string name="settings_player_enable_pip_description">Enable viewing player above other apps when app goes background.</string>
+    <string name="settings_player_enable_pip_not_supported">Your device does not support picture-in-picture.</string>
+    <string name="settings_player_enable_pip_disabled">Picture-in-picture is disabled in settings. Click to open settings.</string>
+    <string name="settings_player_play_downloaded_quality">Always play downloaded video if exist</string>
+    <string name="settings_player_play_downloaded_quality_on">Always try to play existing downloaded clips</string>
+    <string name="settings_player_play_downloaded_quality_off">Always streams video online</string>
+    <string name="settings_allow_video_streaming_env">Allow video streaming when using</string>
+    <string name="settings_allow_play_in_background">Allow play video in background</string>
+    <string name="settings_allow_play_in_background_description">Player will continue playing video even if the app is in background. Enable this will increase battery consumption.</string>
+    <string name="settings_allow_download_env">Allow download when using</string>
+    <string-array name="data_usage_network_type">
+        <item>WiFi only</item>
+        <item>WiFi and mobile data</item>
+    </string-array>
+    <string name="settings_on_text">On</string>
+    <string name="settings_off_text">Off</string>
+    <string name="settings_enabled_text">Enabled</string>
+    <string name="settings_disabled_text">Disabled</string>
+
+    <string name="account_current_account_title">Current account</string>
+    <string name="account_section_setting_title">Settings</string>
+    <string name="account_section_about_title">About</string>
+    <string name="account_app_info_title">App info</string>
+    <string name="account_tutorial_title">Tutorial</string>
+    <string name="account_section_help_title">Help</string>
+    <string name="account_faq_title">FAQ</string>
+    <string name="account_contact_title">Contact</string>
+    <string name="account_menu_settings_title">Settings</string>
 </resources>

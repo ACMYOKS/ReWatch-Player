@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ActivityInfo
-import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.net.ConnectivityManager
@@ -20,6 +19,7 @@ import android.util.Log
 import android.util.Rational
 import android.view.View
 import android.view.WindowManager
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
@@ -29,18 +29,15 @@ import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.lifecycle.Observer
 import androidx.navigation.findNavController
-import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.amoscyk.android.rewatchplayer.AppConstant
+import com.amoscyk.android.rewatchplayer.*
 import com.amoscyk.android.rewatchplayer.R
-import com.amoscyk.android.rewatchplayer.ReWatchPlayerActivity
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel.ResponseActionType
 import com.amoscyk.android.rewatchplayer.ui.library.LibraryFragmentDirections
 import com.amoscyk.android.rewatchplayer.ui.player.*
 import com.amoscyk.android.rewatchplayer.util.*
-import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.source.MergingMediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
@@ -55,6 +52,8 @@ import java.io.File
 class MainActivity : ReWatchPlayerActivity() {
 
     private val mPlayerLayout by lazy { findViewById<VideoPlayerLayout>(R.id.video_player_layout) }
+
+    private var mLoadingDialog: AlertDialog? = null
 
     // player option view
     private var mOptionDialog: BottomSheetDialog? = null
@@ -104,7 +103,8 @@ class MainActivity : ReWatchPlayerActivity() {
 
     private var isWifiConnected = false
     private var isMobileDataConnected = false
-    private var allowPlayUsingWifiOnly = false
+    private var allowPlayUsingMobile = false
+    private var allowDownloadUsingMobile = false
 
     private var exoPlayer: SimpleExoPlayer? = null
     private var playWhenReady = true
@@ -153,12 +153,34 @@ class MainActivity : ReWatchPlayerActivity() {
                 Log.d(AppConstant.TAG, "$TAG mobile data connected: ${it.name}")
             })
         }
-        SPBooleanLiveData(appSharedPreference,
-            PreferenceKey.PLAYER_ONLY_PLAY_WHEN_USING_WIFI,
-            false).apply {
+        SPIntLiveData(appSharedPreference,
+            PreferenceKey.ALLOW_VIDEO_STREAMING_ENV,
+            AppSettings.DEFAULT_ALLOW_VIDEO_STREAMING_ENV).apply {
             observe(this@MainActivity, Observer {
-                allowPlayUsingWifiOnly = it
-                viewModel.notifyIsAllowedPlayUsingWifiOnly(allowPlayUsingWifiOnly)
+                allowPlayUsingMobile = it == 1
+                viewModel.notifyIsAllowedPlayUsingMobile(allowPlayUsingMobile)
+            })
+        }
+        SPIntLiveData(appSharedPreference,
+            PreferenceKey.PLAYER_SKIP_FORWARD_TIME,
+            AppSettings.DEFAULT_PLAYER_SKIP_FORWARD_SECOND).apply {
+            observe(this@MainActivity, Observer {
+                mPlayerLayout.playerControlView.setFastForwardIncrementMs(it * 1000)
+            })
+        }
+        SPIntLiveData(appSharedPreference,
+            PreferenceKey.PLAYER_SKIP_BACKWARD_TIME,
+            AppSettings.DEFAULT_PLAYER_SKIP_BACKWARD_SECOND).apply {
+            observe(this@MainActivity, Observer {
+                mPlayerLayout.playerControlView.setRewindIncrementMs(it * 1000)
+            })
+        }
+        SPIntLiveData(appSharedPreference,
+            PreferenceKey.ALLOW_DOWNLOAD_ENV,
+            AppSettings.DEFAULT_ALLOW_DOWNLOAD_ENV).apply {
+            observe(this@MainActivity, Observer {
+                allowDownloadUsingMobile = it == 1
+                viewModel.notifyIsAllowedDownloadUsingMobile(allowDownloadUsingMobile)
             })
         }
 
@@ -179,7 +201,12 @@ class MainActivity : ReWatchPlayerActivity() {
                     Toast.makeText(this, "Checking...", Toast.LENGTH_SHORT).show()
                 }
                 Status.SUCCESS -> {
-                    viewModel.playVideoForId(this, res.data!!)
+                    viewModel.playVideoForId(this, res.data!!,
+                        appSharedPreference.getBoolean(
+                            PreferenceKey.PLAYER_PLAY_DOWNLOADED_IF_EXIST,
+                            AppSettings.DEFAULT_PLAYER_PLAY_DOWNLOADED_IF_EXIST
+                        )
+                    )
                 }
                 Status.ERROR -> {
                     Toast.makeText(
@@ -252,7 +279,13 @@ class MainActivity : ReWatchPlayerActivity() {
                     getMainFragment()?.contentContainer?.let {
                         Snackbar.make(
                             it,
-                            "has new download task: ${result.data!!.taskCount}",
+                            result.data!!.taskCount.let {
+                                if (it > 0) {
+                                    getString(R.string.player_archive_new_tasks).format(it)
+                                } else {
+                                    getString(R.string.player_archive_no_new_tasks)
+                                }
+                            },
                             Snackbar.LENGTH_SHORT
                         ).show()
                     }
@@ -267,6 +300,36 @@ class MainActivity : ReWatchPlayerActivity() {
                     }
                 }
                 else -> {
+                }
+            }
+        })
+
+        viewModel.isLoadingVideo.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                if (it) {
+                    mLoadingDialog?.show()
+                } else {
+                    mLoadingDialog?.dismiss()
+                }
+            }
+        })
+
+        viewModel.getVideoResult.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                it.error?.let {
+                    AlertDialog.Builder(this)
+                        .setTitle(R.string.player_error_title)
+                        .setMessage(
+                            when (it) {
+                                MainViewModel.GetVideoResult.Error.EMPTY_VIDEO_ID -> R.string.player_error_no_video_id
+                                MainViewModel.GetVideoResult.Error.NO_VIDEO_META -> R.string.player_error_no_video_meta
+                                MainViewModel.GetVideoResult.Error.NO_YT_INFO -> R.string.player_error_no_yt_info
+                                MainViewModel.GetVideoResult.Error.NO_QUALITY -> R.string.player_error_no_available_quality
+                                MainViewModel.GetVideoResult.Error.UNKNOWN -> R.string.player_error_unknown
+                            }
+                        )
+                        .create()
+                        .show()
                 }
             }
         })
@@ -292,15 +355,21 @@ class MainActivity : ReWatchPlayerActivity() {
                     when (res.data) {
                         ResponseActionType.SHOW_ENABLE_MOBILE_DATA_USAGE_ALERT -> {
                             AlertDialog.Builder(this)
-                                .setMessage(res.stringMessage)
-                                .setPositiveButton("ok") { _, _ ->
+                                .setMessage(getString(R.string.player_alert_enable_stream_with_mobile_data))
+                                .setPositiveButton(R.string.confirm_text) { _, _ ->
                                     appSharedPreference.edit(true) {
-                                        putBoolean(PreferenceKey.PLAYER_ONLY_PLAY_WHEN_USING_WIFI, false)
+                                        putInt(PreferenceKey.ALLOW_VIDEO_STREAMING_ENV, 1)
                                     }
                                     viewModel.continueSetQuality()
                                 }
-                                .setNegativeButton("cancel") { dialog, _ -> dialog.cancel() }
-                                .setOnCancelListener { viewModel.cancelSetQuality() }
+                                .setNegativeButton(R.string.cancel_text) { dialog, _ -> dialog.cancel() }
+                                .setOnCancelListener {
+                                    viewModel.cancelSetQuality()
+                                    AlertDialog.Builder(this)
+                                        .setMessage(R.string.player_alert_enable_stream_with_mobile_data_cancel)
+                                        .create()
+                                        .show()
+                                }
                                 .create()
                                 .show()
                         }
@@ -313,7 +382,7 @@ class MainActivity : ReWatchPlayerActivity() {
                         ResponseActionType.DO_NOTHING -> {
                             AlertDialog.Builder(this)
                                 .setMessage(res.stringMessage)
-                                .setPositiveButton("ok") { _, _ -> }
+                                .setPositiveButton(R.string.confirm_text) { _, _ -> }
                                 .create()
                                 .show()
                         }
@@ -337,7 +406,7 @@ class MainActivity : ReWatchPlayerActivity() {
                     else -> null
                 }
                 // search video
-                viewModel.searchVideoById(videoId)
+                viewModel.playVideoForId(this, videoId, true)
             }
         }
     }
@@ -345,14 +414,24 @@ class MainActivity : ReWatchPlayerActivity() {
     override fun onPause() {
         super.onPause()
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-            exoPlayer?.playWhenReady = false
+            if (!isActivityOnStackTop() || !appSharedPreference.getBoolean(
+                    PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
+                    AppSettings.DEFAULT_ALLOW_PLAY_IN_BACKGROUND
+                )) {
+                exoPlayer?.playWhenReady = false
+            }
         }
     }
 
     override fun onStop() {
         super.onStop()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            exoPlayer?.playWhenReady = false
+            if (!isActivityOnStackTop() || !appSharedPreference.getBoolean(
+                    PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
+                    AppSettings.DEFAULT_ALLOW_PLAY_IN_BACKGROUND
+                )) {
+                exoPlayer?.playWhenReady = false
+            }
         }
     }
 
@@ -366,12 +445,13 @@ class MainActivity : ReWatchPlayerActivity() {
         if (mPlayerLayout.isFullscreen) {
             if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
                 requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+            } else {
+                mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.SMALL)
             }
-            mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.SMALL)
         } else if (onBackPressedDispatcher.hasEnabledCallbacks()) {
             onBackPressedDispatcher.onBackPressed()
         } else if (shouldEnterPIPMode()) {
-            enterPIPMode()
+            if (!enterPIPMode()) super.onBackPressed()
         } else {
             super.onBackPressed()
         }
@@ -475,7 +555,7 @@ class MainActivity : ReWatchPlayerActivity() {
                         bufferedDurationUs: Long,
                         playbackSpeed: Float
                     ): Boolean {
-                        if (allowPlayUsingWifiOnly && !viewModel.isLocalBuffering && !isWifiConnected) return false
+                        if (!allowPlayUsingMobile && !viewModel.isLocalBuffering && !isWifiConnected) return false
                         return super.shouldContinueLoading(bufferedDurationUs, playbackSpeed)
                     }
                 })
@@ -591,6 +671,7 @@ class MainActivity : ReWatchPlayerActivity() {
                 }
             })
         }
+        mLoadingDialog = ProgressDialogUtil.create(this)
     }
 
     @SuppressLint("SourceLockedOrientationActivity")
@@ -613,7 +694,7 @@ class MainActivity : ReWatchPlayerActivity() {
         btnRemoveBookmark.isVisible = isBookmarked
     }
 
-    fun playVideoForId(videoId: String) {
+    fun playVideoForId(videoId: String, forceFindFile: Boolean = false) {
         playWhenReady = true
         playbackPosition = 0
         currentWindow = 0
@@ -622,7 +703,13 @@ class MainActivity : ReWatchPlayerActivity() {
             it.seekTo(currentWindow, playbackPosition)
             it.playbackParameters = viewModel.playbackParams.value!!
         }
-        viewModel.playVideoForId(this, videoId)
+        viewModel.playVideoForId(
+            this, videoId, forceFindFile ||
+                    appSharedPreference.getBoolean(
+                        PreferenceKey.PLAYER_PLAY_DOWNLOADED_IF_EXIST,
+                        AppSettings.DEFAULT_PLAYER_PLAY_DOWNLOADED_IF_EXIST
+                    )
+        )
     }
 
     fun showArchiveOption(videoId: String) {
@@ -668,19 +755,21 @@ class MainActivity : ReWatchPlayerActivity() {
 
     private fun shouldEnterPIPMode(): Boolean {
         // show on top of other app according to user preference
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-            packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
-            return !mPlayerLayout.isDismiss
-        }
+        if (AppSettings.isPipSupported(this) && appSharedPreference.getBoolean(
+                PreferenceKey.PLAYER_ENABLE_PIP,
+                AppSettings.DEFAULT_PLAYER_ENABLE_PIP
+            )
+        ) return exoPlayer?.isPlaying ?: false
         return false
     }
 
-    private fun enterPIPMode() {
+    private fun enterPIPMode(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            enterPictureInPictureMode(
+            return enterPictureInPictureMode(
                 PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build()
             )
         }
+        return false
     }
 
     @RequiresApi(Build.VERSION_CODES.O)

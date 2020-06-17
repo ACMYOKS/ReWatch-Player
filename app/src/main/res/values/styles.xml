@@ -14,4 +14,8 @@
         <item name="snackbarButtonStyle">@style/Widget.MaterialComponents.Button.TextButton.Snackbar</item>
     </style>
 
+    <style name="AppProgressDialog" parent="Theme.MaterialComponents.Dialog.Bridge">
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
+
 </resources>

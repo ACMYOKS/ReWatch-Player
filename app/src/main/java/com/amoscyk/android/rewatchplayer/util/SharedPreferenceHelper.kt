@@ -14,7 +14,14 @@ import com.amoscyk.android.rewatchplayer.AppConstant
 enum class PreferenceKey {
     ACCOUNT_NAME,
     LIBRARY_LIST_MODE,
-    PLAYER_ONLY_PLAY_WHEN_USING_WIFI
+    PLAYER_ONLY_PLAY_WHEN_USING_WIFI,
+    PLAYER_SKIP_FORWARD_TIME,
+    PLAYER_SKIP_BACKWARD_TIME,
+    PLAYER_ENABLE_PIP,
+    PLAYER_PLAY_DOWNLOADED_IF_EXIST,
+    ALLOW_VIDEO_STREAMING_ENV,
+    ALLOW_PLAY_IN_BACKGROUND,
+    ALLOW_DOWNLOAD_ENV
 }
 
 abstract class NullableSharedPreferencesLiveData<T>(

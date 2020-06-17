@@ -43,7 +43,7 @@ class ReWatchPlayerApplication: Application() {
             .fallbackToDestructiveMigration()
             .build()
 
-        _youtubeRepository = YoutubeRepository(youtubeServiceProvider.youtubeService,
+        _youtubeRepository = YoutubeRepository(youtubeServiceProvider,
             youtubeOpenService, _appDb)
 
         BundledEmojiCompatConfig(this).let {

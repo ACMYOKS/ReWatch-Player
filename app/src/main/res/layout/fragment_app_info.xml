@@ -1,25 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
+
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"/>
+            android:layout_height="?attr/actionBarSize" />
     </com.google.android.material.appbar.AppBarLayout>
+
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/current_user_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:paddingTop="20dp"
+                android:paddingBottom="20dp"
+                android:orientation="horizontal"
+                android:background="?android:attr/selectableItemBackground">
+
+            <ImageView
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:src="@drawable/ic_account_circle"
+                    android:tint="@android:color/darker_gray" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="14dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/account_current_account_title"
+                        android:textSize="12sp"/>
+
+                    <TextView
+                        android:id="@+id/tv_current_account"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textStyle="bold"
+                        tools:text="example@google.com"
+                        android:textSize="16sp"/>
+                </LinearLayout>
+            </LinearLayout>
+
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -28,39 +76,9 @@
                 android:paddingEnd="14dp"
                 android:paddingBottom="8dp"
                 android:textStyle="bold"
-                android:text="@string/settings_player_section" />
+                android:text="@string/account_section_about_title"/>
             <com.amoscyk.android.rewatchplayer.ui.setting.SettingItemCell
-                android:id="@+id/cell_skip_forward"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0.5dp"
-                android:background="@android:color/darker_gray"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="14dp"/>
-            <com.amoscyk.android.rewatchplayer.ui.setting.SettingItemCell
-                android:id="@+id/cell_skip_backward"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0.5dp"
-                android:background="@android:color/darker_gray"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="14dp"/>
-            <com.amoscyk.android.rewatchplayer.ui.setting.SettingSwitchItemCell
-                android:id="@+id/cell_enable_pip"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0.5dp"
-                android:background="@android:color/darker_gray"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="14dp"/>
-            <com.amoscyk.android.rewatchplayer.ui.setting.SettingSwitchItemCell
-                android:id="@+id/cell_play_downloaded_quality"
+                android:id="@+id/btn_tutorial"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"/>
             <View
@@ -70,36 +88,7 @@
                 android:layout_marginStart="14dp"
                 android:layout_marginEnd="14dp"/>
             <com.amoscyk.android.rewatchplayer.ui.setting.SettingItemCell
-                android:id="@+id/cell_allow_video_stream_env"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0.5dp"
-                android:background="@android:color/darker_gray"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="14dp"/>
-            <com.amoscyk.android.rewatchplayer.ui.setting.SettingSwitchItemCell
-                android:id="@+id/cell_allow_play_when_screen_off"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0.5dp"
-                android:background="@android:color/darker_gray"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="14dp"/>
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingTop="25dp"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp"
-                android:paddingBottom="8dp"
-                android:textStyle="bold"
-                android:text="@string/settings_download_section" />
-            <com.amoscyk.android.rewatchplayer.ui.setting.SettingItemCell
-                android:id="@+id/cell_allow_download_network_env"
+                android:id="@+id/btn_app_info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"/>
             <View
@@ -116,7 +105,27 @@
                 android:paddingEnd="14dp"
                 android:paddingBottom="8dp"
                 android:textStyle="bold"
-                android:text="@string/settings_data_storage_section" />
+                android:text="@string/account_section_help_title" />
+            <com.amoscyk.android.rewatchplayer.ui.setting.SettingItemCell
+                android:id="@+id/btn_faq"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0.5dp"
+                android:background="@android:color/darker_gray"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="14dp"/>
+            <com.amoscyk.android.rewatchplayer.ui.setting.SettingItemCell
+                android:id="@+id/btn_contact"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0.5dp"
+                android:background="@android:color/darker_gray"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="14dp"/>
         </LinearLayout>
     </ScrollView>
 </LinearLayout>
