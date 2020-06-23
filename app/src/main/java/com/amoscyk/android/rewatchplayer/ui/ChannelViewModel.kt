@@ -15,12 +15,12 @@ class ChannelViewModel(private val youtubeRepository: YoutubeRepository) : ViewM
 
     private var channelId: String = ""
 
-    private val _showLoadingChannel = MutableLiveData<Event<Boolean>>()
-    val showLoadingChannel: LiveData<Event<Boolean>> = _showLoadingChannel
-    private val _showLoadingUploaded = MutableLiveData<Event<Boolean>>()
-    val showLoadingUploaded: LiveData<Event<Boolean>> = _showLoadingUploaded
-    private val _showLoadingPlaylist = MutableLiveData<Event<Boolean>>()
-    val showLoadingPlaylist: LiveData<Event<Boolean>> = _showLoadingPlaylist
+    private val _showLoadingChannel = MutableLiveData<ListLoadingStateEvent>()
+    val showLoadingChannel: LiveData<ListLoadingStateEvent> = _showLoadingChannel
+    private val _showLoadingUploaded = MutableLiveData<ListLoadingStateEvent>()
+    val showLoadingUploaded: LiveData<ListLoadingStateEvent> = _showLoadingUploaded
+    private val _showLoadingPlaylist = MutableLiveData<ListLoadingStateEvent>()
+    val showLoadingPlaylist: LiveData<ListLoadingStateEvent> = _showLoadingPlaylist
 
     private val _channelListRes = MutableLiveData<RPChannelListResponse>()
     val channelList: LiveData<RPChannelListResponse> = _channelListRes
@@ -80,10 +80,13 @@ class ChannelViewModel(private val youtubeRepository: YoutubeRepository) : ViewM
         viewModelScope.launch {
             _featuredListListRes.value?.apply {
                 if (nextPageToken != null) {
-                    runCatching {
-                        _featuredListListRes.value = youtubeRepository.getPlaylistsByChannelId(channelId, nextPageToken)
-                    }.onFailure {
-                        Log.e(AppConstant.TAG, it.message.orEmpty())
+                    _showLoadingPlaylist.loading(true) {
+                        runCatching {
+                            _featuredListListRes.value =
+                                youtubeRepository.getPlaylistsByChannelId(channelId, nextPageToken)
+                        }.onFailure {
+                            Log.e(AppConstant.TAG, it.message.orEmpty())
+                        }
                     }
                 }
             }

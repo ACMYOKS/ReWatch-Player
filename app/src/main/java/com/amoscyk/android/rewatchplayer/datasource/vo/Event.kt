@@ -15,10 +15,3 @@ class Event<out T>(private val content: T) {
 
     fun peekContent() = content
 }
-
-/* common function for showing loading UI when processing */
-inline fun MutableLiveData<Event<Boolean>>.loading(action: () -> Unit) {
-    value = Event(true)
-    action()
-    value = Event(false)
-}

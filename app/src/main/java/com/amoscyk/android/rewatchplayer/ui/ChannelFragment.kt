@@ -116,7 +116,7 @@ class ChannelFragment: ReWatchPlayerFragment() {
 
         viewModel.showLoadingUploaded.observe(this, Observer { event ->
             event.getContentIfNotHandled {
-                if (it) mLoadingUploaded.show() else mLoadingUploaded.hide()
+                if (it.isLoading) mLoadingUploaded.show() else mLoadingUploaded.hide()
             }
         })
 
@@ -129,7 +129,9 @@ class ChannelFragment: ReWatchPlayerFragment() {
 
         viewModel.showLoadingPlaylist.observe(this, Observer { event ->
             event.getContentIfNotHandled {
-                if (it) mLoadingPlaylist.show() else mLoadingPlaylist.hide()
+                if (!it.loadMore) {
+                    if (it.isLoading) mLoadingPlaylist.show() else mLoadingPlaylist.hide()
+                }
             }
         })
 

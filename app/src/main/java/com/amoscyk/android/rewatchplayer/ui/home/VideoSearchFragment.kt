@@ -8,9 +8,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import androidx.appcompat.widget.AppCompatSpinner
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
+import androidx.core.content.edit
+import androidx.core.view.forEachIndexed
+import androidx.core.view.get
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
@@ -21,13 +23,17 @@ import androidx.recyclerview.widget.RecyclerView
 
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
-import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
-import com.amoscyk.android.rewatchplayer.ui.MainActivity
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel
 import com.amoscyk.android.rewatchplayer.ui.VideoListAdapter
+import com.amoscyk.android.rewatchplayer.util.PreferenceKey
+import com.amoscyk.android.rewatchplayer.util.appSharedPreference
+import com.amoscyk.android.rewatchplayer.util.getInt
+import com.amoscyk.android.rewatchplayer.util.putInt
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
+import kotlinx.android.synthetic.main.fragment_video_search.*
+import kotlinx.android.synthetic.main.fragment_video_search.view.*
 
 class VideoSearchFragment : ReWatchPlayerFragment() {
 
@@ -36,15 +42,13 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
         BY_TITLE("by title")
     }
 
-    private var mRootView: View? = null
-    private lateinit var mSuggestionList: RecyclerView
-    private lateinit var mVideoList: RecyclerView
-    private lateinit var mToolbar: Toolbar
-    private lateinit var mSearchView: SearchView
-    private lateinit var mTextView: TextView
-    private lateinit var mLoadBtn: Button
-    private lateinit var mSpinner: AppCompatSpinner
-    private lateinit var mLoadingView: ProgressBar
+    private val mSuggestionList: RecyclerView get() = view!!.suggestion_list
+    private val mVideoList: RecyclerView get() = view!!.video_list
+    private val mToolbar: Toolbar get() = view!!.toolbar
+    private val mSearchView: SearchView get() = view!!.search_view
+    private val mTextView: TextView get() = view!!.test_tv
+    private val mLoadBtn: Button get() = view!!.loadmorebtn
+    private val mLoadingView: ProgressBar get() = view!!.loading_view
 
     private val mVideoListAdapter = VideoListAdapter()
 
@@ -53,7 +57,6 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d(TAG, "video search on create")
     }
 
     override fun onAttach(context: Context) {
@@ -106,12 +109,19 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
-        if (mRootView == null) {
-            mRootView = inflater.inflate(R.layout.fragment_video_search, container, false)
-            setupViews()
+        return inflater.inflate(R.layout.fragment_video_search, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupViews()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        requireContext().appSharedPreference.edit {
+            putInt(PreferenceKey.SEARCH_OPTION, getSelectedSearchOptionPos())
         }
-        return mRootView
     }
 
     override fun onGoogleUserAuthResult(resultCode: Int) {
@@ -120,16 +130,24 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
     }
 
     private fun setupViews() {
-        mSuggestionList = mRootView!!.findViewById(R.id.suggestion_list)
-        mVideoList = mRootView!!.findViewById(R.id.video_list)
-        mToolbar = mRootView!!.findViewById(R.id.toolbar)
-        mSearchView = mRootView!!.findViewById(R.id.search_view)
-        mTextView = mRootView!!.findViewById(R.id.test_tv)
-        mLoadBtn = mRootView!!.findViewById(R.id.loadmorebtn)
-        mSpinner = mRootView!!.findViewById(R.id.search_type_spinner)
-        mLoadingView = mRootView!!.findViewById(R.id.loading_view)
-
-        mToolbar.setupWithNavController(findNavController())
+        mToolbar.apply {
+            setupWithNavController(findNavController())
+            inflateMenu(R.menu.search_option_menu)
+            val searchOptionPos =
+                requireContext().appSharedPreference.getInt(PreferenceKey.SEARCH_OPTION, 0)
+            menu[searchOptionPos].isChecked = true
+            setOnMenuItemClickListener {
+                when (it.itemId) {
+                    R.id.search_by_title -> {
+                        it.isChecked = true
+                    }
+                    R.id.search_by_id -> {
+                        it.isChecked = true
+                    }
+                }
+                true
+            }
+        }
         mSearchView.apply {
             setOnSearchClickListener {
                 Log.d("TAG", "search view on click")
@@ -143,13 +161,20 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
                 override fun onQueryTextSubmit(query: String?): Boolean {
                     Log.d("TAG", "query text submit: $query")
                     query?.let {
-                        when (mSpinner.selectedItemPosition) {
-                            SearchCriteria.BY_ID.ordinal -> {
-//                                viewModel.searchForVideoId(it)
-                                mainViewModel.playVideoForId(requireContext(), it, true)
-                            }
-                            SearchCriteria.BY_TITLE.ordinal -> {
+//                        when (mSpinner.editText?.toString()) {
+//                            SearchCriteria.BY_ID.name -> {
+////                                viewModel.searchForVideoId(it)
+//                                mainViewModel.playVideoForId(requireContext(), it, true)
+//                            }
+//                            SearchCriteria.BY_TITLE.name -> {
+//                                viewModel.searchForQuery(it)
+//                            }
+//                        }
+                        getSelectedSearchOptionPos().let { pos ->
+                            if (pos == 0) {
                                 viewModel.searchForQuery(it)
+                            } else {
+                                mainViewModel.playVideoForId(requireContext(), it, true)
                             }
                         }
                     }
@@ -164,12 +189,21 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
         mLoadBtn.setOnClickListener {
             viewModel.loadMoreResource()
         }
-        mSpinner.adapter = ArrayAdapter(requireContext(),
-            android.R.layout.simple_spinner_dropdown_item,
-            SearchCriteria.values().map { it.displayName })
+//        mDropdown.setAdapter(
+//            ArrayAdapter(requireContext(),
+//                R.layout.dropdown_menu_popup_item,
+//                SearchCriteria.values().map { it.displayName })
+//        )
 
         mVideoList.adapter = mVideoListAdapter
         mVideoList.layoutManager = LinearLayoutManager(requireContext())
+    }
+
+    private fun getSelectedSearchOptionPos(): Int {
+        toolbar.menu.forEachIndexed { index, item ->
+            if (item.isChecked) return index
+        }
+        return -1
     }
 
     companion object {

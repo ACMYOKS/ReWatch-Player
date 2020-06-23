@@ -41,15 +41,13 @@ import kotlinx.android.synthetic.main.fragment_download_file_detail.view.*
 import kotlinx.coroutines.launch
 
 class DownloadFileDetailFragment: ReWatchPlayerFragment() {
-
-    private var mRootView: View? = null
-    private val mToolbar by lazy { mRootView!!.toolbar }
-    private val mRvFileStatus by lazy { mRootView!!.rv_download_status }
-    private val mDetailContainer by lazy { mRootView!!.detail_container }
-    private val mIvPreview by lazy { mRootView!!.iv_preview }
-    private val mTvTitle by lazy { mRootView!!.tv_title }
-    private val mTvAuthor by lazy { mRootView!!.tv_author }
-    private val mTvVideoId by lazy { mRootView!!.tv_video_id }
+    private val mToolbar get() = view!!.toolbar
+    private val mRvFileStatus get() = view!!.rv_download_status
+    private val mDetailContainer get() = view!!.detail_container
+    private val mIvPreview get() = view!!.iv_preview
+    private val mTvTitle get() = view!!.tv_title
+    private val mTvAuthor get() = view!!.tv_author
+    private val mTvVideoId get() = view!!.tv_video_id
     private lateinit var mDlMngr: DownloadManager
     private lateinit var mDlObserver: DownloadProgressObserver
     private val mDlHandler = Handler(Looper.getMainLooper())
@@ -176,11 +174,12 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        if (mRootView == null) {
-            mRootView = inflater.inflate(R.layout.fragment_download_file_detail, container, false)
-            setupView()
-        }
-        return mRootView
+        return inflater.inflate(R.layout.fragment_download_file_detail, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupView()
     }
 
     override fun onResume() {

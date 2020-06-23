@@ -39,9 +39,9 @@ import kotlinx.coroutines.launch
 class DownloadManagerFragment : ReWatchPlayerFragment() {
 
     private var rootView: View? = null
-    private val toolbar by lazy { rootView!!.toolbar }
-    private val rvDownloadStatus by lazy { rootView!!.rv_download_status }
-    private val mEmptyView by lazy { rootView!!.empty_view }
+    private val toolbar get() = view!!.toolbar
+    private val rvDownloadStatus get() = view!!.rv_download_status
+    private val mEmptyView get() = view!!.empty_view
     private var mListAdapter: DownloadItemAdapter? = null
     private val mDialogDelete by lazy {
         AlertDialog.Builder(requireContext())
@@ -143,15 +143,12 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        if (rootView == null) {
-            rootView = inflater.inflate(R.layout.fragment_download_manager, container, false)
-            setupViews()
-        }
-        return rootView
+        return inflater.inflate(R.layout.fragment_download_manager, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        setupViews()
         toolbar.setupWithNavController(findNavController())
     }
 

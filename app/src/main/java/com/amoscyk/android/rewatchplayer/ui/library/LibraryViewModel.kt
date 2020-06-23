@@ -55,12 +55,12 @@ class LibraryViewModel(
     private val _bookmarkList = MutableLiveData<List<VideoMetaWithPlayerResource>>()
     val bookmarkList: LiveData<List<VideoMetaWithPlayerResource>> = _bookmarkList
 
-    private val _showLoadingChannel = MutableLiveData<Event<Boolean>>()
-    val showLoadingChannel: LiveData<Event<Boolean>> = _showLoadingChannel
-    private val _showLoadingPlaylist = MutableLiveData<Event<Boolean>>()
-    val showLoadingPlaylist: LiveData<Event<Boolean>> = _showLoadingPlaylist
-    private val _showLoadingBookmarked = MutableLiveData<Event<Boolean>>()
-    val showLoadingBookmarked: LiveData<Event<Boolean>> = _showLoadingBookmarked
+    private val _showLoadingChannel = MutableLiveData<ListLoadingStateEvent>()
+    val showLoadingChannel: LiveData<ListLoadingStateEvent> = _showLoadingChannel
+    private val _showLoadingPlaylist = MutableLiveData<ListLoadingStateEvent>()
+    val showLoadingPlaylist: LiveData<ListLoadingStateEvent> = _showLoadingPlaylist
+    private val _showLoadingBookmarked = MutableLiveData<ListLoadingStateEvent>()
+    val showLoadingBookmarked: LiveData<ListLoadingStateEvent> = _showLoadingBookmarked
 
     private val _bookmarkRemoveCount = MutableLiveData<Event<Int>>()
     val bookmarkRemoveCount: LiveData<Event<Int>> = _bookmarkRemoveCount
@@ -159,7 +159,6 @@ class LibraryViewModel(
     }
 
     fun setDisplayMode(displayMode: DisplayMode) {
-        if (_currentDisplayMode.value == displayMode) return
         _currentDisplayMode.value = displayMode
         when (displayMode) {
             DisplayMode.CHANNEL -> {
@@ -218,7 +217,7 @@ class LibraryViewModel(
             viewModelScope.launch {
                 _channelListRes.value?.apply {
                     if (nextPageToken != null) {
-                        _showLoadingChannel.loading {
+                        _showLoadingChannel.loading(true) {
                             runCatching {
                                 _channelListRes.value =
                                     youtubeRepository.getUserSubscribedChannels(nextPageToken)
@@ -247,6 +246,7 @@ class LibraryViewModel(
         if (!loadPlaylistLock.get()) {
             loadPlaylistLock.set(true)
             viewModelScope.launch {
+                _playlistListResHolder = ListResponseHolder()
                 _showLoadingPlaylist.loading {
                     runCatching {
                         _playlistListRes.value = youtubeRepository.getUserPlaylist()
@@ -267,7 +267,7 @@ class LibraryViewModel(
                 _playlistListResHolder = ListResponseHolder()
                 _playlistListRes.value?.apply {
                     if (nextPageToken != null) {
-                        _showLoadingPlaylist.loading {
+                        _showLoadingPlaylist.loading(true) {
                             runCatching {
                                 _playlistListRes.value =
                                     youtubeRepository.getUserPlaylist(nextPageToken)

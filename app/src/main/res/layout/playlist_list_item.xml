@@ -14,8 +14,8 @@
         android:layout_height="match_parent"
         android:paddingTop="8dp"
         android:paddingBottom="8dp"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp">
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp">
         <ImageView
             android:id="@+id/playlist_img"
             android:layout_width="0dp"
@@ -30,7 +30,7 @@
             app:layout_constraintStart_toEndOf="@id/playlist_img"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="14dp"
             android:maxLines="3"
             android:ellipsize="end"
             tools:text="playlist title"

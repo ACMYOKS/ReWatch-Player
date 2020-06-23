@@ -155,7 +155,7 @@ class MainViewModel(
             val downloadedFileMap = _currentVideoMeta.value!!.playerResources.fold(hashMapOf<Int, String>()) { acc, i ->
                 val realSize = FileDownloadHelper.getFileByName(context, i.filename).length()
                 val expectedSize = dlStatus[i.downloadId]?.downloadedByte?.toLong() ?: 0L
-                if (realSize == expectedSize) acc[i.itag] = i.filename
+                if (expectedSize > 0 && realSize == expectedSize) acc[i.itag] = i.filename
                 acc
             }
             getPreferredITag(downloadedFileMap.keys.toSet())?.let { return it }

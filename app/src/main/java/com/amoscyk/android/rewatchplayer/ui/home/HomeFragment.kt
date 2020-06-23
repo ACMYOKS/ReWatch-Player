@@ -14,12 +14,12 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.setupWithNavController
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ui.player.PlayerActivity
+import kotlinx.android.synthetic.main.fragment_home.view.*
 
 class HomeFragment : Fragment() {
 
-    private var rootView: View? = null
-    private lateinit var toolbar: Toolbar
-    private lateinit var button: Button
+    private val toolbar get() = view!!.toolbar
+    private val button get() = view!!.btn
 
     private val viewModel by viewModels<HomeViewModel>()
 
@@ -27,23 +27,13 @@ class HomeFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
-        if (rootView == null) {
-            rootView = inflater.inflate(R.layout.fragment_home, container, false)
-            bindViews()
-            setupOptionMenu()
-        }
-        return rootView
+        return inflater.inflate(R.layout.fragment_home, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         toolbar.setupWithNavController(findNavController())
-    }
-
-    private fun bindViews() {
-        toolbar = rootView!!.findViewById(R.id.toolbar)
-        button = rootView!!.findViewById(R.id.btn)
+        setupOptionMenu()
     }
 
     private fun setupOptionMenu() {

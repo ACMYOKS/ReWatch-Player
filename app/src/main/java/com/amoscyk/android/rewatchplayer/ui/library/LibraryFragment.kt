@@ -28,19 +28,20 @@ import com.amoscyk.android.rewatchplayer.ui.VideoListAdapter
 import com.amoscyk.android.rewatchplayer.util.*
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.android.synthetic.main.fragment_library.view.*
 
 class LibraryFragment : ReWatchPlayerFragment() {
 
     private var rootView: View? = null
     private var actionMode: ActionMode? = null
-    private lateinit var toolbar: Toolbar
-    private lateinit var typeSpinner: Spinner
-    private lateinit var loadPlaylistBtn: Button
-    private lateinit var loadMoreBtn: Button
-    private lateinit var channelList: RecyclerView
-    private lateinit var playlistList: RecyclerView
-    private lateinit var bookmarkList: RecyclerView
-    private lateinit var loadingView: ContentLoadingProgressBar
+    private val toolbar get() = view!!.toolbar
+    private val typeSpinner get() = view!!.spinner_list_type
+    private val channelList get() = view!!.channel_list
+    private val playlistList get() = view!!.playlist_list
+    private val bookmarkList get() = view!!.bookmark_list
+    private val loadPlaylistBtn get() = view!!.load_playlist_btn
+    private val loadMoreBtn get() = view!!.load_more_playlist_btn
+    private val loadingView get() = view!!.loading_view
     private val viewModel by viewModels<LibraryViewModel> { viewModelFactory }
 
     private val actionModeCallback = object : ActionMode.Callback {
@@ -145,34 +146,40 @@ class LibraryFragment : ReWatchPlayerFragment() {
         })
         viewModel.showLoadingChannel.observe(this, Observer { event ->
             event.getContentIfNotHandled {
-                if (it) {
-                    if (mChannelListAdapter.itemCount == 0) {
+                if (!it.loadMore) {
+                    if (it.isLoading) {
+                        channelList.visibility = View.INVISIBLE
                         loadingView.show()
+                    } else {
+                        channelList.visibility = View.VISIBLE
+                        loadingView.hide()
                     }
-                } else {
-                    loadingView.hide()
                 }
             }
         })
         viewModel.showLoadingPlaylist.observe(this, Observer { event ->
             event.getContentIfNotHandled {
-                if (it) {
-                    if (mPlaylistAdapter.itemCount == 0) {
+                if (!it.loadMore) {
+                    if (it.isLoading) {
+                        playlistList.visibility = View.INVISIBLE
                         loadingView.show()
+                    } else {
+                        playlistList.visibility = View.VISIBLE
+                        loadingView.hide()
                     }
-                } else {
-                    loadingView.hide()
                 }
             }
         })
         viewModel.showLoadingBookmarked.observe(this, Observer { event ->
             event.getContentIfNotHandled {
-                if (it) {
-                    if (mBookmarkListAdapter.itemCount == 0) {
+                if (!it.loadMore) {
+                    if (it.isLoading) {
+                        bookmarkList.visibility = View.INVISIBLE
                         loadingView.show()
+                    } else {
+                        bookmarkList.visibility = View.VISIBLE
+                        loadingView.hide()
                     }
-                } else {
-                    loadingView.hide()
                 }
             }
         })
@@ -193,13 +200,13 @@ class LibraryFragment : ReWatchPlayerFragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        if (rootView == null) {
-            // Inflate the layout for this fragment
-            rootView = inflater.inflate(R.layout.fragment_library, container, false)
-            setupViews()
-            setupOptionMenu()
-        }
-        return rootView
+        return inflater.inflate(R.layout.fragment_library, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupViews()
+        setupOptionMenu()
     }
 
     override fun onResume() {
@@ -223,15 +230,6 @@ class LibraryFragment : ReWatchPlayerFragment() {
     }
 
     private fun setupViews() {
-        toolbar = rootView!!.findViewById(R.id.toolbar)
-        typeSpinner = rootView!!.findViewById(R.id.spinner_list_type)
-        channelList = rootView!!.findViewById(R.id.channel_list)
-        playlistList = rootView!!.findViewById(R.id.playlist_list)
-        bookmarkList = rootView!!.findViewById(R.id.bookmark_list)
-        loadPlaylistBtn = rootView!!.findViewById(R.id.load_playlist_btn)
-        loadMoreBtn = rootView!!.findViewById(R.id.load_more_playlist_btn)
-        loadingView = rootView!!.findViewById(R.id.loading_view)
-
         toolbar.setupWithNavController(findNavController())
         typeSpinner.apply {
             adapter = mTypeSpinnerAdapter

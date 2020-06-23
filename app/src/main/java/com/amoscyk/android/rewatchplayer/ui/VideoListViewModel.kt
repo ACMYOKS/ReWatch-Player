@@ -28,10 +28,10 @@ class VideoListViewModel(
         _videoListResHolder
     }
 
-    private val _showListItemLoading = MutableLiveData<Event<Boolean>>()
-    val showListItemLoading: LiveData<Event<Boolean>> = _showListItemLoading
-    private val _showVideoLoading = MutableLiveData<Event<Boolean>>()
-    val showVideoLoading: LiveData<Event<Boolean>> = _showVideoLoading
+    private val _showListItemLoading = MutableLiveData<ListLoadingStateEvent>()
+    val showListItemLoading: LiveData<ListLoadingStateEvent> = _showListItemLoading
+    private val _showVideoLoading = MutableLiveData<ListLoadingStateEvent>()
+    val showVideoLoading: LiveData<ListLoadingStateEvent> = _showVideoLoading
 
 //    private val _videoResource = MutableLiveData<VideoListResponseResource>()
 //    private val _videoList = _videoResource.switchMap { it.resource }
@@ -86,7 +86,7 @@ class VideoListViewModel(
             //            _playlistResponse.value?.loadMoreResource()
             _playlistItemListRes.value?.apply {
                 if (nextPageToken != null) {
-                    _showListItemLoading.loading {
+                    _showListItemLoading.loading(true) {
                         runCatching {
                             _playlistItemListRes.value =
                                 youtubeRepository.getPlaylistItemForPlaylist(_currentPlaylist!!.id, nextPageToken, 10)

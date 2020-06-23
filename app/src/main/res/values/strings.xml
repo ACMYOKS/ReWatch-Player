@@ -7,6 +7,10 @@
     <string name="main_bottom_nav_title_downloads">Downloads</string>
     <string name="main_bottom_nav_title_about">About</string>
 
+    <!-- Search -->
+    <string name="search_option_by_title">Search by title</string>
+    <string name="search_option_by_id">Search by ID</string>
+
     <!-- Player -->
     <string name="player_archive_option_video">Video Resolution</string>
     <string name="player_archive_option_audio">Audio Quality</string>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <group
+        android:id="@+id/group"
+        android:checkableBehavior="single">
+        <item
+            android:id="@+id/search_by_title"
+            android:title="@string/search_option_by_title"
+            app:showAsAction="never"/>
+        <item
+            android:id="@+id/search_by_id"
+            android:title="@string/search_option_by_id"
+            app:showAsAction="never"/>
+    </group>
+</menu>

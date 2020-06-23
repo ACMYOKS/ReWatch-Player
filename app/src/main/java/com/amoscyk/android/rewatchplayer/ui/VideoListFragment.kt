@@ -93,20 +93,24 @@ class VideoListFragment : ReWatchPlayerFragment() {
 
         viewModel.showListItemLoading.observe(this, Observer { event ->
             event.getContentIfNotHandled {
-                if (mListAdapter.itemCount == 0) {
-                    if (it) mLoadingView.show() else mLoadingView.hide()
-                } else {
-//                    mListAdapter.setShowLoadingAtBottom(it)
+                if (!it.loadMore) {
+                    if (it.isLoading) {
+                        mLoadingView.show()
+                    } else {
+                        mLoadingView.hide()
+                    }
                 }
             }
         })
 
         viewModel.showVideoLoading.observe(this, Observer { event ->
             event.getContentIfNotHandled {
-                if (mListAdapter.itemCount == 0) {
-                    if (it) mLoadingView.show() else mLoadingView.hide()
-                } else {
-//                    mListAdapter.setShowLoadingAtBottom(it)
+                if (!it.loadMore) {
+                    if (it.isLoading) {
+                        mLoadingView.show()
+                    } else {
+                        mLoadingView.hide()
+                    }
                 }
             }
         })
