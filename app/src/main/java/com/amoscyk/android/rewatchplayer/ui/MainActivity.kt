@@ -19,7 +19,6 @@ import android.util.Log
 import android.util.Rational
 import android.view.View
 import android.view.WindowManager
-import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
@@ -70,7 +69,7 @@ class MainActivity : ReWatchPlayerActivity() {
         } else if (position == 1) {
             mResOptionDialog?.show()
         } else if (position == 2) {
-            viewModel.videoMeta.value?.videoId?.let { vid ->
+            viewModel.videoData.value?.videoMeta!!.videoMeta.videoId.let { vid ->
                 showArchiveOption(vid)
             }
         } else if (position == 3) {
@@ -83,7 +82,8 @@ class MainActivity : ReWatchPlayerActivity() {
         } else if (position == 4) {
             Intent.createChooser(Intent().apply {
                 action = Intent.ACTION_SEND
-                putExtra(Intent.EXTRA_TEXT, "https://youtu.be/" + viewModel.videoMeta.value!!.videoId)
+                putExtra(Intent.EXTRA_TEXT, "https://youtu.be/" +
+                        viewModel.videoData.value!!.videoMeta.videoMeta.videoId)
                 type = "text/plain"
             }, getString(R.string.player_share_title)).also { startActivity(it) }
         }
@@ -107,7 +107,6 @@ class MainActivity : ReWatchPlayerActivity() {
     private var allowDownloadUsingMobile = false
 
     private var exoPlayer: SimpleExoPlayer? = null
-    private var playWhenReady = true
     private var playbackPosition: Long = 0
     private var currentWindow: Int = 0
     private val defaultFactory: DefaultDataSourceFactory by lazy {
@@ -123,6 +122,14 @@ class MainActivity : ReWatchPlayerActivity() {
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             } else {
                 window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+        }
+
+        override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+            if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
+                exoPlayer?.apply {
+                    viewModel.saveWatchHistory(currentPosition)
+                }
             }
         }
     }
@@ -189,7 +196,11 @@ class MainActivity : ReWatchPlayerActivity() {
         })
 
         viewModel.bookmarkToggled.observe(this, Observer {
-            viewModel.videoMeta.value?.apply {
+//            viewModel.videoMeta.value?.apply {
+//                bookmarked = !bookmarked
+//                setBookmarkButton(bookmarked)
+//            }
+            viewModel.videoData.value?.videoMeta?.videoMeta?.apply {
                 bookmarked = !bookmarked
                 setBookmarkButton(bookmarked)
             }
@@ -218,7 +229,36 @@ class MainActivity : ReWatchPlayerActivity() {
             }
         })
 
-        viewModel.videoMeta.observe(this, Observer { meta ->
+//        viewModel.videoMeta.observe(this, Observer { meta ->
+//            mPlayerLayout.setTitle(meta.title)
+//            setBookmarkButton(meta.bookmarked)
+//            val itags = meta.itags
+//            val vTags = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMATS.filter {
+//                itags.contains(it.key)
+//            })
+//            val aTags = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_AUDIO_FORMATS.filter {
+//                itags.contains(it.key)
+//            })
+//            mResOptionDialog?.apply {
+//                setVideoTags(vTags.keys.toList())
+//                setAudioVTags(aTags.keys.toList())
+//            }
+//            mVideoInfoDialog?.apply {
+//                setVideoMeta(meta)
+//                setViewChannelButtonOnClickListener(View.OnClickListener {
+//                    dismiss()
+//                    findNavController(R.id.main_page_nav_host_fragment)
+//                        .navigate(LibraryFragmentDirections.showChannelDetail(meta.channelId))
+//                    if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+//                        handleRotation()
+//                    }
+//                    mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.SMALL)
+//                })
+//            }
+//        })
+
+        viewModel.videoData.observe(this, Observer { viewData ->
+            val meta = viewData.videoMeta.videoMeta
             mPlayerLayout.setTitle(meta.title)
             setBookmarkButton(meta.bookmarked)
             val itags = meta.itags
@@ -229,10 +269,6 @@ class MainActivity : ReWatchPlayerActivity() {
                 itags.contains(it.key)
             })
             mResOptionDialog?.apply {
-                setVideoTags(vTags.keys.toList())
-                setAudioVTags(aTags.keys.toList())
-            }
-            mArchiveOptionDialog?.apply {
                 setVideoTags(vTags.keys.toList())
                 setAudioVTags(aTags.keys.toList())
             }
@@ -250,6 +286,20 @@ class MainActivity : ReWatchPlayerActivity() {
             }
         })
 
+        viewModel.archiveVideoMeta.observe(this, Observer { meta ->
+            val itags = meta.itags
+            val vTags = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMATS.filter {
+                itags.contains(it.key)
+            })
+            val aTags = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_AUDIO_FORMATS.filter {
+                itags.contains(it.key)
+            })
+            mArchiveOptionDialog?.apply {
+                setVideoTags(vTags.keys.toList())
+                setAudioVTags(aTags.keys.toList())
+            }
+        })
+
         viewModel.selectedTags.observe(this, Observer {
             mResOptionDialog?.apply {
                 it.vTag?.let { setCurrentVTag(it) }
@@ -263,6 +313,32 @@ class MainActivity : ReWatchPlayerActivity() {
                 it.videoUrl?.let { url -> Uri.parse(url) },
                 it.audioUrl?.let { url -> Uri.parse(url) }
             )
+            if (it.lastPlayPos != null) {
+                AlertDialog.Builder(this)
+                    .setMessage(R.string.player_restore_last_play_position_message)
+                    .setPositiveButton(R.string.confirm_text) { d, i ->
+                        exoPlayer?.apply {
+                            playWhenReady = true
+                            seekTo(currentWindow, it.lastPlayPos)
+                        }
+                    }
+                    .setNegativeButton(R.string.negative_text) { d, i ->
+                        d.cancel()
+                    }
+                    .setOnCancelListener {
+                        exoPlayer?.apply {
+                            playWhenReady = true
+                            seekTo(currentWindow, 0)
+                        }
+                    }
+                    .create()
+                    .show()
+            } else {
+                exoPlayer?.apply {
+                    playWhenReady = true
+                    seekTo(currentWindow, playbackPosition)
+                }
+            }
         })
 
         viewModel.resourceFile.observe(this, Observer {
@@ -271,6 +347,61 @@ class MainActivity : ReWatchPlayerActivity() {
                 it.videoFile?.let { filename -> getResFileUriIfExist(filename) },
                 it.audioFile?.let { filename -> getResFileUriIfExist(filename) }
             )
+            if (it.lastPlayPos != null) {
+                AlertDialog.Builder(this)
+                    .setMessage(R.string.player_restore_last_play_position_message)
+                    .setPositiveButton(R.string.confirm_text) { d, i ->
+                        exoPlayer?.apply {
+                            playWhenReady = true
+                            seekTo(currentWindow, it.lastPlayPos)
+                        }
+                    }
+                    .setNegativeButton(R.string.negative_text) { d, i ->
+                        d.cancel()
+                    }
+                    .setOnCancelListener {
+                        exoPlayer?.apply {
+                            playWhenReady = true
+                            seekTo(currentWindow, 0)
+                        }
+                    }
+                    .create()
+                    .show()
+            } else {
+                exoPlayer?.apply {
+                    playWhenReady = true
+                    seekTo(currentWindow, playbackPosition)
+                }
+            }
+        })
+
+//        viewModel.shouldAskUserRestoreWatchPosition.observe(this, Observer { event ->
+//            event.getContentIfNotHandled {
+//                AlertDialog.Builder(this)
+//                    .setMessage(R.string.player_restore_last_play_position_message)
+//                    .setPositiveButton(R.string.confirm_text) { d, i ->
+//                        playbackPosition = it.lastWatchPosMillis
+//                        viewModel.startPlayingVideo()
+//                    }
+//                    .setNegativeButton(R.string.negative_text) { d, i ->
+//                        d.cancel()
+//                    }
+//                    .setOnCancelListener {
+//                        playbackPosition = 0
+//                        viewModel.startPlayingVideo()
+//                    }
+//                    .create()
+//                    .show()
+//            }
+//        })
+
+        viewModel.shouldSaveWatchHistory.observe(this, Observer { event ->
+            event.getContentIfNotHandled { videoId ->
+                exoPlayer?.let {
+                    Log.d("MainActivity", "save watch history, ${videoId}, ${it.currentPosition}")
+                    viewModel.saveWatchHistory(videoId, it.currentPosition)
+                }
+            }
         })
 
         viewModel.archiveResult.observe(this, Observer { result ->
@@ -311,6 +442,21 @@ class MainActivity : ReWatchPlayerActivity() {
                 } else {
                     mLoadingDialog?.dismiss()
                 }
+            }
+        })
+
+        viewModel.shouldStartPlayVideo.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                exoPlayer?.let {
+                    it.playWhenReady = true
+                    it.seekTo(currentWindow, playbackPosition)
+                }
+            }
+        })
+
+        viewModel.shouldStopVideo.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                exoPlayer?.playWhenReady = false
             }
         })
 
@@ -418,7 +564,10 @@ class MainActivity : ReWatchPlayerActivity() {
                     PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
                     AppSettings.DEFAULT_ALLOW_PLAY_IN_BACKGROUND
                 )) {
-                exoPlayer?.playWhenReady = false
+                exoPlayer?.apply {
+                    playWhenReady = false
+                    viewModel.saveWatchHistory(currentPosition)
+                }
             }
         }
     }
@@ -430,14 +579,17 @@ class MainActivity : ReWatchPlayerActivity() {
                     PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
                     AppSettings.DEFAULT_ALLOW_PLAY_IN_BACKGROUND
                 )) {
-                exoPlayer?.playWhenReady = false
+                exoPlayer?.apply {
+                    playWhenReady = false
+                    viewModel.saveWatchHistory(currentPosition)
+                }
             }
         }
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         releasePlayer()
+        super.onDestroy()
     }
 
     @SuppressLint("SourceLockedOrientationActivity")
@@ -560,7 +712,6 @@ class MainActivity : ReWatchPlayerActivity() {
                     }
                 })
             mPlayerLayout.setPlayer(exoPlayer)
-            exoPlayer!!.playWhenReady = playWhenReady
             exoPlayer!!.seekTo(currentWindow, playbackPosition)
             exoPlayer!!.addListener(mPlayerListener)
         }
@@ -568,7 +719,6 @@ class MainActivity : ReWatchPlayerActivity() {
 
     private fun releasePlayer() {
         if (exoPlayer != null) {
-            playWhenReady = exoPlayer!!.playWhenReady
             playbackPosition = exoPlayer!!.currentPosition
             currentWindow = exoPlayer!!.currentWindowIndex
             exoPlayer!!.removeListener(mPlayerListener)
@@ -584,7 +734,7 @@ class MainActivity : ReWatchPlayerActivity() {
                 setOnMenuItemClickListener {
                     when (it.itemId) {
                         R.id.bookmark, R.id.remove_bookmark -> {
-                            viewModel.videoMeta.value?.videoId?.let { vid ->
+                            viewModel.videoData.value?.videoMeta!!.videoMeta.videoId.let { vid ->
                                 viewModel.toggleBookmarkStatus(vid)
                             }
                         }
@@ -647,7 +797,6 @@ class MainActivity : ReWatchPlayerActivity() {
                 override fun onQualityOptionSelected(vTag: Int, aTag: Int) {
                     // save playback state
                     exoPlayer?.let {
-                        playWhenReady = it.playWhenReady
                         currentWindow = it.currentWindowIndex
                         playbackPosition = it.currentPosition
                     }
@@ -695,14 +844,14 @@ class MainActivity : ReWatchPlayerActivity() {
     }
 
     fun playVideoForId(videoId: String, forceFindFile: Boolean = false) {
-        playWhenReady = true
+//        playWhenReady = true
         playbackPosition = 0
-        currentWindow = 0
-        exoPlayer?.let {
-            it.playWhenReady = playWhenReady
-            it.seekTo(currentWindow, playbackPosition)
-            it.playbackParameters = viewModel.playbackParams.value!!
-        }
+//        currentWindow = 0
+//        exoPlayer?.let {
+//            it.playWhenReady = false
+//            it.seekTo(currentWindow, 0)
+//            it.playbackParameters = viewModel.playbackParams.value!!
+//        }
         viewModel.playVideoForId(
             this, videoId, forceFindFile ||
                     appSharedPreference.getBoolean(
@@ -743,8 +892,8 @@ class MainActivity : ReWatchPlayerActivity() {
                 1 -> exoPlayer?.prepare(first())
                 else -> exoPlayer?.prepare(MergingMediaSource(*toTypedArray()))
             }
-            exoPlayer?.playWhenReady = playWhenReady
-            exoPlayer?.seekTo(currentWindow, playbackPosition)
+//            exoPlayer?.playWhenReady = playWhenReady
+//            exoPlayer?.seekTo(currentWindow, playbackPosition)
         }
     }
 

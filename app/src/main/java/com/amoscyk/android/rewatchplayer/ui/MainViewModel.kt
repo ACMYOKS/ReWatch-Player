@@ -12,16 +12,18 @@ import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
 import com.amoscyk.android.rewatchplayer.datasource.vo.Resource
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMetaWithPlayerResource
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.WatchHistory
 import com.amoscyk.android.rewatchplayer.ui.player.PlayerSelection
 import com.amoscyk.android.rewatchplayer.ui.player.SelectableItemWithTitle
+import com.amoscyk.android.rewatchplayer.util.DateTimeHelper
 import com.amoscyk.android.rewatchplayer.util.FileDownloadHelper
 import com.google.android.exoplayer2.PlaybackParameters
 import kotlinx.coroutines.launch
+import kotlin.math.round
 
 class MainViewModel(
     private val youtubeRepository: YoutubeRepository
 ): ViewModel() {
-
     private val _isOnlineMode = MutableLiveData(false)
     val isOnlineMode: LiveData<Boolean> = _isOnlineMode
 
@@ -42,6 +44,9 @@ class MainViewModel(
     private val _needShowArchiveOption = MutableLiveData<Event<Unit>>()
     val needShowArchiveOption: LiveData<Event<Unit>> = _needShowArchiveOption
 
+    private val _shouldSaveWatchHistory = MutableLiveData<Event<String>>()
+    val shouldSaveWatchHistory: LiveData<Event<String>> = _shouldSaveWatchHistory
+
     // used for archiving
 //    private val _availableITag = MutableLiveData<List<Int>>()
 //    val availableITag: LiveData<List<Int>> = _availableITag
@@ -58,8 +63,8 @@ class MainViewModel(
 //    private var isAdaptive = false
 
 //    private var _videoId = ""
-    private var _allUrlMap = mapOf<Int, String>()
-    private var _allFileMap = mapOf<Int, String>()
+//    private var _allUrlMap = mapOf<Int, String>()
+//    private var _allFileMap = mapOf<Int, String>()
     private var _isWifiConnected = false
     private var _isMobileDataConnected = false
     private var _isAllowedPlayUsingMobile = false
@@ -73,6 +78,18 @@ class MainViewModel(
     private val _responseAction = MutableLiveData<Resource<ResponseActionType>>()
     val responseAction: LiveData<Resource<ResponseActionType>> = _responseAction
 
+    private val _stopPlayingCurrent = MutableLiveData<Event<Unit>>()
+    val stopPlayingCurrent: LiveData<Event<Unit>> = _stopPlayingCurrent
+
+    private val _shouldAskUserRestoreWatchPosition = MutableLiveData<Event<WatchHistory>>()
+    val shouldAskUserRestoreWatchPosition: LiveData<Event<WatchHistory>> = _shouldAskUserRestoreWatchPosition
+
+    private val _shouldStartPlayVideo = MutableLiveData<Event<Unit>>()
+    val shouldStartPlayVideo: LiveData<Event<Unit>> = _shouldStartPlayVideo
+
+    private val _shouldStopVideo = MutableLiveData<Event<Unit>>()
+    val shouldStopVideo: LiveData<Event<Unit>> = _shouldStopVideo
+
     private val _getVideoResult = MutableLiveData<Event<GetVideoResult>>()
     val getVideoResult: LiveData<Event<GetVideoResult>> = _getVideoResult
 
@@ -83,9 +100,16 @@ class MainViewModel(
     private var pendingVTag: Int? = null
     private var pendingATag: Int? = null
 
-    private var _currentVideoMeta = MutableLiveData<VideoMetaWithPlayerResource>()
-    val videoMeta: LiveData<VideoMeta> = _currentVideoMeta.map { it.videoMeta }
+    private var pendingVideoData: VideoViewData? = null
+    private val _currentVideoData = MutableLiveData<VideoViewData>()
+    val videoData: LiveData<VideoViewData> = _currentVideoData
 
+//    private var _currentVideoMeta = MutableLiveData<VideoMetaWithPlayerResource>()
+//    val videoMeta: LiveData<VideoMeta> = _currentVideoMeta.map { it.videoMeta }
+
+    private var archiveData: VideoViewData? = null
+    private val _archiveVideoMeta = MutableLiveData<VideoMeta>()
+    val archiveVideoMeta: LiveData<VideoMeta> = _archiveVideoMeta
     private val _archiveResult = MutableLiveData<Resource<ArchiveResult>>()
     val archiveResult: LiveData<Resource<ArchiveResult>> = _archiveResult
 
@@ -117,51 +141,55 @@ class MainViewModel(
     }
 
     @Throws(Exception::class)
-    private suspend fun initResource(videoId: String) {
-        _allFileMap = mapOf()
-        _allUrlMap = mapOf()
+    private suspend fun initResource(videoId: String): VideoViewData {
+        var fileMap = mapOf<Int, String>()
+        var urlMap = mapOf<Int, String>()
+        var videoMeta: VideoMetaWithPlayerResource? = null
 
         // get video meta and resource to play the video
         val metas = youtubeRepository.getVideoMetaWithPlayerResource(arrayOf(videoId))
         if (metas.isEmpty() || metas.first().playerResources.isEmpty()) {
             // fetch network resource
             youtubeRepository.loadYTInfoForVideoId(videoId)?.let { info ->
-                _allUrlMap = info.urlMap
+                urlMap = info.urlMap
                 youtubeRepository.getVideoMetaWithPlayerResource(arrayOf(videoId)).let { m ->
                     if (m.isEmpty()) {
                         throw NoVideoMetaException()
                     } else {
-                        _currentVideoMeta.value = m.first()
+                        videoMeta = m.first()
                     }
                 }
-            } ?: run {
-                // emit error message: cannot get ytInfo
-                throw NoYtInfoException()
-            }
+            } ?: throw NoYtInfoException()
         }
         metas.firstOrNull()?.let { meta ->
-            _currentVideoMeta.value = meta
-            _allFileMap = meta.playerResources.associate { Pair(it.itag, it.filename) }
-        }
+            videoMeta = meta
+            fileMap = meta.playerResources.associate { Pair(it.itag, it.filename) }
+        } ?: throw NoVideoMetaException()
+        val history = youtubeRepository.getWatchHistory(arrayOf(videoId)).firstOrNull()
+        return VideoViewData(urlMap, fileMap, videoMeta!!, history?.lastWatchPosMillis ?: 0)
     }
 
     @Throws(Exception::class)
-    private suspend fun getPreferredITagForPlaying(context: Context, findFile: Boolean): ResourceTag {
+    private suspend fun getPreferredITagForPlaying(context: Context,
+                                                   videoViewData: VideoViewData,
+                                                   findFile: Boolean): ResourceTag {
         if (findFile) {
-            val dlIdList = _currentVideoMeta.value!!.playerResources.map { it.downloadId }
+            val dlIdList = videoViewData.videoMeta.playerResources.map { it.downloadId }
             val dlMngr = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             val dlStatus = FileDownloadHelper.getDownloadStatus(dlMngr, dlIdList)
             // only allow download completed files
-            val downloadedFileMap = _currentVideoMeta.value!!.playerResources.fold(hashMapOf<Int, String>()) { acc, i ->
-                val realSize = FileDownloadHelper.getFileByName(context, i.filename).length()
-                val expectedSize = dlStatus[i.downloadId]?.downloadedByte?.toLong() ?: 0L
-                if (expectedSize > 0 && realSize == expectedSize) acc[i.itag] = i.filename
-                acc
-            }
+            val downloadedFileMap =
+                videoViewData.videoMeta.playerResources.fold(hashMapOf<Int, String>()) { acc, i ->
+                    val realSize = FileDownloadHelper.getFileByName(context, i.filename).length()
+                    val expectedSize = dlStatus[i.downloadId]?.downloadedByte?.toLong() ?: 0L
+                    if (expectedSize > 0 && realSize == expectedSize) acc[i.itag] = i.filename
+                    acc
+                }
             getPreferredITag(downloadedFileMap.keys.toSet())?.let { return it }
         }
-        if (_allUrlMap.isEmpty()) _allUrlMap = fetchUrlMap(_currentVideoMeta.value!!.videoMeta.videoId)
-        getPreferredITag(_allUrlMap.keys).let {
+        if (videoViewData.urlMap.isEmpty())
+            videoViewData.urlMap = fetchUrlMap(videoViewData.videoMeta.videoMeta.videoId)
+        getPreferredITag(videoViewData.urlMap.keys).let {
             if (it == null) throw NoAvailableQualityException()
             return it
         }
@@ -187,19 +215,35 @@ class MainViewModel(
             }
             _isLoadingVideo.value = Event(true)
             runCatching {
-                initResource(videoId)
+                pendingVideoData = initResource(videoId)
             }.onFailure {
                 _getVideoResult.value = Event(GetVideoResult(videoId, when (it) {
                     is NoVideoMetaException -> GetVideoResult.Error.NO_VIDEO_META
                     is NoYtInfoException -> GetVideoResult.Error.NO_YT_INFO
                     else -> GetVideoResult.Error.UNKNOWN
                 }))
-//                _responseAction.value = Resource.error((it as? Exception)?.message,
-//                    ResponseActionType.DO_NOTHING)
+                pendingVideoData = null
             }.onSuccess {
                 runCatching {
-                    getPreferredITagForPlaying(context, findFile).let { setQuality(it.vTag, it.aTag) }
+                    _currentVideoData.value?.let {
+                        _shouldStopVideo.value = Event(Unit)
+                        _shouldSaveWatchHistory.value = Event(it.videoMeta.videoMeta.videoId)
+                    }
+                    _currentVideoData.value = pendingVideoData
+                    val resTag = getPreferredITagForPlaying(context, pendingVideoData!!, findFile)
+                    var lastPlayPos: Long? = null
+                    youtubeRepository.getWatchHistory(arrayOf(videoId)).firstOrNull()?.let {
+                        if (it.lastWatchPosMillis > 0 &&
+                            round(it.lastWatchPosMillis / 1000f) <
+                            round(DateTimeHelper.getDurationMillis(pendingVideoData!!.videoMeta.videoMeta.duration) / 1000f)
+                        ) {
+                            lastPlayPos = it.lastWatchPosMillis
+                        }
+                    }
+                    setQuality(resTag.vTag, resTag.aTag, lastPlayPos)
+
                     setPlaybackSpeed(1f)
+                    pendingVideoData = null
                 }.onFailure {
                     _getVideoResult.value = Event(
                         GetVideoResult(
@@ -209,8 +253,7 @@ class MainViewModel(
                             }
                         )
                     )
-//                    _responseAction.value = Resource.error((it as? Exception)?.message,
-//                        ResponseActionType.DO_NOTHING)
+                    pendingVideoData = null
                 }
             }
             _isLoadingVideo.value = Event(false)
@@ -225,94 +268,27 @@ class MainViewModel(
         }
     }
 
-    private fun prepareVideoResource2(context: Context, videoId: String) {
-        viewModelScope.launch {
-            _allFileMap = mapOf()
-            _allUrlMap = mapOf()
-
-            // get video meta and resource to play the video
-            val metas = youtubeRepository.getVideoMetaWithPlayerResource(arrayOf(videoId))
-            if (metas.isEmpty() || metas.first().playerResources.isEmpty()) {
-                // fetch network resource
-                youtubeRepository.loadYTInfoForVideoId(videoId)?.let { info ->
-                    _allUrlMap = info.urlMap
-                    youtubeRepository.getVideoMetaWithPlayerResource(arrayOf(videoId)).let { m ->
-                        if (m.isEmpty()) {
-                            // emit error message: unexpected error, cannot get video meta
-                            _responseAction.value = Resource.error("cannot get video meta for $videoId",
-                                ResponseActionType.DO_NOTHING)
-                            return@launch
-                        } else {
-                            _currentVideoMeta.value = m.first()
-                        }
-                    }
-                } ?: run {
-                    // emit error message: cannot get ytInfo
-                    _responseAction.value = Resource.error("cannot get ytInfo for $videoId",
-                        ResponseActionType.DO_NOTHING)
-                    return@launch
-                }
-            } else {
-                metas.first().let { meta ->
-                    _currentVideoMeta.value = meta
-                    _allFileMap = meta.playerResources.associate { Pair(it.itag, it.filename) }
-                }
-            }
-
-            // get preferred itag for playing
-            // find offline resource first
-            val dlIdList = _currentVideoMeta.value!!.playerResources.map { it.downloadId }
-            val dlMngr = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-            val dlStatus = FileDownloadHelper.getDownloadStatus(dlMngr, dlIdList)
-            // only allow download completed files
-            val downloadedFileMap = _currentVideoMeta.value!!.playerResources.fold(hashMapOf<Int, String>()) { acc, i ->
-                val realSize = FileDownloadHelper.getFileByName(context, i.filename).length()
-                val expectedSize = dlStatus[i.downloadId]?.downloadedByte?.toLong() ?: 0L
-                if (realSize == expectedSize) acc[i.itag] = i.filename
-                acc
-            }
-            var itags = downloadedFileMap.keys.toSet()
-            var vTag = adaptiveVideoTagPriorityList.firstOrNull { itags.contains(it) }
-            var aTag = adaptiveAudioTagPriorityList.firstOrNull { itags.contains(it) }
-            if (vTag == null || aTag == null) {
-                vTag = muxedVideoTagPriorityList.firstOrNull { itags.contains(it) }
-                if (vTag == null) {
-                    // find online resource
-                    itags = _allUrlMap.keys
-                    vTag = adaptiveVideoTagPriorityList.firstOrNull { itags.contains(it) }
-                    aTag = adaptiveAudioTagPriorityList.firstOrNull { itags.contains(it) }
-                    if (vTag == null || aTag == null) {
-                        vTag = muxedVideoTagPriorityList.firstOrNull { itags.contains(it) }
-                        if (vTag == null) {
-                            // emit error message: no available quality
-                            _responseAction.value = Resource.error("no available quality for $videoId",
-                                ResponseActionType.DO_NOTHING)
-                            return@launch
-                        }
-                    }
-                }
-            }
-            setQuality(vTag, aTag)
-        }
+    fun setQuality(vTag: Int?, aTag: Int?) {
+        setQuality(vTag, aTag, null)
     }
 
-    fun setQuality(vTag: Int?, aTag: Int?) {
+    private fun setQuality(vTag: Int?, aTag: Int?, lastPlayPos: Long?) {
         if (vTag == null && aTag == null) return
         viewModelScope.launch {
-            _currentVideoMeta.value?.videoMeta?.videoId?.let { vid ->
-                if (listOfNotNull(vTag, aTag).all { _allFileMap.containsKey(it) }) {
-                    _resourceFile.value = ResourceFile(_allFileMap[vTag], _allFileMap[aTag])
+            _currentVideoData.value?.let { viewData ->
+                if (listOfNotNull(vTag, aTag).all { it in viewData.fileMap }) {
+                    _resourceFile.value = ResourceFile(viewData.fileMap[vTag], viewData.fileMap[aTag], lastPlayPos)
                     _selectedTags.value = ResourceTag(vTag, aTag)
                     _isLocalBuffering = true
                     return@launch
                 }
-                if (_allUrlMap.isEmpty() || !_allUrlMap.containsKey(vTag) && !_allUrlMap.containsKey(aTag)) {
-                    _allUrlMap = fetchUrlMap(vid)
-                    if (_allUrlMap.isEmpty()
-                        || vTag != null && !_allUrlMap.containsKey(vTag)
-                        || aTag != null && !_allUrlMap.containsKey(aTag)) {
+                if (viewData.urlMap.isEmpty() || !viewData.urlMap.containsKey(vTag) && !viewData.urlMap.containsKey(aTag)) {
+                    viewData.urlMap = fetchUrlMap(viewData.videoMeta.videoMeta.videoId)
+                    if (viewData.urlMap.isEmpty()
+                        || vTag != null && !viewData.urlMap.containsKey(vTag)
+                        || aTag != null && !viewData.urlMap.containsKey(aTag)) {
                         // emit error message
-                        _responseAction.value = Resource.error("no url for video $vid",
+                        _responseAction.value = Resource.error("no url for video ${viewData.videoMeta.videoMeta.videoId}",
                             ResponseActionType.DO_NOTHING)
                     }
                 }
@@ -322,7 +298,7 @@ class MainViewModel(
                     pendingVTag = vTag
                     pendingATag = aTag
                 } else {
-                    _resourceUrl.value = ResourceUrl(_allUrlMap[vTag], _allUrlMap[aTag])
+                    _resourceUrl.value = ResourceUrl(viewData.urlMap[vTag], viewData.urlMap[aTag], lastPlayPos)
                     _selectedTags.value = ResourceTag(vTag, aTag)
                     _isLocalBuffering = false
                 }
@@ -342,15 +318,22 @@ class MainViewModel(
 //        _responseAction.value = Resource.error("Cancelled changing quality", ResponseActionType.DO_NOTHING)
     }
 
+    fun startPlayingVideo() {
+        _shouldStartPlayVideo.value = Event(Unit)
+    }
+
     private suspend fun fetchUrlMap(videoId: String): Map<Int, String> =
         youtubeRepository.loadYTInfoForVideoId(videoId)?.urlMap.orEmpty()
 
     fun showArchiveOption(videoId: String) {
         viewModelScope.launch {
-            if (_currentVideoMeta.value?.videoMeta?.videoId != videoId) {
+            val viewData = _currentVideoData.value
+            if (viewData == null || (viewData.videoMeta.videoMeta.videoId != videoId ||
+                        viewData.urlMap.isEmpty())) {
                 _isLoadingVideo.value = Event(true)
                 runCatching {
-                    initResource(videoId)
+                    archiveData = initResource(videoId)
+                    _archiveVideoMeta.value = archiveData!!.videoMeta.videoMeta
                 }.onFailure {
                     _getVideoResult.value = Event(
                         GetVideoResult(
@@ -362,16 +345,22 @@ class MainViewModel(
                             }
                         )
                     )
+                }.onSuccess {
+                    _needShowArchiveOption.value = Event(Unit)
                 }
                 _isLoadingVideo.value = Event(false)
+            } else {
+                archiveData = VideoViewData(viewData.urlMap, mapOf(), viewData.videoMeta, 0)
+                _archiveVideoMeta.value = viewData.videoMeta.videoMeta
+                _needShowArchiveOption.value = Event(Unit)
             }
-            _needShowArchiveOption.value = Event(Unit)
+
         }
     }
 
     fun archiveVideo(context: Context, videoTag: Int?, audioTag: Int?) {
         viewModelScope.launch {
-            _currentVideoMeta.value?.videoMeta?.videoId?.let { videoId ->
+            archiveData?.videoMeta!!.videoMeta.videoId.let { videoId ->
                 val dlMngr = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
                 val count = listOf(videoTag, audioTag).fold(0) { acc, tag ->
                     if (tag != null) {
@@ -396,10 +385,10 @@ class MainViewModel(
                             }
                         }
                         if (shouldDl) {
-                            if (!_allUrlMap.containsKey(tag)) {
+                            if (!archiveData!!.urlMap.containsKey(tag)) {
                                 // try refresh url map
-                                _allUrlMap = fetchUrlMap(videoId)
-                                if (!_allUrlMap.containsKey(tag)) {
+                                archiveData!!.urlMap = fetchUrlMap(videoId)
+                                if (!archiveData!!.urlMap.containsKey(tag)) {
                                     // emit error message
                                     _archiveResult.value = Resource.error(
                                         "cannot find url for $videoId with itag $tag",
@@ -408,7 +397,7 @@ class MainViewModel(
                                     return@launch
                                 }
                             }
-                            val id = DownloadManager.Request(Uri.parse(_allUrlMap[tag])).let { req ->
+                            val id = DownloadManager.Request(Uri.parse(archiveData!!.urlMap[tag])).let { req ->
                                 req.setDestinationInExternalFilesDir(
                                     context,
                                     FileDownloadHelper.DIR_DOWNLOAD,
@@ -441,6 +430,22 @@ class MainViewModel(
         }
     }
 
+    fun saveWatchHistory(videoId: String, playbackPos: Long) {
+        viewModelScope.launch {
+            youtubeRepository.insertWatchHistory(videoId, System.currentTimeMillis(), playbackPos)
+        }
+    }
+
+    fun saveWatchHistory(playbackPos: Long) {
+        viewModelScope.launch {
+            _currentVideoData.value?.videoMeta?.videoMeta!!.videoId.let {
+                Log.d("MainViewModel", "notify video stopped, save history")
+//                _shouldSaveWatchHistory.value = Event(it)
+                youtubeRepository.insertWatchHistory(it, System.currentTimeMillis(), playbackPos)
+            }
+        }
+    }
+
     fun toggleBookmarkStatus(videoId: String) {
         viewModelScope.launch {
             val count = youtubeRepository.toggleBookmarked(videoId)
@@ -460,22 +465,29 @@ class MainViewModel(
         }
     }
 
-    fun updateBookmarkStatus(bookmark: Boolean) {
-        viewModelScope.launch {
-            _currentVideoMeta.value?.videoMeta?.let { videoMeta ->
-                youtubeRepository.updateVideoMeta(arrayOf(videoMeta.apply { bookmarked = bookmark }))
-                _currentVideoMeta.value = _currentVideoMeta.value?.apply {
-                    videoMeta.apply {
-                        bookmarked = bookmark
-                    }
-                }
-            }
-        }
-    }
+//    fun updateBookmarkStatus(bookmark: Boolean) {
+//        viewModelScope.launch {
+//            _currentVideoMeta.value?.videoMeta?.let { videoMeta ->
+//                youtubeRepository.updateVideoMeta(arrayOf(videoMeta.apply { bookmarked = bookmark }))
+//                _currentVideoMeta.value = _currentVideoMeta.value?.apply {
+//                    videoMeta.apply {
+//                        bookmarked = bookmark
+//                    }
+//                }
+//            }
+//        }
+//    }
 
     class NoVideoMetaException : Exception("No video meta")
     class NoYtInfoException : Exception("No YtInfo")
     class NoAvailableQualityException : Exception("No available quality")
+
+    data class VideoViewData(
+        var urlMap: Map<Int, String>,
+        var fileMap: Map<Int, String>,
+        var videoMeta: VideoMetaWithPlayerResource,
+        var lastPlayPos: Long
+    )
 
     data class ResourceTag(
         val vTag: Int?,
@@ -484,12 +496,14 @@ class MainViewModel(
 
     data class ResourceUrl(
         val videoUrl: String?,
-        val audioUrl: String?
+        val audioUrl: String?,
+        val lastPlayPos: Long?
     )
 
     data class ResourceFile(
         val videoFile: String?,
-        val audioFile: String?
+        val audioFile: String?,
+        val lastPlayPos: Long?
     )
 
     data class MediaDisplayInfo(

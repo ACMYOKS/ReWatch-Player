@@ -22,4 +22,7 @@ object DateTimeHelper {
         }
         return "??:??:??"
     }
+    fun getDurationMillis(durationString: String): Long {
+        return Duration.parse(durationString).toMillis()
+    }
 }

@@ -1,5 +1,6 @@
 package com.amoscyk.android.rewatchplayer.datasource
 
+import android.util.Log
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPThumbnailDetails
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.*
@@ -24,7 +25,10 @@ class YoutubeRepository(
         ytApiServiceProvider.credential.selectedAccountName = accountName
     }
 
-    suspend fun loadSearchResultResource(query: String, maxResults: Long = MAX_VIDEO_RESULTS): SearchListResponseResource {
+    suspend fun loadSearchResultResource(
+        query: String,
+        maxResults: Long = MAX_VIDEO_RESULTS
+    ): SearchListResponseResource {
         // TODO: obtain resource from db if record exists, and only request from api when db record
         //  expired, e.g. after 7 days from first query
         val request = ytApiService.search().list("id,snippet")
@@ -47,7 +51,10 @@ class YoutubeRepository(
         }.getResponse()
     }
 
-    suspend fun loadPlaylistResultResourceByPlaylistId(playlistIds: List<String>, maxResults: Long = MAX_PLAYLIST_RESULTS): PlaylistListResponseResource {
+    suspend fun loadPlaylistResultResourceByPlaylistId(
+        playlistIds: List<String>,
+        maxResults: Long = MAX_PLAYLIST_RESULTS
+    ): PlaylistListResponseResource {
         val request = ytApiService.playlists().list("id,snippet,contentDetails")
             .setId(playlistIds.joinToString(","))
             .setMaxResults(maxResults)
@@ -66,7 +73,10 @@ class YoutubeRepository(
         }.getResponse()
     }
 
-    suspend fun loadPlaylistResultResourceByChannelId(channelId: String, maxResults: Long = MAX_PLAYLIST_RESULTS): PlaylistListResponseResource {
+    suspend fun loadPlaylistResultResourceByChannelId(
+        channelId: String,
+        maxResults: Long = MAX_PLAYLIST_RESULTS
+    ): PlaylistListResponseResource {
         val request = ytApiService.playlists().list("id,snippet,contentDetails")
             .setChannelId(channelId)
             .setMaxResults(maxResults)
@@ -103,7 +113,10 @@ class YoutubeRepository(
         }.getResponse()
     }
 
-    suspend fun loadPlaylistItemForPlaylist(id: String, maxResults: Long = MAX_VIDEO_RESULTS): PlaylistItemListResponseResource {
+    suspend fun loadPlaylistItemForPlaylist(
+        id: String,
+        maxResults: Long = MAX_VIDEO_RESULTS
+    ): PlaylistItemListResponseResource {
         val request = ytApiService.playlistItems().list("id,snippet")
             .setPlaylistId(id)
             .setMaxResults(maxResults)
@@ -122,7 +135,10 @@ class YoutubeRepository(
         }.getResponse()
     }
 
-    suspend fun loadVideoResultResource(videoIds: List<String>, maxResults: Long = MAX_VIDEO_RESULTS): VideoListResponseResource {
+    suspend fun loadVideoResultResource(
+        videoIds: List<String>,
+        maxResults: Long = MAX_VIDEO_RESULTS
+    ): VideoListResponseResource {
         val request = ytApiService.videos().list("id,snippet,contentDetails")
             .setId(videoIds.joinToString(","))
             .setMaxResults(maxResults)
@@ -159,10 +175,14 @@ class YoutubeRepository(
         }.getResponse()
     }
 
-    suspend fun loadChannelResource(channelIds: List<String>, maxResults: Long = MAX_CHANNEL_RESULTS): ChannelListResponseResource {
-        val request = ytApiService.channels().list("snippet,contentDetails,statistics,brandingSettings")
-            .setId(channelIds.joinToString(","))
-            .setMaxResults(maxResults)
+    suspend fun loadChannelResource(
+        channelIds: List<String>,
+        maxResults: Long = MAX_CHANNEL_RESULTS
+    ): ChannelListResponseResource {
+        val request =
+            ytApiService.channels().list("snippet,contentDetails,statistics,brandingSettings")
+                .setId(channelIds.joinToString(","))
+                .setMaxResults(maxResults)
         return ChannelListResponseResource.build(request)
     }
 
@@ -179,31 +199,29 @@ class YoutubeRepository(
     }
 
 
-    suspend fun checkVideoIdExist(videoId: String): Boolean? {
-        return withContext(Dispatchers.IO) {
-            val response = ytOpenService.getVideoInfo(videoId).execute()
-            response.body()?.string()?.let {
-                return@withContext !it.contains("status=fail")
-            }
-            return@withContext null
+    suspend fun checkVideoIdExist(videoId: String): Boolean? = withContext(Dispatchers.IO) {
+        val response = ytOpenService.getVideoInfo(videoId).execute()
+        response.body()?.string()?.let {
+            return@withContext !it.contains("status=fail")
         }
+        return@withContext null
+
     }
 
-    suspend fun getVideoMeta(videos: List<RPVideo>): List<VideoMeta> {
-        return withContext(Dispatchers.IO) {
-            val map = appDatabase.videoMetaDao().getByVideoId(*videos.map { it.id }.toTypedArray())
-                .associateBy { it.videoId }
-            return@withContext videos.fold(ArrayList<VideoMeta>()) { acc, video ->
-                map[video.id]?.let {
-                    acc.add(it)
-                } ?: run { acc.add(video.toVideoMeta()) }
-                acc
-            }
+    suspend fun getVideoMeta(videos: List<RPVideo>): List<VideoMeta> = withContext(Dispatchers.IO) {
+        val map = appDatabase.videoMetaDao().getByVideoId(*videos.map { it.id }.toTypedArray())
+            .associateBy { it.videoId }
+        return@withContext videos.fold(ArrayList<VideoMeta>()) { acc, video ->
+            map[video.id]?.let {
+                acc.add(it)
+            } ?: run { acc.add(video.toVideoMeta()) }
+            acc
         }
+
     }
 
-    suspend fun loadYTInfoForVideoId(videoId: String): YouTubeExtractor.YTInfo? {
-        return withContext(Dispatchers.IO) {
+    suspend fun loadYTInfoForVideoId(videoId: String): YouTubeExtractor.YTInfo? =
+        withContext(Dispatchers.IO) {
             val ytInfo = ytExtractor.extractInfo(videoId)
             ytInfo?.videoDetails?.let {
                 val record = appDatabase.videoMetaDao().getByVideoId(it.videoId)
@@ -214,7 +232,9 @@ class YoutubeRepository(
                     channelId = it.channelId,
                     channelTitle = it.author,
                     description = it.shortDescription,
-                    duration = Duration.ofSeconds(ytInfo.videoDetails.lengthSeconds.toLongOrNull() ?: 0).toString(),
+                    duration = Duration.ofSeconds(
+                        ytInfo.videoDetails.lengthSeconds.toLongOrNull() ?: 0
+                    ).toString(),
                     thumbnails = RPThumbnailDetails(),
                     tags = it.keywords,
                     itags = ytInfo.urlMap.keys.toList(),
@@ -228,83 +248,80 @@ class YoutubeRepository(
             }
             return@withContext ytInfo
         }
-    }
 
-    suspend fun addPlayerResource(videoId: String, itag: Int, filepath: String, filename: String,
-                                  fileSize: Long, extension: String = ".mp4", isAdaptive: Boolean,
-                                  isVideo: Boolean, downloadId: Long = -1) {
-        return withContext(Dispatchers.IO) {
-            appDatabase.playerResourceDao().insert(
-                PlayerResource(
-                    videoId = videoId,
-                    itag = itag,
-                    filepath = filepath,
-                    filename = filename,
-                    fileSize = fileSize,
-                    extension = extension,
-                    isAdaptive = isAdaptive,
-                    isVideo = isVideo,
-                    downloadId = downloadId
-                )
+
+    suspend fun addPlayerResource(
+        videoId: String, itag: Int, filepath: String, filename: String,
+        fileSize: Long, extension: String = ".mp4", isAdaptive: Boolean,
+        isVideo: Boolean, downloadId: Long = -1
+    ) = withContext(Dispatchers.IO) {
+        appDatabase.playerResourceDao().insert(
+            PlayerResource(
+                videoId = videoId,
+                itag = itag,
+                filepath = filepath,
+                filename = filename,
+                fileSize = fileSize,
+                extension = extension,
+                isAdaptive = isAdaptive,
+                isVideo = isVideo,
+                downloadId = downloadId
             )
-            return@withContext
-        }
+        )
+        return@withContext
+
     }
 
-    suspend fun getPlayerResource(videoIds: Array<String>? = null): List<PlayerResource> {
-        return withContext(Dispatchers.IO) {
+    suspend fun getPlayerResource(videoIds: Array<String>? = null): List<PlayerResource> =
+        withContext(Dispatchers.IO) {
             return@withContext if (videoIds == null) appDatabase.playerResourceDao().getAll()
             else appDatabase.playerResourceDao().getByVideoId(*videoIds)
-        }
-    }
 
-    suspend fun getVideoMeta(videoIds: Array<String>? = null): List<VideoMeta> {
-        return withContext(Dispatchers.IO) {
+        }
+
+    suspend fun getVideoMeta(videoIds: Array<String>? = null): List<VideoMeta> =
+        withContext(Dispatchers.IO) {
             return@withContext if (videoIds == null) appDatabase.videoMetaDao().getAll()
             else appDatabase.videoMetaDao().getByVideoId(*videoIds)
+
         }
+
+    suspend fun getBookmarkedVideoMeta(): List<VideoMeta> = withContext(Dispatchers.IO) {
+        return@withContext appDatabase.videoMetaDao().getBookmarked()
+
     }
 
-    suspend fun getBookmarkedVideoMeta(): List<VideoMeta> {
-        return withContext(Dispatchers.IO) {
-            return@withContext appDatabase.videoMetaDao().getBookmarked()
-        }
-    }
-
-    suspend fun getVideoMetaWithPlayerResource(videoIds: Array<String>? = null): List<VideoMetaWithPlayerResource> {
-        return withContext(Dispatchers.IO) {
+    suspend fun getVideoMetaWithPlayerResource(videoIds: Array<String>? = null): List<VideoMetaWithPlayerResource> =
+        withContext(Dispatchers.IO) {
             return@withContext if (videoIds == null) appDatabase.videoMetaDao().getAllWithPlayerResource()
             else appDatabase.videoMetaDao().getByVideoIdWithPlayerResource(*videoIds)
-        }
-    }
 
-    suspend fun getVideoMetaWithExistingPlayerResource(): List<VideoMetaWithPlayerResource> {
-        return withContext(Dispatchers.IO) {
+        }
+
+    suspend fun getVideoMetaWithExistingPlayerResource(): List<VideoMetaWithPlayerResource> =
+        withContext(Dispatchers.IO) {
             return@withContext appDatabase.videoMetaDao().getAllExistingPlayerResource()
         }
-    }
 
-    suspend fun getBookmarkedVideoMetaWithPlayerResource(): List<VideoMetaWithPlayerResource> {
-        return withContext(Dispatchers.IO) {
+
+    suspend fun getBookmarkedVideoMetaWithPlayerResource(): List<VideoMetaWithPlayerResource> =
+        withContext(Dispatchers.IO) {
             return@withContext appDatabase.videoMetaDao().getBookmarkedWithPlayerResource()
+
         }
+
+    suspend fun toggleBookmarked(videoIds: Array<String>): Int = withContext(Dispatchers.IO) {
+        return@withContext appDatabase.videoMetaDao().toggleBookmarked(*videoIds)
     }
 
-    suspend fun toggleBookmarked(videoIds: Array<String>): Int {
-        return withContext(Dispatchers.IO) {
-            return@withContext appDatabase.videoMetaDao().toggleBookmarked(*videoIds)
-        }
-    }
 
-    suspend fun toggleBookmarked(videoId: String): Int {
-        return withContext(Dispatchers.IO) {
-            val count = appDatabase.videoMetaDao().toggleBookmarked(videoId)
-            if (count == 0) {
-                loadYTInfoForVideoId(videoId)
-                return@withContext appDatabase.videoMetaDao().toggleBookmarked(videoId)
-            }
-            return@withContext count
+    suspend fun toggleBookmarked(videoId: String): Int = withContext(Dispatchers.IO) {
+        val count = appDatabase.videoMetaDao().toggleBookmarked(videoId)
+        if (count == 0) {
+            loadYTInfoForVideoId(videoId)
+            return@withContext appDatabase.videoMetaDao().toggleBookmarked(videoId)
         }
+        return@withContext count
     }
 
     suspend fun upsertVideoMeta(videoMeta: VideoMeta): Int {
@@ -317,11 +334,10 @@ class YoutubeRepository(
         }
     }
 
-    suspend fun updateVideoMeta(videoMetas: Array<VideoMeta>): List<Long> {
-        return withContext(Dispatchers.IO) {
+    suspend fun updateVideoMeta(videoMetas: Array<VideoMeta>): List<Long> =
+        withContext(Dispatchers.IO) {
             return@withContext appDatabase.videoMetaDao().insert(*videoMetas)
         }
-    }
 
     suspend fun deletePlayerResource(videoIds: Array<String>): Int {
         return withContext(Dispatchers.IO) {
@@ -329,17 +345,34 @@ class YoutubeRepository(
         }
     }
 
-    suspend fun deletePlayerResource(videoId: String, itags: IntArray): Int {
-        return withContext(Dispatchers.IO) {
-            return@withContext appDatabase.playerResourceDao().deleteByVideoIdWithITag(videoId, *itags)
+    suspend fun deletePlayerResource(videoId: String, itags: IntArray): Int =
+        withContext(Dispatchers.IO) {
+            return@withContext appDatabase.playerResourceDao()
+                .deleteByVideoIdWithITag(videoId, *itags)
         }
+
+    suspend fun deletePlayerResource(downloadIds: LongArray): Int = withContext(Dispatchers.IO) {
+        appDatabase.playerResourceDao().deleteByDownloadId(*downloadIds)
     }
 
-    suspend fun deletePlayerResource(downloadIds: LongArray): Int {
-        return withContext(Dispatchers.IO) {
-            return@withContext appDatabase.playerResourceDao().deleteByDownloadId(*downloadIds)
+    suspend fun getWatchHistory(videoIds: Array<String>): List<WatchHistory> =
+        withContext(Dispatchers.IO) {
+            val username = ytApiServiceProvider.credential.selectedAccountName
+            appDatabase.watchHistoryDao().getWithVideoIdForUser(videoIds, username)
         }
+
+    suspend fun insertWatchHistory(history: WatchHistory): Int = withContext(Dispatchers.IO) {
+        appDatabase.watchHistoryDao().insert(history).size
     }
+
+    suspend fun insertWatchHistory(videoId: String, currentTime: Long, playbackPos: Long): Int =
+        withContext(Dispatchers.IO) {
+            Log.d("YtRepo", "insert history for video $videoId, at $currentTime, at pos $playbackPos")
+            val username = ytApiServiceProvider.credential.selectedAccountName
+            appDatabase.watchHistoryDao().insert(
+                WatchHistory(videoId, username, currentTime, playbackPos)
+            ).size
+        }
 
     companion object {
         private const val MAX_VIDEO_RESULTS: Long = 30

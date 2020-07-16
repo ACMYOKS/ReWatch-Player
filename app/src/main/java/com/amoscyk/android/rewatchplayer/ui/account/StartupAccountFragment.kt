@@ -17,17 +17,19 @@ import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 
 import com.amoscyk.android.rewatchplayer.R
+import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
+import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.amoscyk.android.rewatchplayer.youtubeServiceProvider
 import pub.devrel.easypermissions.AfterPermissionGranted
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
 
-class StartupAccountFragment : Fragment(), EasyPermissions.PermissionCallbacks {
+class StartupAccountFragment : ReWatchPlayerFragment(), EasyPermissions.PermissionCallbacks {
 
     private var rootView: View? = null
     private lateinit var signupBtn: Button
 
-    private val viewModel by viewModels<StartupAccountViewModel>()
+    private val viewModel by viewModels<StartupAccountViewModel> { viewModelFactory }
 
 
     override fun onAttach(context: Context) {

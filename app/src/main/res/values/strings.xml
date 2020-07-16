@@ -34,6 +34,7 @@
 
     <string name="player_alert_enable_stream_with_mobile_data">Mobile data connected. Enable play video using mobile data?</string>
     <string name="player_alert_enable_stream_with_mobile_data_cancel">Not able to stream data with mobile data.</string>
+    <string name="player_restore_last_play_position_message">Restore last play position?</string>
     <string name="player_error_title">Error</string>
     <string name="player_error_no_video_id">No video ID</string>
     <string name="player_error_no_video_meta">No video meta</string>
@@ -78,6 +79,7 @@
 
     <!-- Common string -->
     <string name="confirm_text">OK</string>
+    <string name="negative_text">No</string>
     <string name="cancel_text">Cancel</string>
     <string name="default_text">Default</string>
     <string name="empty_list">no item</string>
