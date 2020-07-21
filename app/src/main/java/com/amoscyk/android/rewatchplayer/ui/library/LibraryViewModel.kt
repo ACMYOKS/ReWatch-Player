@@ -264,7 +264,6 @@ class LibraryViewModel(
         if (!loadPlaylistLock.get()) {
             loadPlaylistLock.set(true)
             viewModelScope.launch {
-                _playlistListResHolder = ListResponseHolder()
                 _playlistListRes.value?.apply {
                     if (nextPageToken != null) {
                         _showLoadingPlaylist.loading(true) {

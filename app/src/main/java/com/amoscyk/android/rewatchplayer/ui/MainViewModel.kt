@@ -160,11 +160,12 @@ class MainViewModel(
                     }
                 }
             } ?: throw NoYtInfoException()
+        } else {
+            metas.firstOrNull()?.let { meta ->
+                videoMeta = meta
+                fileMap = meta.playerResources.associate { Pair(it.itag, it.filename) }
+            } ?: throw NoVideoMetaException()
         }
-        metas.firstOrNull()?.let { meta ->
-            videoMeta = meta
-            fileMap = meta.playerResources.associate { Pair(it.itag, it.filename) }
-        } ?: throw NoVideoMetaException()
         val history = youtubeRepository.getWatchHistory(arrayOf(videoId)).firstOrNull()
         return VideoViewData(urlMap, fileMap, videoMeta!!, history?.lastWatchPosMillis ?: 0)
     }
@@ -216,45 +217,32 @@ class MainViewModel(
             _isLoadingVideo.value = Event(true)
             runCatching {
                 pendingVideoData = initResource(videoId)
+                _currentVideoData.value?.let {
+                    _shouldStopVideo.value = Event(Unit)
+                    _shouldSaveWatchHistory.value = Event(it.videoMeta.videoMeta.videoId)
+                }
+                _currentVideoData.value = pendingVideoData
+                val resTag = getPreferredITagForPlaying(context, pendingVideoData!!, findFile)
+                var lastPlayPos: Long? = null
+                youtubeRepository.getWatchHistory(arrayOf(videoId)).firstOrNull()?.let {
+                    if (it.lastWatchPosMillis > 0 &&
+                        round(it.lastWatchPosMillis / 1000f) <
+                        round(DateTimeHelper.getDurationMillis(pendingVideoData!!.videoMeta.videoMeta.duration) / 1000f)
+                    ) {
+                        lastPlayPos = it.lastWatchPosMillis
+                    }
+                }
+                setQuality(resTag.vTag, resTag.aTag, lastPlayPos)
+                setPlaybackSpeed(1f)
+                pendingVideoData = null
             }.onFailure {
                 _getVideoResult.value = Event(GetVideoResult(videoId, when (it) {
                     is NoVideoMetaException -> GetVideoResult.Error.NO_VIDEO_META
                     is NoYtInfoException -> GetVideoResult.Error.NO_YT_INFO
+                    is NoAvailableQualityException -> GetVideoResult.Error.NO_QUALITY
                     else -> GetVideoResult.Error.UNKNOWN
                 }))
                 pendingVideoData = null
-            }.onSuccess {
-                runCatching {
-                    _currentVideoData.value?.let {
-                        _shouldStopVideo.value = Event(Unit)
-                        _shouldSaveWatchHistory.value = Event(it.videoMeta.videoMeta.videoId)
-                    }
-                    _currentVideoData.value = pendingVideoData
-                    val resTag = getPreferredITagForPlaying(context, pendingVideoData!!, findFile)
-                    var lastPlayPos: Long? = null
-                    youtubeRepository.getWatchHistory(arrayOf(videoId)).firstOrNull()?.let {
-                        if (it.lastWatchPosMillis > 0 &&
-                            round(it.lastWatchPosMillis / 1000f) <
-                            round(DateTimeHelper.getDurationMillis(pendingVideoData!!.videoMeta.videoMeta.duration) / 1000f)
-                        ) {
-                            lastPlayPos = it.lastWatchPosMillis
-                        }
-                    }
-                    setQuality(resTag.vTag, resTag.aTag, lastPlayPos)
-
-                    setPlaybackSpeed(1f)
-                    pendingVideoData = null
-                }.onFailure {
-                    _getVideoResult.value = Event(
-                        GetVideoResult(
-                            videoId, when (it) {
-                                is NoAvailableQualityException -> GetVideoResult.Error.NO_QUALITY
-                                else -> null
-                            }
-                        )
-                    )
-                    pendingVideoData = null
-                }
             }
             _isLoadingVideo.value = Event(false)
         }
@@ -334,6 +322,13 @@ class MainViewModel(
                 runCatching {
                     archiveData = initResource(videoId)
                     _archiveVideoMeta.value = archiveData!!.videoMeta.videoMeta
+                    if (archiveData!!.urlMap.isEmpty()) {
+                        _getVideoResult.value = Event(
+                            GetVideoResult(videoId, GetVideoResult.Error.NO_QUALITY)
+                        )
+                    } else {
+                        _needShowArchiveOption.value = Event(Unit)
+                    }
                 }.onFailure {
                     _getVideoResult.value = Event(
                         GetVideoResult(
@@ -345,14 +340,18 @@ class MainViewModel(
                             }
                         )
                     )
-                }.onSuccess {
-                    _needShowArchiveOption.value = Event(Unit)
                 }
                 _isLoadingVideo.value = Event(false)
             } else {
                 archiveData = VideoViewData(viewData.urlMap, mapOf(), viewData.videoMeta, 0)
                 _archiveVideoMeta.value = viewData.videoMeta.videoMeta
-                _needShowArchiveOption.value = Event(Unit)
+                if (archiveData!!.urlMap.isEmpty()) {
+                    _getVideoResult.value = Event(
+                        GetVideoResult(videoId, GetVideoResult.Error.NO_QUALITY)
+                    )
+                } else {
+                    _needShowArchiveOption.value = Event(Unit)
+                }
             }
 
         }
@@ -360,7 +359,7 @@ class MainViewModel(
 
     fun archiveVideo(context: Context, videoTag: Int?, audioTag: Int?) {
         viewModelScope.launch {
-            archiveData?.videoMeta!!.videoMeta.videoId.let { videoId ->
+            archiveData?.videoMeta?.videoMeta?.videoId?.let { videoId ->
                 val dlMngr = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
                 val count = listOf(videoTag, audioTag).fold(0) { acc, tag ->
                     if (tag != null) {
@@ -438,7 +437,7 @@ class MainViewModel(
 
     fun saveWatchHistory(playbackPos: Long) {
         viewModelScope.launch {
-            _currentVideoData.value?.videoMeta?.videoMeta!!.videoId.let {
+            _currentVideoData.value?.videoMeta?.videoMeta?.videoId?.let {
                 Log.d("MainViewModel", "notify video stopped, save history")
 //                _shouldSaveWatchHistory.value = Event(it)
                 youtubeRepository.insertWatchHistory(it, System.currentTimeMillis(), playbackPos)

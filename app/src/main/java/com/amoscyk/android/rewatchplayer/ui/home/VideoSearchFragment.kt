@@ -8,11 +8,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.edit
 import androidx.core.view.forEachIndexed
 import androidx.core.view.get
+import androidx.core.widget.ContentLoadingProgressBar
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
@@ -23,13 +25,13 @@ import androidx.recyclerview.widget.RecyclerView
 
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
+import com.amoscyk.android.rewatchplayer.datasource.vo.ListLoadingState
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
+import com.amoscyk.android.rewatchplayer.ui.CommonListDecoration
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel
+import com.amoscyk.android.rewatchplayer.ui.ProgressDialogUtil
 import com.amoscyk.android.rewatchplayer.ui.VideoListAdapter
-import com.amoscyk.android.rewatchplayer.util.PreferenceKey
-import com.amoscyk.android.rewatchplayer.util.appSharedPreference
-import com.amoscyk.android.rewatchplayer.util.getInt
-import com.amoscyk.android.rewatchplayer.util.putInt
+import com.amoscyk.android.rewatchplayer.util.*
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
 import kotlinx.android.synthetic.main.fragment_video_search.*
@@ -46,11 +48,17 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
     private val mVideoList: RecyclerView get() = view!!.video_list
     private val mToolbar: Toolbar get() = view!!.toolbar
     private val mSearchView: SearchView get() = view!!.search_view
-    private val mTextView: TextView get() = view!!.test_tv
-    private val mLoadBtn: Button get() = view!!.loadmorebtn
-    private val mLoadingView: ProgressBar get() = view!!.loading_view
+    private val mLoadingView: ContentLoadingProgressBar get() = view!!.loading_view
+    private val mEmptyView: View get() = view!!.empty_list_view
 
-    private val mVideoListAdapter = VideoListAdapter()
+    private val mVideoListAdapter = VideoListAdapter().apply {
+        setOnLoadMoreNeeded {
+            viewModel.loadMoreResource()
+        }
+        setOnItemClickListener { position, meta ->
+            mainViewModel.playVideoForId(requireContext(), meta.videoId, true)
+        }
+    }
 
     private val mainViewModel by activityViewModels<MainViewModel> { viewModelFactory }
     private val viewModel by viewModels<VideoSearchViewModel> { viewModelFactory }
@@ -61,46 +69,35 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        viewModel.searchResults.observe(this, Observer { resource ->
-            when (resource.status) {
-                Status.LOADING -> {
-
-                }
-                Status.SUCCESS -> {
-                    // FIXME: get video from video api instead of direct conversion
-                    resource.data!!
-                        .map { searchResult -> searchResult.toRPVideo() }
-                        .let { list -> mVideoListAdapter.submitList(list.map { it.toVideoMeta() }) }
-                }
-                Status.ERROR -> {
-                    (resource.message as? UserRecoverableAuthIOException)?.let { exception ->
-                        requestForGoogleUserAuth(exception)
+        viewModel.showLoading.observe(this, Observer { event ->
+            event.getContentIfNotHandled { content: ListLoadingState ->
+                if (!content.loadMore) {
+                    if (content.isLoading) {
+                        mEmptyView.visibility = View.GONE
+                        mLoadingView.show()
+                    } else {
+                        mLoadingView.hide()
                     }
                 }
             }
         })
-        viewModel.videoExists.observe(this, Observer { resource ->
-            when (resource.status) {
-                Status.LOADING -> {
-                    mLoadingView.visibility = View.VISIBLE
-                    Toast.makeText(requireContext(), "checking", Toast.LENGTH_SHORT).show()
-                }
-                Status.SUCCESS -> {
-                    mLoadingView.visibility = View.GONE
-                    if (resource.data!!.second) {
-                        mainActivity?.apply {
-                            playVideoForId(resource.data.first)
-                        }
-                    } else {
-                        Toast.makeText(requireContext(),
-                            "Video with id: ${resource.data.first} not found", Toast.LENGTH_SHORT)
-                            .show()
-                    }
-                }
-                Status.ERROR -> {
-                    mLoadingView.visibility = View.GONE
-                    Toast.makeText(requireContext(), resource.message.toString(), Toast.LENGTH_SHORT).show()
-                }
+        viewModel.searchList.observe(this, Observer {
+            mEmptyView.visibility = if ((it.accumulatedItems + it.newItems).isEmpty()) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+            mVideoListAdapter.submitList(it.accumulatedItems + it.newItems)
+            mVideoListAdapter.setEnableInfiniteLoad(!it.isEndOfList)
+        })
+        viewModel.errorEvent.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                AlertDialog.Builder(requireContext())
+                    .setMessage(it)
+                    .setTitle(R.string.player_error_title)
+                    .setPositiveButton(R.string.confirm_text) { d, i -> d.cancel() }
+                    .create()
+                    .show()
             }
         })
     }
@@ -150,31 +147,20 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
         }
         mSearchView.apply {
             setOnSearchClickListener {
-                Log.d("TAG", "search view on click")
+
             }
             setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                 override fun onQueryTextChange(newText: String?): Boolean {
-//                    Log.d("TAG", "query text changed: $newText")
                     return false
                 }
 
                 override fun onQueryTextSubmit(query: String?): Boolean {
-                    Log.d("TAG", "query text submit: $query")
                     query?.let {
-//                        when (mSpinner.editText?.toString()) {
-//                            SearchCriteria.BY_ID.name -> {
-////                                viewModel.searchForVideoId(it)
-//                                mainViewModel.playVideoForId(requireContext(), it, true)
-//                            }
-//                            SearchCriteria.BY_TITLE.name -> {
-//                                viewModel.searchForQuery(it)
-//                            }
-//                        }
                         getSelectedSearchOptionPos().let { pos ->
                             if (pos == 0) {
                                 viewModel.searchForQuery(it)
                             } else {
-                                mainViewModel.playVideoForId(requireContext(), it, true)
+                                viewModel.searchForVideoId(it)
                             }
                         }
                     }
@@ -182,21 +168,13 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
                 }
             })
             setOnCloseListener {
-                Log.d("TAG", "search view on close")
                 false
             }
         }
-        mLoadBtn.setOnClickListener {
-            viewModel.loadMoreResource()
-        }
-//        mDropdown.setAdapter(
-//            ArrayAdapter(requireContext(),
-//                R.layout.dropdown_menu_popup_item,
-//                SearchCriteria.values().map { it.displayName })
-//        )
 
         mVideoList.adapter = mVideoListAdapter
         mVideoList.layoutManager = LinearLayoutManager(requireContext())
+        mVideoList.addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(4f).toInt()))
     }
 
     private fun getSelectedSearchOptionPos(): Int {

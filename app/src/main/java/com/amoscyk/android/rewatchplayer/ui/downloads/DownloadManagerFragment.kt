@@ -27,6 +27,7 @@ import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMetaWithPlayerResource
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel
 import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadPageViewModel.MenuState
+import com.amoscyk.android.rewatchplayer.util.DateTimeHelper
 import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
 import com.amoscyk.android.rewatchplayer.util.YouTubeVideoThumbnailHelper
 import com.amoscyk.android.rewatchplayer.util.formatReadableByteUnit
@@ -180,6 +181,7 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
             if (checkStatus[item.videoMeta.videoId] == null) checkStatus[item.videoMeta.videoId] = false
             holder.apply {
                 ivPreview.load(YouTubeVideoThumbnailHelper.getStandardUrl(item.videoMeta.videoId))
+                tvDuration.text = DateTimeHelper.getDisplayString(item.videoMeta.duration)
                 tvTitle.text = item.videoMeta.title
                 tvAuthor.text = item.videoMeta.channelTitle
                 tvQuality.text = item.playerResources.joinToString { res ->
@@ -215,6 +217,7 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
 
         inner class ViewHolder(itemView: View): RecyclerView.ViewHolder(itemView) {
             val ivPreview: ImageView = itemView.iv_preview
+            val tvDuration: TextView = itemView.tv_duration
             val tvTitle: TextView = itemView.tv_title
             val tvAuthor: TextView = itemView.tv_author
             val tvQuality: TextView = itemView.tv_quality

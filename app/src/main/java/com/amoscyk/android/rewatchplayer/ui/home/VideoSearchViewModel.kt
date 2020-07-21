@@ -3,52 +3,77 @@ package com.amoscyk.android.rewatchplayer.ui.home
 import androidx.lifecycle.*
 import com.amoscyk.android.rewatchplayer.datasource.SearchListResponseResource
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
-import com.amoscyk.android.rewatchplayer.datasource.vo.RPSearchResult
-import com.amoscyk.android.rewatchplayer.datasource.vo.Resource
+import com.amoscyk.android.rewatchplayer.datasource.vo.*
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.RPSearchListResponse
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
 import kotlinx.coroutines.launch
 class VideoSearchViewModel(
     private val youtubeRepository: YoutubeRepository
 ): ViewModel() {
 
-    private val _query = MutableLiveData<String>()
-    private val searchResultResource = MutableLiveData<SearchListResponseResource>()
-    val searchResults: LiveData<Resource<List<RPSearchResult>>> =
-        Transformations.switchMap(searchResultResource) { it.resource }
-    private val _videoExists = MutableLiveData<Resource<Pair<String, Boolean>>>()
-    val videoExists: LiveData<Resource<Pair<String, Boolean>>> = _videoExists
+    private val _titleQuery = MutableLiveData<String>()
+    private val _idQuery = MutableLiveData<String>()
+
+    private var searchListResHolder = ListResponseHolder<VideoMeta>()
+    private val _searchListResult = MutableLiveData<RPSearchListResponse>()
+    private val _searchIdResult = MutableLiveData<List<VideoMeta>>()
+    val searchList: LiveData<ListResponseHolder<VideoMeta>> = MediatorLiveData<ListResponseHolder<VideoMeta>>().apply {
+        addSource(_searchListResult) {
+            searchListResHolder = searchListResHolder.addNew(
+                it.items.map { it.toRPVideo().toVideoMeta() },
+                it.nextPageToken != null
+            )
+            value = searchListResHolder
+        }
+        addSource(_searchIdResult) {
+            searchListResHolder = ListResponseHolder<VideoMeta>().addNew(it, true)
+            value = searchListResHolder
+        }
+    }
+    private val _showLoading = MutableLiveData<ListLoadingStateEvent>()
+    val showLoading: LiveData<ListLoadingStateEvent> = _showLoading
+
+    private val _errorEvent = MutableLiveData<Event<String>>()
+    val errorEvent: LiveData<Event<String>> = _errorEvent
 
     fun searchForQuery(query: String) {
-        if (query != _query.value) {
-            _query.value = query
+        if (query != _titleQuery.value) {
+            _titleQuery.value = query
+            searchListResHolder = ListResponseHolder()
             viewModelScope.launch {
-                searchResultResource.value = youtubeRepository.loadSearchResultResource(query)
+                _showLoading.loading {
+                    _searchListResult.value = youtubeRepository.getVideoSearchResult(query)
+                }
             }
         }
     }
 
     fun searchForVideoId(videoId: String) {
-        // use retrofit to get public youtube api for checking video ID existence
-        if (videoId != _query.value) {
-            _query.value = videoId
+        if (videoId != _idQuery.value) {
+            _idQuery.value = videoId
+            searchListResHolder = ListResponseHolder()
             viewModelScope.launch {
-                _videoExists.value = Resource.loading(null)
-                youtubeRepository.checkVideoIdExist(videoId).let {
-                    _videoExists.value = if (it == null) {
-                        // TODO: find better error handling
-                        Resource.error("fail to get response", null)
-                    } else {
-                        Resource.success(Pair(videoId, it))
-                    }
+                _showLoading.loading {
+                    _searchIdResult.value = youtubeRepository.loadYTInfoForVideoId(videoId)?.let {
+                        youtubeRepository.getVideoMeta(arrayOf(videoId)).firstOrNull()?.let {
+                            listOf(it)
+                        }
+                    } ?: listOf()
                 }
-
             }
         }
     }
 
-    // TODO: handle end of list
     fun loadMoreResource() {
         viewModelScope.launch {
-            searchResultResource.value?.loadMoreResource()
+            _searchListResult.value?.let {
+                if (it.nextPageToken != null) {
+                    _showLoading.loading(true) {
+                        _searchListResult.value =
+                            youtubeRepository.getVideoSearchResult(it.request.q, it.nextPageToken)
+                    }
+                }
+            }
         }
     }
 }

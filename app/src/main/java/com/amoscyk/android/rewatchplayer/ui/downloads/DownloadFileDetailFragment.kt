@@ -31,6 +31,7 @@ import com.amoscyk.android.rewatchplayer.datasource.vo.DownloadStatus
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.PlayerResource
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel
+import com.amoscyk.android.rewatchplayer.util.DateTimeHelper
 import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
 import com.amoscyk.android.rewatchplayer.util.YouTubeVideoThumbnailHelper
 import com.amoscyk.android.rewatchplayer.util.formatReadableByteUnit
@@ -45,6 +46,7 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
     private val mRvFileStatus get() = view!!.rv_download_status
     private val mDetailContainer get() = view!!.detail_container
     private val mIvPreview get() = view!!.iv_preview
+    private val mTvDuration get() = view!!.tv_duration
     private val mTvTitle get() = view!!.tv_title
     private val mTvAuthor get() = view!!.tv_author
     private val mTvVideoId get() = view!!.tv_video_id
@@ -110,6 +112,7 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
         viewModel.videoMetas.observe(this, Observer { metas ->
             metas.firstOrNull()?.let { res ->
                 mIvPreview.load(YouTubeVideoThumbnailHelper.getStandardUrl(res.videoMeta.videoId))
+                mTvDuration.text = DateTimeHelper.getDisplayString(res.videoMeta.duration)
                 mTvTitle.text = res.videoMeta.title
                 mTvAuthor.text = res.videoMeta.channelTitle
                 mTvVideoId.text = res.videoMeta.videoId
@@ -337,12 +340,14 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
                         DownloadManager.STATUS_PENDING -> {
                             tvCompletedFileSize.visibility = View.GONE
                             tvFileSize.visibility = View.GONE
+                            pbDownload.visibility = View.GONE
                             tvStatusReason.visibility = View.VISIBLE
                             tvStatusReason.text = getString(R.string.download_status_pending)
                         }
                         DownloadManager.STATUS_PAUSED -> {
                             tvCompletedFileSize.visibility = View.GONE
                             tvFileSize.visibility = View.GONE
+                            pbDownload.visibility = View.GONE
                             tvStatusReason.visibility = View.VISIBLE
                             tvStatusReason.text = getString(R.string.download_status_paused) + ": " +
                                     getString(
@@ -357,6 +362,7 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
                         DownloadManager.STATUS_FAILED -> {
                             tvCompletedFileSize.visibility = View.GONE
                             tvFileSize.visibility = View.GONE
+                            pbDownload.visibility = View.GONE
                             tvStatusReason.visibility = View.VISIBLE
                             tvStatusReason.text = getString(R.string.download_status_failed) + ": " +
                                     getString(

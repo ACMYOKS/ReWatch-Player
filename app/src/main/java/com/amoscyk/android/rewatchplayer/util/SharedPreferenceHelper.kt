@@ -13,6 +13,7 @@ import com.amoscyk.android.rewatchplayer.AppConstant
  * */
 enum class PreferenceKey {
     ACCOUNT_NAME,
+    LAST_OPEN_TAB_ID,
     LIBRARY_LIST_MODE,
     SEARCH_OPTION,
     PLAYER_ONLY_PLAY_WHEN_USING_WIFI,

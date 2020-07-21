@@ -7,15 +7,16 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.view.ActionMode
-import androidx.navigation.findNavController
-import androidx.transition.AutoTransition
 import androidx.transition.Slide
 import androidx.transition.TransitionManager
 
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.ui.player.VideoPlayerLayout
-import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.amoscyk.android.rewatchplayer.util.PreferenceKey
+import com.amoscyk.android.rewatchplayer.util.appSharedPreference
+import com.amoscyk.android.rewatchplayer.util.getInt
+import com.amoscyk.android.rewatchplayer.util.putInt
 import kotlinx.android.synthetic.main.fragment_main_page.view.*
 
 class MainPageFragment : ReWatchPlayerFragment() {
@@ -58,11 +59,18 @@ class MainPageFragment : ReWatchPlayerFragment() {
     override fun onStart() {
         super.onStart()
         mainActivity?.addPlayerSizeListener(playerSizeListener)
+
+        // if last open tab is not set, use default tab
+        bottomNav.selectedItemId =
+            activity!!.appSharedPreference.getInt(PreferenceKey.LAST_OPEN_TAB_ID, -1)
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
+    override fun onStop() {
+        super.onStop()
         mainActivity?.removePlayerSizeListener(playerSizeListener)
+        activity!!.appSharedPreference.edit()
+            .putInt(PreferenceKey.LAST_OPEN_TAB_ID, bottomNav.selectedItemId)
+            .apply()
     }
 
     fun onSupportActionModeStarted(actionMode: ActionMode?) {

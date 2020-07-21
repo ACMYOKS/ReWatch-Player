@@ -46,10 +46,6 @@ class HomeFragment : Fragment() {
             }
             true
         }
-        button.setOnClickListener {
-            val intent = Intent(requireContext(), PlayerActivity::class.java)
-            startActivity(intent)
-        }
     }
 
 }
