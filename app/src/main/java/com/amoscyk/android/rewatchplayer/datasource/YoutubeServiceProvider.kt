@@ -1,4 +1,4 @@
-package com.amoscyk.android.rewatchplayer.service
+package com.amoscyk.android.rewatchplayer.datasource
 
 import android.content.Context
 import com.google.android.gms.common.ConnectionResult
@@ -44,7 +44,8 @@ class YoutubeServiceProvider(context: Context) {
     val youtubeService: YouTube
         get() {
             val transport = AndroidHttp.newCompatibleTransport()
-            return YouTube.Builder(transport, JSON_FACTORY, credential)
+            return YouTube.Builder(transport,
+                JSON_FACTORY, credential)
                 .setApplicationName("ReWatch Player")
                 .build()
         }

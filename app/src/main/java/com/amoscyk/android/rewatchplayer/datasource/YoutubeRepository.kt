@@ -4,10 +4,8 @@ import android.util.Log
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPThumbnailDetails
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.*
-import com.amoscyk.android.rewatchplayer.service.YoutubeServiceProvider
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeExtractor
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeOpenService
-import com.google.api.services.youtube.YouTube
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.threeten.bp.Duration

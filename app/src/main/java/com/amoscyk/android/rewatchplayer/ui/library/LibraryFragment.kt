@@ -32,15 +32,12 @@ import kotlinx.android.synthetic.main.fragment_library.view.*
 
 class LibraryFragment : ReWatchPlayerFragment() {
 
-    private var rootView: View? = null
     private var actionMode: ActionMode? = null
     private val toolbar get() = view!!.toolbar
     private val typeSpinner get() = view!!.spinner_list_type
     private val channelList get() = view!!.channel_list
     private val playlistList get() = view!!.playlist_list
     private val bookmarkList get() = view!!.bookmark_list
-    private val loadPlaylistBtn get() = view!!.load_playlist_btn
-    private val loadMoreBtn get() = view!!.load_more_playlist_btn
     private val loadingView get() = view!!.loading_view
     private val viewModel by viewModels<LibraryViewModel> { viewModelFactory }
 

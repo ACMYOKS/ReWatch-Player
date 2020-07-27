@@ -7,7 +7,6 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
-import com.amoscyk.android.rewatchplayer.service.YoutubeServiceProvider
 import com.amoscyk.android.rewatchplayer.util.PreferenceKey
 import com.amoscyk.android.rewatchplayer.util.appSharedPreference
 import com.amoscyk.android.rewatchplayer.util.putString

@@ -138,4 +138,11 @@
     <string name="account_faq_title">FAQ</string>
     <string name="account_contact_title">Contact</string>
     <string name="account_menu_settings_title">Settings</string>
+
+    <!--  Player Service  -->
+    <string name="player_notification_channel_name">Player</string>
+    <string name="player_notification_channel_description">Playing video in background</string>
+    <string name="player_notification_unknown_title">Unknown title</string>
+    <string name="player_notification_unknown_content">Unknown content</string>
+
 </resources>

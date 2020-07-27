@@ -4,6 +4,7 @@ import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.lifecycle.*
 import com.amoscyk.android.rewatchplayer.AppConstant
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
@@ -37,6 +38,8 @@ class MainViewModel(
     val resourceUrl: LiveData<ResourceUrl> = _resourceUrl
     private val _resourceFile = MutableLiveData<ResourceFile>()
     val resourceFile: LiveData<ResourceFile> = _resourceFile
+    private val _resourceUri = MutableLiveData<ResourceUri>()
+    val resourceUri: LiveData<ResourceUri> = _resourceUri
 
     private val _isLoadingVideo = MutableLiveData(Event(false))
     val isLoadingVideo: LiveData<Event<Boolean>> = _isLoadingVideo
@@ -163,7 +166,7 @@ class MainViewModel(
         } else {
             metas.firstOrNull()?.let { meta ->
                 videoMeta = meta
-                fileMap = meta.playerResources.associate { Pair(it.itag, it.filename) }
+                fileMap = meta.playerResources.associate { Pair(it.itag, "${it.filepath}/${it.filename}") }
             } ?: throw NoVideoMetaException()
         }
         val history = youtubeRepository.getWatchHistory(arrayOf(videoId)).firstOrNull()
@@ -265,7 +268,7 @@ class MainViewModel(
         viewModelScope.launch {
             _currentVideoData.value?.let { viewData ->
                 if (listOfNotNull(vTag, aTag).all { it in viewData.fileMap }) {
-                    _resourceFile.value = ResourceFile(viewData.fileMap[vTag], viewData.fileMap[aTag], lastPlayPos)
+                    _resourceUri.value = ResourceUri(listOf(vTag!!, aTag!!).mapNotNull { viewData.fileMap[it]?.toUri() }, lastPlayPos)
                     _selectedTags.value = ResourceTag(vTag, aTag)
                     _isLocalBuffering = true
                     return@launch
@@ -286,7 +289,13 @@ class MainViewModel(
                     pendingVTag = vTag
                     pendingATag = aTag
                 } else {
-                    _resourceUrl.value = ResourceUrl(viewData.urlMap[vTag], viewData.urlMap[aTag], lastPlayPos)
+                    _resourceUri.value =
+                        ResourceUri(
+                            listOf(
+                                viewData.urlMap[vTag],
+                                viewData.urlMap[aTag]
+                            ).mapNotNull { it?.toUri() }, lastPlayPos
+                        )
                     _selectedTags.value = ResourceTag(vTag, aTag)
                     _isLocalBuffering = false
                 }
@@ -464,19 +473,6 @@ class MainViewModel(
         }
     }
 
-//    fun updateBookmarkStatus(bookmark: Boolean) {
-//        viewModelScope.launch {
-//            _currentVideoMeta.value?.videoMeta?.let { videoMeta ->
-//                youtubeRepository.updateVideoMeta(arrayOf(videoMeta.apply { bookmarked = bookmark }))
-//                _currentVideoMeta.value = _currentVideoMeta.value?.apply {
-//                    videoMeta.apply {
-//                        bookmarked = bookmark
-//                    }
-//                }
-//            }
-//        }
-//    }
-
     class NoVideoMetaException : Exception("No video meta")
     class NoYtInfoException : Exception("No YtInfo")
     class NoAvailableQualityException : Exception("No available quality")
@@ -491,6 +487,11 @@ class MainViewModel(
     data class ResourceTag(
         val vTag: Int?,
         val aTag: Int?
+    )
+
+    data class ResourceUri(
+        val uriList: List<Uri>,
+        val lastPlayPos: Long?
     )
 
     data class ResourceUrl(

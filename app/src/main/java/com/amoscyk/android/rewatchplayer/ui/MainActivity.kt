@@ -33,6 +33,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.amoscyk.android.rewatchplayer.*
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
+import com.amoscyk.android.rewatchplayer.service.AudioPlayerService
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel.ResponseActionType
 import com.amoscyk.android.rewatchplayer.ui.library.LibraryFragmentDirections
 import com.amoscyk.android.rewatchplayer.ui.player.*
@@ -133,6 +134,9 @@ class MainActivity : ReWatchPlayerActivity() {
             }
         }
     }
+
+    private var mWasPlayingOnPause = false
+    private var mPlayerServiceReceiver: BroadcastReceiver? = null
 
     private var mPlayerSizeListeners = ArrayList<VideoPlayerLayout.PlayerSizeListener>()
 
@@ -307,12 +311,9 @@ class MainActivity : ReWatchPlayerActivity() {
             }
         })
 
-        viewModel.resourceUrl.observe(this, Observer {
+        viewModel.resourceUri.observe(this, Observer {
             showPlayerView()
-            prepareMediaResource(
-                it.videoUrl?.let { url -> Uri.parse(url) },
-                it.audioUrl?.let { url -> Uri.parse(url) }
-            )
+            prepareMediaResource(*it.uriList.toTypedArray())
             if (it.lastPlayPos != null) {
                 AlertDialog.Builder(this)
                     .setMessage(R.string.player_restore_last_play_position_message)
@@ -340,60 +341,6 @@ class MainActivity : ReWatchPlayerActivity() {
                 }
             }
         })
-
-        viewModel.resourceFile.observe(this, Observer {
-            showPlayerView()
-            prepareMediaResource(
-                it.videoFile?.let { filename -> getResFileUriIfExist(filename) },
-                it.audioFile?.let { filename -> getResFileUriIfExist(filename) }
-            )
-            if (it.lastPlayPos != null) {
-                AlertDialog.Builder(this)
-                    .setMessage(R.string.player_restore_last_play_position_message)
-                    .setPositiveButton(R.string.confirm_text) { d, i ->
-                        exoPlayer?.apply {
-                            playWhenReady = true
-                            seekTo(currentWindow, it.lastPlayPos)
-                        }
-                    }
-                    .setNegativeButton(R.string.negative_text) { d, i ->
-                        d.cancel()
-                    }
-                    .setOnCancelListener {
-                        exoPlayer?.apply {
-                            playWhenReady = true
-                            seekTo(currentWindow, 0)
-                        }
-                    }
-                    .create()
-                    .show()
-            } else {
-                exoPlayer?.apply {
-                    playWhenReady = true
-                    seekTo(currentWindow, playbackPosition)
-                }
-            }
-        })
-
-//        viewModel.shouldAskUserRestoreWatchPosition.observe(this, Observer { event ->
-//            event.getContentIfNotHandled {
-//                AlertDialog.Builder(this)
-//                    .setMessage(R.string.player_restore_last_play_position_message)
-//                    .setPositiveButton(R.string.confirm_text) { d, i ->
-//                        playbackPosition = it.lastWatchPosMillis
-//                        viewModel.startPlayingVideo()
-//                    }
-//                    .setNegativeButton(R.string.negative_text) { d, i ->
-//                        d.cancel()
-//                    }
-//                    .setOnCancelListener {
-//                        playbackPosition = 0
-//                        viewModel.startPlayingVideo()
-//                    }
-//                    .create()
-//                    .show()
-//            }
-//        })
 
         viewModel.shouldSaveWatchHistory.observe(this, Observer { event ->
             event.getContentIfNotHandled { videoId ->
@@ -557,17 +504,43 @@ class MainActivity : ReWatchPlayerActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+
+        mPlayerServiceReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                playbackPosition = intent.getLongExtra(AudioPlayerService.EXTRA_KEY_PLAYBACK_POSITION, 0L)
+                Log.d("MainActivity", "audio service broadcast receiver: $playbackPosition")
+                viewModel.startPlayingVideo()
+            }
+        }
+        registerReceiver(mPlayerServiceReceiver, IntentFilter().apply {
+            addAction(AudioPlayerService.ACTION_GET_PLAYBACK_POSITION)
+        })
+        stopPlayService()
+    }
+
     override fun onPause() {
         super.onPause()
+
+        mWasPlayingOnPause = exoPlayer?.isPlaying == true
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N || !isInPictureInPictureMode) {
+            exoPlayer?.apply {
+                playWhenReady = false
+                viewModel.saveWatchHistory(currentPosition)
+                playbackPosition = currentPosition
+            }
+        }
+        mPlayerServiceReceiver?.let { unregisterReceiver(it) }
+        mPlayerServiceReceiver = null
+
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-            if (!isActivityOnStackTop() || !appSharedPreference.getBoolean(
+            if (isActivityOnStackTop() && mWasPlayingOnPause && appSharedPreference.getBoolean(
                     PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
                     AppSettings.DEFAULT_ALLOW_PLAY_IN_BACKGROUND
-                )) {
-                exoPlayer?.apply {
-                    playWhenReady = false
-                    viewModel.saveWatchHistory(currentPosition)
-                }
+                )
+            ) {
+                startPlayService()
             }
         }
     }
@@ -575,14 +548,12 @@ class MainActivity : ReWatchPlayerActivity() {
     override fun onStop() {
         super.onStop()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            if (!isActivityOnStackTop() || !appSharedPreference.getBoolean(
+            if (isActivityOnStackTop() && mWasPlayingOnPause && appSharedPreference.getBoolean(
                     PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
                     AppSettings.DEFAULT_ALLOW_PLAY_IN_BACKGROUND
-                )) {
-                exoPlayer?.apply {
-                    playWhenReady = false
-                    viewModel.saveWatchHistory(currentPosition)
-                }
+                )
+            ) {
+                startPlayService()
             }
         }
     }
@@ -663,13 +634,13 @@ class MainActivity : ReWatchPlayerActivity() {
     ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (isInPictureInPictureMode) {
-                    setPictureInPictureParams(PictureInPictureParams.Builder().apply {
-                        if (exoPlayer?.isPlaying == true) {
-                            setPauseAction()
-                        } else {
-                            setPlayAction()
-                        }
-                    }.build())
+                setPictureInPictureParams(PictureInPictureParams.Builder().apply {
+                    if (exoPlayer?.isPlaying == true) {
+                        setPauseAction()
+                    } else {
+                        setPlayAction()
+                    }
+                }.build())
                 mPlayerLayout.hideControlView()
                 mPipActionReceiver = object : BroadcastReceiver() {
                     override fun onReceive(context: Context, intent: Intent) {
@@ -695,6 +666,8 @@ class MainActivity : ReWatchPlayerActivity() {
                 })
             } else {
                 mPipActionReceiver?.let { unregisterReceiver(it) }
+                mPipActionReceiver = null
+                exoPlayer?.playWhenReady = false
             }
         }
     }
@@ -934,6 +907,25 @@ class MainActivity : ReWatchPlayerActivity() {
             R.drawable.exo_controls_play), "Play", "Play video",
             PendingIntent.getBroadcast(this@MainActivity, REQUEST_CODE_PIP_PLAY,
                 Intent(ACTION_PIP_PLAY), 0))))
+
+    private fun startPlayService() {
+        val viewData = viewModel.videoData.value!!
+        val intent = AudioPlayerService.IntentBuilder(this)
+            .setUriList(viewModel.resourceUri.value!!.uriList.toTypedArray())
+            .setPlaybackPosition(playbackPosition)
+            .setTitle(viewData.videoMeta.videoMeta.title)
+            .setContent(viewData.videoMeta.videoMeta.channelTitle)
+            .build()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+    }
+
+    private fun stopPlayService() {
+        stopService(Intent(this, AudioPlayerService::class.java))
+    }
 
     fun getMainFragment(): MainPageFragment? =
         supportFragmentManager.findFragmentById(R.id.root_nav_container)?.
