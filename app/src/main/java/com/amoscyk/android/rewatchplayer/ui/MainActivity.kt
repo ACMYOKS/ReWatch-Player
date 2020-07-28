@@ -134,8 +134,6 @@ class MainActivity : ReWatchPlayerActivity() {
             }
         }
     }
-
-    private var mWasPlayingOnPause = false
     private var mPlayerServiceReceiver: BroadcastReceiver? = null
 
     private var mPlayerSizeListeners = ArrayList<VideoPlayerLayout.PlayerSizeListener>()
@@ -523,19 +521,17 @@ class MainActivity : ReWatchPlayerActivity() {
     override fun onPause() {
         super.onPause()
 
-        mWasPlayingOnPause = exoPlayer?.isPlaying == true
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N || !isInPictureInPictureMode) {
+        mPlayerServiceReceiver?.let { unregisterReceiver(it) }
+        mPlayerServiceReceiver = null
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            val wasPlaying = exoPlayer?.isPlaying == true
             exoPlayer?.apply {
                 playWhenReady = false
                 viewModel.saveWatchHistory(currentPosition)
                 playbackPosition = currentPosition
             }
-        }
-        mPlayerServiceReceiver?.let { unregisterReceiver(it) }
-        mPlayerServiceReceiver = null
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-            if (isActivityOnStackTop() && mWasPlayingOnPause && appSharedPreference.getBoolean(
+            if (isActivityOnStackTop() && wasPlaying && appSharedPreference.getBoolean(
                     PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
                     AppSettings.DEFAULT_ALLOW_PLAY_IN_BACKGROUND
                 )
@@ -548,7 +544,13 @@ class MainActivity : ReWatchPlayerActivity() {
     override fun onStop() {
         super.onStop()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            if (isActivityOnStackTop() && mWasPlayingOnPause && appSharedPreference.getBoolean(
+            val wasPlaying = exoPlayer?.isPlaying == true
+            exoPlayer?.apply {
+                playWhenReady = false
+                viewModel.saveWatchHistory(currentPosition)
+                playbackPosition = currentPosition
+            }
+            if (isActivityOnStackTop() && wasPlaying && appSharedPreference.getBoolean(
                     PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
                     AppSettings.DEFAULT_ALLOW_PLAY_IN_BACKGROUND
                 )
@@ -667,7 +669,6 @@ class MainActivity : ReWatchPlayerActivity() {
             } else {
                 mPipActionReceiver?.let { unregisterReceiver(it) }
                 mPipActionReceiver = null
-                exoPlayer?.playWhenReady = false
             }
         }
     }
