@@ -19,6 +19,7 @@ import android.util.Log
 import android.util.Rational
 import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
@@ -143,6 +144,12 @@ class MainActivity : ReWatchPlayerActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // init account name for youtube repo every time main activity is created
+        // to prevent null account name on app restart
+        appSharedPreference.getString(PreferenceKey.ACCOUNT_NAME, null)?.let {
+            viewModel.setAccountName(it)
+        }
 
         initPlayer()
         setupViews()

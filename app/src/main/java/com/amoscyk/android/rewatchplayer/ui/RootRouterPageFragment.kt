@@ -34,6 +34,8 @@ class RootRouterPageFragment : Fragment() {
     }
 
     private fun navigateToNextPage() {
+        // FIXME: should set account name in MainActivity,
+        // since this page cannot be reached on app restart and this line will not be called
         getSelectedAccountName()?.let {
             youtubeServiceProvider.credential.selectedAccountName = it
             findNavController().navigate(RootRouterPageFragmentDirections.showMainPage())

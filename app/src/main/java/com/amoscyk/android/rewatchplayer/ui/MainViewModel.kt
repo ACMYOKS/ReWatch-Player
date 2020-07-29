@@ -126,6 +126,10 @@ class MainViewModel(
     fun notifyIsAllowedPlayUsingMobile(isAllowedPlayUsingMobile: Boolean) { _isAllowedPlayUsingMobile = isAllowedPlayUsingMobile }
     fun notifyIsAllowedDownloadUsingMobile(isAllowedDownloadUsingMobile: Boolean) { _isAllowedDownloadUsingMobile = isAllowedDownloadUsingMobile }
 
+    fun setAccountName(accountName: String?) {
+        youtubeRepository.setAccountName(accountName)
+    }
+
     fun searchVideoById(videoId: String?) {
         viewModelScope.launch {
             _isVideoExist.value = Resource.loading(null)

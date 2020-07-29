@@ -19,7 +19,7 @@ class YoutubeRepository(
     private val ytExtractor = YouTubeExtractor(ytOpenService)
     private val ytApiService = ytApiServiceProvider.youtubeService
 
-    fun setAccountName(accountName: String) {
+    fun setAccountName(accountName: String?) {
         ytApiServiceProvider.credential.selectedAccountName = accountName
     }
 
