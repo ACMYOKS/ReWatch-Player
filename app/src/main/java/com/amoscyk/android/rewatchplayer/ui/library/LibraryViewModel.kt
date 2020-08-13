@@ -65,6 +65,8 @@ class LibraryViewModel(
     private val _bookmarkRemoveCount = MutableLiveData<Event<Int>>()
     val bookmarkRemoveCount: LiveData<Event<Int>> = _bookmarkRemoveCount
 
+    private var bookmarkChanged = false
+
     init {
         _editMode.value = false
         _currentDisplayMode.value = DisplayMode.PLAYLISTS
@@ -136,7 +138,10 @@ class LibraryViewModel(
                 if (reachRefreshPlaylistTime) loadPlaylists()
             }
             DisplayMode.BOOKMARKED -> {
-                if (reachRefreshBookmarkListTime) loadBookmarkList()
+                if (bookmarkChanged || reachRefreshBookmarkListTime) {
+                    loadBookmarkList()
+                    bookmarkChanged = false
+                }
             }
             else -> {}
         }
@@ -158,6 +163,10 @@ class LibraryViewModel(
         }
     }
 
+    fun notifyBookmarkChanged() {
+        bookmarkChanged = true
+    }
+
     fun setDisplayMode(displayMode: DisplayMode) {
         _currentDisplayMode.value = displayMode
         when (displayMode) {
@@ -167,8 +176,9 @@ class LibraryViewModel(
                 }
             }
             DisplayMode.BOOKMARKED -> {
-                if (reachRefreshBookmarkListTime && _editMode.value == false) {
+                if (bookmarkChanged || (reachRefreshBookmarkListTime && _editMode.value == false)) {
                     loadBookmarkList()
+                    bookmarkChanged = false
                 }
             }
             DisplayMode.PLAYLISTS -> {
@@ -201,6 +211,7 @@ class LibraryViewModel(
                 _showLoadingChannel.loading {
                     runCatching {
                         _channelListRes.value = youtubeRepository.getUserSubscribedChannels()
+                        Log.d("MOMO", "load channel")
                         setChannelTimer()
                     }.onFailure {
                         Log.e(AppConstant.TAG, it.message.orEmpty())
@@ -237,6 +248,8 @@ class LibraryViewModel(
             _showLoadingBookmarked.loading {
                 _bookmarkList.value =
                     youtubeRepository.getBookmarkedVideoMetaWithPlayerResource()
+
+                Log.d("MOMO", "load bookmark")
                 setBookmarkListTimer()
             }
         }
@@ -249,6 +262,7 @@ class LibraryViewModel(
                 _playlistListResHolder = ListResponseHolder()
                 _showLoadingPlaylist.loading {
                     runCatching {
+                        Log.d("MOMO", "load playlist")
                         _playlistListRes.value = youtubeRepository.getUserPlaylist()
                         setPlaylistTimer()
                     }.onFailure {
@@ -283,7 +297,7 @@ class LibraryViewModel(
 
     fun removeBookmark(videoIds: List<String>) {
         viewModelScope.launch {
-            _bookmarkRemoveCount.value = Event(youtubeRepository.toggleBookmarked(videoIds.toTypedArray()))
+            _bookmarkRemoveCount.value = Event(youtubeRepository.removeBookmark(videoIds.toTypedArray()))
         }
     }
 

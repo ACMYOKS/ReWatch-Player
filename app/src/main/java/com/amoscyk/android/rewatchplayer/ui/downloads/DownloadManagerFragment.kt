@@ -39,7 +39,6 @@ import kotlinx.coroutines.launch
 
 class DownloadManagerFragment : ReWatchPlayerFragment() {
 
-    private var rootView: View? = null
     private val toolbar get() = view!!.toolbar
     private val rvDownloadStatus get() = view!!.rv_download_status
     private val mEmptyView get() = view!!.empty_view
@@ -57,6 +56,7 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
                         Snackbar.make(view!!, (result.message as? String) ?: "error",
                             Snackbar.LENGTH_SHORT).show()
                     }
+                    actionMode?.finish()
                 }
             }
             .setNegativeButton(getString(R.string.cancel_text)) { _, _ -> }
@@ -265,8 +265,7 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
             override fun areItemsTheSame(oldItem: VideoMetaWithPlayerResource, newItem: VideoMetaWithPlayerResource): Boolean {
                 return oldItem.videoMeta.videoId == newItem.videoMeta.videoId &&
                         oldItem.videoMeta.title == newItem.videoMeta.title &&
-                        oldItem.videoMeta.channelTitle == newItem.videoMeta.channelTitle &&
-                        oldItem.videoMeta.bookmarked == newItem.videoMeta.bookmarked
+                        oldItem.videoMeta.channelTitle == newItem.videoMeta.channelTitle
             }
 
             override fun areContentsTheSame(oldItem: VideoMetaWithPlayerResource, newItem: VideoMetaWithPlayerResource): Boolean {

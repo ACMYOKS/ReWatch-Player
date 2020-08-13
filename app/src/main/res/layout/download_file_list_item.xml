@@ -1,70 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:paddingStart="8dp"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingEnd="8dp"
+    android:paddingStart="8dp"
     android:paddingTop="4dp"
+    android:paddingEnd="8dp"
     android:paddingBottom="4dp">
+
     <TextView
         android:id="@+id/tv_description"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:textSize="18sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:text="1080p"
-        android:textSize="18sp"/>
+        tools:text="1080p" />
+
     <TextView
         android:id="@+id/tv_file_size"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/checkbox_select"
         android:layout_marginEnd="8dp"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/checkbox_select"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_goneMarginEnd="0dp"
         tools:text="50MB/100MB"
-        android:textSize="18sp"
-        tools:visibility="visible"/>
+        tools:visibility="visible" />
+
     <TextView
         android:id="@+id/tv_completed_file_size"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:textSize="18sp"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tv_description"
-        app:layout_constraintStart_toStartOf="parent"
         tools:text="100MB"
-        android:textSize="18sp"
-        tools:visibility="gone"/>
-    <TextView
-        android:id="@+id/tv_status_reason"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:textSize="18sp"
-        app:layout_constraintTop_toBottomOf="@id/tv_completed_file_size"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/checkbox_select"
-        tools:text="status: no network"/>
+        tools:visibility="gone" />
+
     <ProgressBar
         android:id="@+id/pb_download"
         style="@style/Widget.AppCompat.ProgressBar.Horizontal"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/checkbox_select"
-        app:layout_constraintTop_toBottomOf="@id/tv_description"
         android:layout_marginEnd="8dp"
+        app:layout_constraintEnd_toStartOf="@id/checkbox_select"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_description"
         app:layout_goneMarginEnd="0dp"
-        tools:visibility="visible"
-        tools:progress="50"/>
+        tools:progress="50"
+        tools:visibility="visible" />
+
+    <TextView
+        android:id="@+id/tv_status_reason"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toStartOf="@id/checkbox_select"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/pb_download"
+        tools:text="status: no network" />
+
     <CheckBox
         android:id="@+id/checkbox_select"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        tools:visibility="visible"/>
+        tools:visibility="visible" />
 </androidx.constraintlayout.widget.ConstraintLayout>

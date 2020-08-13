@@ -63,7 +63,7 @@ class VideoListViewModel(
                 _showListItemLoading.loading {
                     runCatching {
                         _playlistItemListRes.value =
-                            youtubeRepository.getPlaylistItemForPlaylist(playlist.id, maxResults = 10)
+                            youtubeRepository.getPlaylistItemForPlaylist(playlist.id)
                     }
                 }
             }
@@ -89,7 +89,7 @@ class VideoListViewModel(
                     _showListItemLoading.loading(true) {
                         runCatching {
                             _playlistItemListRes.value =
-                                youtubeRepository.getPlaylistItemForPlaylist(_currentPlaylist!!.id, nextPageToken, 10)
+                                youtubeRepository.getPlaylistItemForPlaylist(_currentPlaylist!!.id, nextPageToken)
                         }
                     }
                 }

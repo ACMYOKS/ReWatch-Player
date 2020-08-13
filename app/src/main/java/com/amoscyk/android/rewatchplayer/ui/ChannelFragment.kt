@@ -43,6 +43,7 @@ class ChannelFragment: ReWatchPlayerFragment() {
     private var mRootView: View? = null
     private val mCollapsingToolbar by lazy { mRootView!!.collapsing_toolbar }
     private val mToolbar by lazy { mRootView!!.toolbar }
+    private val mSvContent by lazy { mRootView!!.sv_content }
     private val mIvBanner by lazy { mRootView!!.iv_banner }
     private val mIvThumbnail by lazy { mRootView!!.iv_thumbnail }
     private val mTvChannelName by lazy { mRootView!!.tv_title }
@@ -80,9 +81,9 @@ class ChannelFragment: ReWatchPlayerFragment() {
 
         viewModel.channelList.observe(this, Observer { res ->
             res.items.firstOrNull()?.let { info ->
-                mCollapsingToolbar.title = info.title.withEmoji()
-                mToolbar.title = info.title.withEmoji()
-                mTvChannelName.text = info.title.withEmoji()
+                val title = info.title.withEmoji()
+                mCollapsingToolbar.title = title
+                mTvChannelName.text = title
                 mTvDescription.text = info.description.withEmoji()
                 mTvSubscriberCount.text = getString(R.string.channel_subscriber_count).format(info.subscriberCount)
                 mTvVideoCount.text = getString(R.string.channel_video_count).format(info.videoCount)

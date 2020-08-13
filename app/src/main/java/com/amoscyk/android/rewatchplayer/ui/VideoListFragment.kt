@@ -53,7 +53,8 @@ class VideoListFragment : ReWatchPlayerFragment() {
             mainActivity?.showArchiveOption(meta.videoId)
         }
         setOnBookmarkClickListener { position, meta ->
-            mainViewModel.toggleBookmarkStatus(meta.videoId)
+            mainViewModel.setBookmarked(meta.videoId, !isBookmarked(position))
+//            mainViewModel.toggleBookmarkStatus(meta.videoId)
         }
         setOnItemClickListener { position, meta ->
             if (isEditMode) {
@@ -79,12 +80,8 @@ class VideoListFragment : ReWatchPlayerFragment() {
 
         requireActivity().onBackPressedDispatcher.addCallback(mOnBackPressedCallback)
 
-        mainViewModel.bookmarkToggled.observe(this, Observer { videoId ->
-            val idx = videoMetas.indexOfFirst { it.videoId == videoId }
-            if (idx != -1) {
-                videoMetas[idx].bookmarked = !videoMetas[idx].bookmarked
-                mListAdapter.notifyItemChanged(idx)
-            }
+        mainViewModel.bookmarkedVid.observe(this, Observer {
+            mListAdapter.setBookmarkedVideoId(it)
         })
 
         viewModel.title.observe(this, Observer { title ->
@@ -224,6 +221,7 @@ class VideoListFragment : ReWatchPlayerFragment() {
 
     private fun fetchVideoList() {
         viewModel.setPlaylist(args.playlist)
+        mainViewModel.refreshBookmarkedVid()
     }
 
 }

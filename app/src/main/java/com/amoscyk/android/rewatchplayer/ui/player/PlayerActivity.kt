@@ -136,7 +136,7 @@ class PlayerActivity : ReWatchPlayerActivity() {
 
         viewModel.videoMeta.observe(this, Observer {
             mTitleTv.text = it.title
-            setBookmarkButton(it.bookmarked)
+//            setBookmarkButton(it.bookmarked)
         })
 
         viewModel.resourceUrl.observe(this, Observer {

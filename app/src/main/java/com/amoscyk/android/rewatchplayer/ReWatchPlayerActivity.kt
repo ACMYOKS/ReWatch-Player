@@ -1,5 +1,6 @@
 package com.amoscyk.android.rewatchplayer
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.amoscyk.android.rewatchplayer.util.ActivityIdStack
@@ -22,6 +23,15 @@ abstract class ReWatchPlayerActivity: AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString(STATE_KEY_ACTIVITY_ID, activityId)
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        intent?.flags?.let { flags ->
+            if (flags or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT == flags) {
+                ActivityIdStack.bringIdToTop(activityId!!)
+            }
+        }
     }
 
     override fun onDestroy() {

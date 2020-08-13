@@ -27,6 +27,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.view.ActionMode
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.Observer
 import androidx.navigation.findNavController
 import androidx.recyclerview.widget.DiffUtil
@@ -204,16 +205,16 @@ class MainActivity : ReWatchPlayerActivity() {
             event.getContentIfNotHandled { mArchiveOptionDialog?.show() }
         })
 
-        viewModel.bookmarkToggled.observe(this, Observer {
+//        viewModel.bookmarkToggled.observe(this, Observer {
 //            viewModel.videoMeta.value?.apply {
 //                bookmarked = !bookmarked
 //                setBookmarkButton(bookmarked)
 //            }
-            viewModel.videoData.value?.videoMeta?.videoMeta?.apply {
-                bookmarked = !bookmarked
-                setBookmarkButton(bookmarked)
-            }
-        })
+//            viewModel.videoData.value?.videoMeta?.videoMeta?.apply {
+//                bookmarked = !bookmarked
+//                setBookmarkButton(bookmarked)
+//            }
+//        })
 
         viewModel.searchVideoResource.observe(this, Observer { res ->
             when (res.status) {
@@ -265,11 +266,30 @@ class MainActivity : ReWatchPlayerActivity() {
 //                })
 //            }
 //        })
+        viewModel.bookmarkedVid.observe(this, Observer {
+
+        })
+
+        object : MediatorLiveData<Boolean>() {
+            var vid = listOf<String>()
+            var currentVid: String? = null
+            init {
+                addSource(viewModel.bookmarkedVid) {
+                    vid = it
+                    value = currentVid in vid
+                }
+                addSource(viewModel.videoData) {
+                    currentVid = it.videoMeta.videoMeta.videoId
+                    value = currentVid!! in vid
+                }
+            }
+        }.observe(this, Observer { isBookmarked ->
+            setBookmarkButton(isBookmarked)
+        })
 
         viewModel.videoData.observe(this, Observer { viewData ->
             val meta = viewData.videoMeta.videoMeta
             mPlayerLayout.setTitle(meta.title)
-            setBookmarkButton(meta.bookmarked)
             val itags = meta.itags
             val vTags = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMATS.filter {
                 itags.contains(it.key)
@@ -490,6 +510,8 @@ class MainActivity : ReWatchPlayerActivity() {
                 }
             }
         })
+
+        viewModel.refreshBookmarkedVid()
 
         // handle implicit intent from hyperlink
         if (intent.action == Intent.ACTION_VIEW) {
@@ -714,9 +736,14 @@ class MainActivity : ReWatchPlayerActivity() {
                 inflateMenu(R.menu.player_option_menu)
                 setOnMenuItemClickListener {
                     when (it.itemId) {
-                        R.id.bookmark, R.id.remove_bookmark -> {
-                            viewModel.videoData.value?.videoMeta!!.videoMeta.videoId.let { vid ->
-                                viewModel.toggleBookmarkStatus(vid)
+                        R.id.bookmark -> {
+                            viewModel.videoData.value?.videoMeta?.videoMeta?.videoId?.let { vid ->
+                                viewModel.setBookmarked(vid, true)
+                            }
+                        }
+                        R.id.remove_bookmark -> {
+                            viewModel.videoData.value?.videoMeta?.videoMeta?.videoId?.let { vid ->
+                                viewModel.setBookmarked(vid, false)
                             }
                         }
                         R.id.rotation -> {
@@ -844,10 +871,6 @@ class MainActivity : ReWatchPlayerActivity() {
 
     fun showArchiveOption(videoId: String) {
         viewModel.showArchiveOption(videoId)
-    }
-
-    fun toggleBookmarkStatus(videoId: String) {
-        viewModel.toggleBookmarkStatus(videoId)
     }
 
     private fun showPlayerView() {

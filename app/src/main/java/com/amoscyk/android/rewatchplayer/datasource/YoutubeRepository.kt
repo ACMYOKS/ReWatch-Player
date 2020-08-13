@@ -1,6 +1,9 @@
 package com.amoscyk.android.rewatchplayer.datasource
 
 import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.liveData
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPThumbnailDetails
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.*
@@ -19,8 +22,12 @@ class YoutubeRepository(
     private val ytExtractor = YouTubeExtractor(ytOpenService)
     private val ytApiService = ytApiServiceProvider.youtubeService
 
+    private val _currentAccountName = MutableLiveData<String>()
+    val currentAccountName: LiveData<String> = _currentAccountName
+
     fun setAccountName(accountName: String?) {
         ytApiServiceProvider.credential.selectedAccountName = accountName
+        _currentAccountName.value = accountName
     }
 
     suspend fun loadSearchResultResource(
@@ -223,7 +230,6 @@ class YoutubeRepository(
             val ytInfo = ytExtractor.extractInfo(videoId)
             ytInfo?.videoDetails?.let {
                 val record = appDatabase.videoMetaDao().getByVideoId(it.videoId)
-                val bookmarked = if (record.isEmpty()) false else record[0].bookmarked
                 val meta = VideoMeta(
                     videoId = it.videoId,
                     title = it.title,
@@ -235,8 +241,7 @@ class YoutubeRepository(
                     ).toString(),
                     thumbnails = RPThumbnailDetails(),
                     tags = it.keywords,
-                    itags = ytInfo.urlMap.keys.toList(),
-                    bookmarked = bookmarked
+                    itags = ytInfo.urlMap.keys.toList()
                 )
                 appDatabase.videoMetaDao().apply {
                     if (record.isEmpty()) insert(meta)
@@ -285,8 +290,9 @@ class YoutubeRepository(
         }
 
     suspend fun getBookmarkedVideoMeta(): List<VideoMeta> = withContext(Dispatchers.IO) {
-        return@withContext appDatabase.videoMetaDao().getBookmarked()
-
+        val username = currentAccountName.value
+        return@withContext if (username == null) listOf()
+        else appDatabase.videoMetaDao().getBookmarked(username)
     }
 
     suspend fun getVideoMetaWithPlayerResource(videoIds: Array<String>? = null): List<VideoMetaWithPlayerResource> =
@@ -304,22 +310,32 @@ class YoutubeRepository(
 
     suspend fun getBookmarkedVideoMetaWithPlayerResource(): List<VideoMetaWithPlayerResource> =
         withContext(Dispatchers.IO) {
-            return@withContext appDatabase.videoMetaDao().getBookmarkedWithPlayerResource()
-
+            return@withContext currentAccountName.value?.let { username ->
+                appDatabase.videoMetaDao().getBookmarkedWithPlayerResource(username)
+            } ?: listOf()
         }
 
-    suspend fun toggleBookmarked(videoIds: Array<String>): Int = withContext(Dispatchers.IO) {
-        return@withContext appDatabase.videoMetaDao().toggleBookmarked(*videoIds)
+    suspend fun getBookmarkedVideoId(): List<String> = withContext(Dispatchers.IO) {
+        return@withContext currentAccountName.value?.let { username ->
+            appDatabase.videoBookmarkDao().getAllForUser(username).map { it.videoId }
+        } ?: listOf()
     }
 
-
-    suspend fun toggleBookmarked(videoId: String): Int = withContext(Dispatchers.IO) {
-        val count = appDatabase.videoMetaDao().toggleBookmarked(videoId)
-        if (count == 0) {
-            loadYTInfoForVideoId(videoId)
-            return@withContext appDatabase.videoMetaDao().toggleBookmarked(videoId)
+    suspend fun addBookmark(videoId: String) = withContext(Dispatchers.IO) {
+        currentAccountName.value?.let { username ->
+            appDatabase.videoBookmarkDao().insert(username, videoId)
+            // add VideoMeta for bookmarked video to ease Bookmark list display
+            if (appDatabase.videoMetaDao().getByVideoId(videoId).isEmpty()) {
+                loadYTInfoForVideoId(videoId)
+            }
         }
-        return@withContext count
+        return@withContext
+    }
+
+    suspend fun removeBookmark(videoIds: Array<String>): Int = withContext(Dispatchers.IO) {
+        return@withContext currentAccountName.value?.let { username ->
+            appDatabase.videoBookmarkDao().delete(username, videoIds)
+        } ?: 0
     }
 
     suspend fun upsertVideoMeta(videoMeta: VideoMeta): Int {
@@ -355,8 +371,9 @@ class YoutubeRepository(
 
     suspend fun getWatchHistory(videoIds: Array<String>): List<WatchHistory> =
         withContext(Dispatchers.IO) {
-            val username = ytApiServiceProvider.credential.selectedAccountName
-            appDatabase.watchHistoryDao().getWithVideoIdForUser(videoIds, username)
+            currentAccountName.value?.let { username ->
+                appDatabase.watchHistoryDao().getWithVideoIdForUser(videoIds, username)
+            } ?: listOf()
         }
 
     suspend fun insertWatchHistory(history: WatchHistory): Int = withContext(Dispatchers.IO) {
@@ -366,10 +383,11 @@ class YoutubeRepository(
     suspend fun insertWatchHistory(videoId: String, currentTime: Long, playbackPos: Long): Int =
         withContext(Dispatchers.IO) {
             Log.d("YtRepo", "insert history for video $videoId, at $currentTime, at pos $playbackPos")
-            val username = ytApiServiceProvider.credential.selectedAccountName
-            appDatabase.watchHistoryDao().insert(
-                WatchHistory(videoId, username, currentTime, playbackPos)
-            ).size
+            currentAccountName.value?.let { username ->
+                appDatabase.watchHistoryDao().insert(
+                    WatchHistory(videoId, username, currentTime, playbackPos)
+                ).size
+            } ?: 0
         }
 
     companion object {

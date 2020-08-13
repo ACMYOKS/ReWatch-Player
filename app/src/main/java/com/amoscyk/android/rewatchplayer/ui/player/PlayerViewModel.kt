@@ -418,14 +418,14 @@ class PlayerViewModel(
 
     fun updateBookmarkStatus(bookmark: Boolean) {
         viewModelScope.launch {
-            _currentVideoMeta.value?.videoMeta?.let { videoMeta ->
-                youtubeRepository.updateVideoMeta(arrayOf(videoMeta.apply { bookmarked = bookmark }))
-                _currentVideoMeta.value = _currentVideoMeta.value?.apply {
-                    videoMeta.apply {
-                        bookmarked = bookmark
-                    }
-                }
-            }
+//            _currentVideoMeta.value?.videoMeta?.let { videoMeta ->
+//                youtubeRepository.updateVideoMeta(arrayOf(videoMeta.apply { bookmarked = bookmark }))
+//                _currentVideoMeta.value = _currentVideoMeta.value?.apply {
+//                    videoMeta.apply {
+//                        bookmarked = bookmark
+//                    }
+//                }
+//            }
         }
     }
 

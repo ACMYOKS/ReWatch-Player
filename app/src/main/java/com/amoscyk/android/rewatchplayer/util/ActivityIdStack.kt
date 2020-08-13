@@ -11,6 +11,12 @@ object ActivityIdStack {
         activityIdStack.remove(id)
     }
 
+    fun bringIdToTop(id: String) {
+        if (activityIdStack.remove(id)) {
+            activityIdStack.add(id)
+        }
+    }
+
     fun isActivityOnTop(id: String): Boolean {
         if (activityIdStack.size == 0) return false
         return activityIdStack.last() == id

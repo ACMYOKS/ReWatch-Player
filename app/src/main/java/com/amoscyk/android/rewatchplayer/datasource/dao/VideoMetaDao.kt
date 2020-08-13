@@ -12,11 +12,9 @@ interface VideoMetaDao {
     @Query("SELECT * FROM video_metas WHERE video_id IN (:videoIds)")
     fun getByVideoId(vararg videoIds: String): List<VideoMeta>
 
-    @Query("SELECT * FROM video_metas WHERE bookmarked = 1")
-    fun getBookmarked(): List<VideoMeta>
-
-    @Query("UPDATE video_metas SET bookmarked = NOT bookmarked WHERE video_id IN(:videoIds)")
-    fun toggleBookmarked(vararg videoIds: String): Int
+    @Transaction
+    @Query("SELECT * FROM video_metas WHERE video_id in (SELECT video_id FROM video_bookmarks WHERE username = :username)")
+    fun getBookmarked(username: String): List<VideoMeta>
 
     @Transaction
     @Query("SELECT * FROM video_metas")
@@ -31,8 +29,8 @@ interface VideoMetaDao {
     fun getAllExistingPlayerResource(): List<VideoMetaWithPlayerResource>
 
     @Transaction
-    @Query("SELECT * FROM video_metas WHERE bookmarked = 1")
-    fun getBookmarkedWithPlayerResource(): List<VideoMetaWithPlayerResource>
+    @Query("SELECT * FROM video_metas WHERE video_id in (SELECT video_id FROM video_bookmarks WHERE username = :username)")
+    fun getBookmarkedWithPlayerResource(username: String): List<VideoMetaWithPlayerResource>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(vararg videoMetas: VideoMeta): List<Long>

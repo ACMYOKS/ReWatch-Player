@@ -38,6 +38,7 @@ class VideoListAdapter: ListAdapter<VideoMeta, VideoListAdapter.ViewHolder>(DIFF
     private var isInfiniteLoadEnabled = true
 
     private val viewStatusMap = hashMapOf<String, ViewStatus>()
+    private var bookmarkedVideoId = listOf<String>()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -127,6 +128,18 @@ class VideoListAdapter: ListAdapter<VideoMeta, VideoListAdapter.ViewHolder>(DIFF
     fun getSelectedItemsId(): List<String> =
         viewStatusMap.filterValues { it.isSelected }.keys.toList()
 
+    fun setBookmarkedVideoId(vid: List<String>) {
+        bookmarkedVideoId = vid
+        notifyDataSetChanged()
+    }
+
+    fun isBookmarked(position: Int): Boolean {
+        if (position in 0 until itemCount) {
+            return getItem(position).videoId in bookmarkedVideoId
+        }
+        return false
+    }
+
     fun setOnItemClickListener(l: ((position: Int, meta: VideoMeta) -> Unit)?) { onItemClick = l }
     fun setOnItemLongClickListener(l: ((position: Int, meta: VideoMeta) -> Boolean)?) { onItemLongClick = l }
     fun setOnArchiveClickListener(l: ((position: Int, meta: VideoMeta) -> Unit)?) { onArchiveClick = l }
@@ -175,7 +188,7 @@ class VideoListAdapter: ListAdapter<VideoMeta, VideoListAdapter.ViewHolder>(DIFF
             checkbox.isChecked = viewStatusMap[video.videoId]!!.isSelected
             archiveBtn.visibility = if (isEditMode || !isArchivable) View.GONE else View.VISIBLE
             bookmarkBtn.visibility = if (isEditMode || !isBookmarkable) View.GONE else View.VISIBLE
-            bookmarkBtn.isSelected = video.bookmarked
+            bookmarkBtn.isSelected = video.videoId in bookmarkedVideoId
         }
 
     }
@@ -183,8 +196,7 @@ class VideoListAdapter: ListAdapter<VideoMeta, VideoListAdapter.ViewHolder>(DIFF
     companion object {
         val DIFF_CALLBACK = object : DiffUtil.ItemCallback<VideoMeta>() {
             override fun areItemsTheSame(oldItem: VideoMeta, newItem: VideoMeta): Boolean {
-                return oldItem.videoId == newItem.videoId &&
-                        oldItem.bookmarked == newItem.bookmarked
+                return oldItem.videoId == newItem.videoId
             }
 
             override fun areContentsTheSame(oldItem: VideoMeta, newItem: VideoMeta): Boolean {

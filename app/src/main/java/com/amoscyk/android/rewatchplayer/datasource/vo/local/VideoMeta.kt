@@ -15,6 +15,5 @@ data class VideoMeta(
     var duration: String,
     var thumbnails: RPThumbnailDetails,
     val tags: List<String>,
-    val itags: List<Int>,
-    var bookmarked: Boolean
+    val itags: List<Int>
 )

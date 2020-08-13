@@ -12,10 +12,16 @@
 
         <item name="snackbarStyle">@style/Widget.MaterialComponents.Snackbar</item>
         <item name="snackbarButtonStyle">@style/Widget.MaterialComponents.Button.TextButton.Snackbar</item>
+        <item name="actionModeStyle">@style/AppActionModeStyle</item>
+        <item name="actionBarTheme">@style/ThemeOverlay.AppCompat.Dark.ActionBar</item>
     </style>
 
     <style name="AppProgressDialog" parent="Theme.MaterialComponents.Dialog.Bridge">
         <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
+
+    <style name="AppActionModeStyle" parent="@style/Widget.AppCompat.ActionMode">
+
     </style>
 
 </resources>

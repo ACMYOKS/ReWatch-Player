@@ -25,8 +25,7 @@ data class RPVideo(
         duration = duration,
         thumbnails = thumbnails,
         tags = tags,
-        itags = listOf(),
-        bookmarked = false
+        itags = listOf()
     )
 }
 

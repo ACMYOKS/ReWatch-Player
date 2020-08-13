@@ -25,6 +25,9 @@ import kotlin.math.round
 class MainViewModel(
     private val youtubeRepository: YoutubeRepository
 ): ViewModel() {
+
+    val currentAccountName: LiveData<String> = youtubeRepository.currentAccountName
+
     private val _isOnlineMode = MutableLiveData(false)
     val isOnlineMode: LiveData<Boolean> = _isOnlineMode
 
@@ -96,9 +99,6 @@ class MainViewModel(
     private val _getVideoResult = MutableLiveData<Event<GetVideoResult>>()
     val getVideoResult: LiveData<Event<GetVideoResult>> = _getVideoResult
 
-    private val _bookmarkToggled = MutableLiveData<String>()
-    val bookmarkToggled: LiveData<String> = _bookmarkToggled
-
 //    private var pendingFetchVideoId: String? = null
     private var pendingVTag: Int? = null
     private var pendingATag: Int? = null
@@ -115,6 +115,9 @@ class MainViewModel(
     val archiveVideoMeta: LiveData<VideoMeta> = _archiveVideoMeta
     private val _archiveResult = MutableLiveData<Resource<ArchiveResult>>()
     val archiveResult: LiveData<Resource<ArchiveResult>> = _archiveResult
+
+    private val _bookmarkedVid = MutableLiveData<List<String>>()
+    val bookmarkedVid: LiveData<List<String>> = _bookmarkedVid
 
     //    private val adaptiveVideoTagPriorityList = listOf(266, 264, 299, 137, 298, 136, 135, 134, 133)
     private val adaptiveVideoTagPriorityList = listOf(298, 136, 135, 134, 133, 160, 299, 137, 264, 138, 266)
@@ -175,6 +178,24 @@ class MainViewModel(
         }
         val history = youtubeRepository.getWatchHistory(arrayOf(videoId)).firstOrNull()
         return VideoViewData(urlMap, fileMap, videoMeta!!, history?.lastWatchPosMillis ?: 0)
+    }
+
+    private suspend fun initArchiveResource(videoId: String): VideoViewData {
+        var urlMap = mapOf<Int, String>()
+        var videoMeta: VideoMetaWithPlayerResource? = null
+
+        // fetch network resource
+        youtubeRepository.loadYTInfoForVideoId(videoId)?.let { info ->
+            urlMap = info.urlMap
+            youtubeRepository.getVideoMetaWithPlayerResource(arrayOf(videoId)).let { m ->
+                if (m.isEmpty()) {
+                    throw NoVideoMetaException()
+                } else {
+                    videoMeta = m.first()
+                }
+            }
+        } ?: throw NoYtInfoException()
+        return VideoViewData(urlMap, mapOf(), videoMeta!!, 0)
     }
 
     @Throws(Exception::class)
@@ -328,12 +349,12 @@ class MainViewModel(
 
     fun showArchiveOption(videoId: String) {
         viewModelScope.launch {
-            val viewData = _currentVideoData.value
+            val viewData = archiveData
             if (viewData == null || (viewData.videoMeta.videoMeta.videoId != videoId ||
                         viewData.urlMap.isEmpty())) {
                 _isLoadingVideo.value = Event(true)
                 runCatching {
-                    archiveData = initResource(videoId)
+                    archiveData = initArchiveResource(videoId)
                     _archiveVideoMeta.value = archiveData!!.videoMeta.videoMeta
                     if (archiveData!!.urlMap.isEmpty()) {
                         _getVideoResult.value = Event(
@@ -458,14 +479,31 @@ class MainViewModel(
         }
     }
 
-    fun toggleBookmarkStatus(videoId: String) {
+    fun refreshBookmarkedVid() {
         viewModelScope.launch {
-            val count = youtubeRepository.toggleBookmarked(videoId)
-            if (count == 1) {
-                _bookmarkToggled.value = videoId
-            }
+            _bookmarkedVid.value = youtubeRepository.getBookmarkedVideoId()
         }
     }
+
+    fun setBookmarked(videoId: String, bookmarked: Boolean) {
+        viewModelScope.launch {
+            if (bookmarked) {
+                youtubeRepository.addBookmark(videoId)
+            } else {
+                youtubeRepository.removeBookmark(arrayOf(videoId))
+            }
+            _bookmarkedVid.value = youtubeRepository.getBookmarkedVideoId()
+        }
+    }
+
+//    fun toggleBookmarkStatus(videoId: String) {
+//        viewModelScope.launch {
+//            val count = youtubeRepository.toggleBookmarked(videoId)
+//            if (count == 1) {
+//                _bookmarkToggled.value = videoId
+//            }
+//        }
+//    }
 
     suspend fun getVideoMetas(videos: List<RPVideo>): List<VideoMeta> {
         return youtubeRepository.getVideoMeta(videos)

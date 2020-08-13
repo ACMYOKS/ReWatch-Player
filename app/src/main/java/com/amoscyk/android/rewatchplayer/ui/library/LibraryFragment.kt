@@ -12,6 +12,7 @@ import androidx.appcompat.view.ActionMode
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.edit
 import androidx.core.widget.ContentLoadingProgressBar
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
@@ -21,10 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
-import com.amoscyk.android.rewatchplayer.ui.CommonListDecoration
-import com.amoscyk.android.rewatchplayer.ui.PlaylistListAdapter
-import com.amoscyk.android.rewatchplayer.ui.SubscriptionListAdapter
-import com.amoscyk.android.rewatchplayer.ui.VideoListAdapter
+import com.amoscyk.android.rewatchplayer.ui.*
 import com.amoscyk.android.rewatchplayer.util.*
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.material.snackbar.Snackbar
@@ -40,6 +38,7 @@ class LibraryFragment : ReWatchPlayerFragment() {
     private val bookmarkList get() = view!!.bookmark_list
     private val loadingView get() = view!!.loading_view
     private val viewModel by viewModels<LibraryViewModel> { viewModelFactory }
+    private val mainViewModel by activityViewModels<MainViewModel> { viewModelFactory }
 
     private val actionModeCallback = object : ActionMode.Callback {
         override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
@@ -111,6 +110,9 @@ class LibraryFragment : ReWatchPlayerFragment() {
 
         mTypeSpinnerAdapter = ListTypeAdapter(context)
 
+        mainViewModel.currentAccountName.observe(this, Observer {
+            viewModel.refreshList()
+        })
         viewModel.editMode.observe(this, Observer {
             isEditMode = it
 //            mOnBackPressedCallback.isEnabled = it
@@ -191,6 +193,11 @@ class LibraryFragment : ReWatchPlayerFragment() {
                 viewModel.refreshList()
             }
         })
+
+        mainViewModel.bookmarkedVid.observe(this, Observer {
+            // if bookmark count changed, refresh list
+            viewModel.notifyBookmarkChanged()
+        })
     }
 
     override fun onCreateView(
@@ -260,16 +267,6 @@ class LibraryFragment : ReWatchPlayerFragment() {
             addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(8f).toInt()))
             adapter = mBookmarkListAdapter
         }
-//        loadPlaylistBtn.setOnClickListener {
-//            if (viewModel.currentDisplayMode.value == LibraryViewModel.DisplayMode.PLAYLISTS) {
-//                viewModel.loadPlaylists()
-//            } else {
-//                viewModel.loadBookmarkList()
-//            }
-//        }
-//        loadMoreBtn.setOnClickListener {
-//            viewModel.loadMorePlaylists()
-//        }
         loadingView.hide()
     }
 

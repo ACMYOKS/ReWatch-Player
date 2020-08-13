@@ -67,6 +67,7 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
                         Snackbar.make(view!!, (result.message as? String) ?: "error",
                             Snackbar.LENGTH_SHORT).show()
                     }
+                    actionMode?.finish()
                 }
             }
             .setNegativeButton("cancel") { _, _ -> }
@@ -139,7 +140,7 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
             }
         })
         viewModel.totalSize.observe(this, Observer {
-            mToolbar.title = it.formatReadableByteUnit()
+//            mToolbar.title = it.formatReadableByteUnit()
         })
         object : MediatorLiveData<String>() {
             var selectedSize = 0L
