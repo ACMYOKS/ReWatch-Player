@@ -3,15 +3,13 @@ package com.amoscyk.android.rewatchplayer.ui.library
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import android.widget.*
-import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
-import androidx.appcompat.widget.Toolbar
 import androidx.core.content.edit
-import androidx.core.widget.ContentLoadingProgressBar
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentPagerAdapter
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
@@ -33,10 +31,10 @@ class LibraryFragment : ReWatchPlayerFragment() {
     private var actionMode: ActionMode? = null
     private val toolbar get() = view!!.toolbar
     private val typeSpinner get() = view!!.spinner_list_type
-    private val channelList get() = view!!.channel_list
-    private val playlistList get() = view!!.playlist_list
-    private val bookmarkList get() = view!!.bookmark_list
-    private val loadingView get() = view!!.loading_view
+    private val viewPager get() = view!!.view_pager
+    private lateinit var channelFrag: ContentListFragment
+    private lateinit var playlistFrag: ContentListFragment
+    private lateinit var bookmarkFrag: ContentListFragment
     private val viewModel by viewModels<LibraryViewModel> { viewModelFactory }
     private val mainViewModel by activityViewModels<MainViewModel> { viewModelFactory }
 
@@ -115,8 +113,6 @@ class LibraryFragment : ReWatchPlayerFragment() {
         })
         viewModel.editMode.observe(this, Observer {
             isEditMode = it
-//            mOnBackPressedCallback.isEnabled = it
-//            setMenuItemVisibility(it)
             mBookmarkListAdapter.setEditMode(it)
             if (it) {
                 actionMode = (requireActivity() as AppCompatActivity).startSupportActionMode(
@@ -129,7 +125,6 @@ class LibraryFragment : ReWatchPlayerFragment() {
         viewModel.currentDisplayMode.observe(this, Observer {
             currentDisplayMode = it
             typeSpinner.setSelection(it.ordinal)
-//            setMenuItemVisibility(isEditMode)
             setListForDisplayMode(it)
         })
         viewModel.channelList.observe(this, Observer {
@@ -147,11 +142,9 @@ class LibraryFragment : ReWatchPlayerFragment() {
             event.getContentIfNotHandled {
                 if (!it.loadMore) {
                     if (it.isLoading) {
-                        channelList.visibility = View.INVISIBLE
-                        loadingView.show()
+                        channelFrag.beginLoadingView()
                     } else {
-                        channelList.visibility = View.VISIBLE
-                        loadingView.hide()
+                        channelFrag.endLoadingView()
                     }
                 }
             }
@@ -160,11 +153,9 @@ class LibraryFragment : ReWatchPlayerFragment() {
             event.getContentIfNotHandled {
                 if (!it.loadMore) {
                     if (it.isLoading) {
-                        playlistList.visibility = View.INVISIBLE
-                        loadingView.show()
+                        playlistFrag.beginLoadingView()
                     } else {
-                        playlistList.visibility = View.VISIBLE
-                        loadingView.hide()
+                        playlistFrag.endLoadingView()
                     }
                 }
             }
@@ -173,11 +164,9 @@ class LibraryFragment : ReWatchPlayerFragment() {
             event.getContentIfNotHandled {
                 if (!it.loadMore) {
                     if (it.isLoading) {
-                        bookmarkList.visibility = View.INVISIBLE
-                        loadingView.show()
+                        bookmarkFrag.beginLoadingView()
                     } else {
-                        bookmarkList.visibility = View.VISIBLE
-                        loadingView.hide()
+                        bookmarkFrag.endLoadingView()
                     }
                 }
             }
@@ -200,6 +189,34 @@ class LibraryFragment : ReWatchPlayerFragment() {
         })
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        /*
+         restore sub-fragments that are added to fragmentManager by ViewPager after instance
+         of this fragment is saved; getting sub-fragment instance is needed in order to bind/rebind
+         RecyclerView.Adapter from this fragment
+         */
+        channelFrag = getContentListFragment(0)
+        playlistFrag = getContentListFragment(1)
+        bookmarkFrag = getContentListFragment(2)
+        channelFrag.setupRecyclerView {
+            it.layoutManager = LinearLayoutManager(requireContext())
+            it.addItemDecoration(DividerItemDecoration(requireContext(), RecyclerView.VERTICAL))
+            it.adapter = mChannelListAdapter
+        }
+        playlistFrag.setupRecyclerView {
+            it.layoutManager = LinearLayoutManager(requireContext())
+            it.addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(8f).toInt()))
+            it.adapter = mPlaylistAdapter
+        }
+        bookmarkFrag.setupRecyclerView {
+            it.layoutManager = LinearLayoutManager(requireContext())
+            it.addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(8f).toInt()))
+            it.adapter = mBookmarkListAdapter
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -215,15 +232,17 @@ class LibraryFragment : ReWatchPlayerFragment() {
 
     override fun onResume() {
         super.onResume()
-        requireActivity().appSharedPreference.apply {
+        val displayMode = requireActivity().appSharedPreference.run {
             getString(PreferenceKey.LIBRARY_LIST_MODE, null).let {
-                if (it == null)
-                    edit { putString(PreferenceKey.LIBRARY_LIST_MODE, currentDisplayMode.name) }
-                else
-                    viewModel.setDisplayMode(LibraryViewModel.DisplayMode.valueOf(it))
+                if (it == null) {
+                    edit { putString(PreferenceKey.LIBRARY_LIST_MODE, DEFAULT_DISPLAY_MODE) }
+                    DEFAULT_DISPLAY_MODE
+                }
+                else it
             }
         }
-        viewModel.getVideoList()
+        viewModel.setDisplayMode(LibraryViewModel.DisplayMode.valueOf(displayMode))
+        viewModel.getList()
     }
 
     override fun onPause() {
@@ -232,6 +251,10 @@ class LibraryFragment : ReWatchPlayerFragment() {
             edit { putString(PreferenceKey.LIBRARY_LIST_MODE, currentDisplayMode.name) }
         }
     }
+
+    private fun getContentListFragment(position: Int): ContentListFragment =
+        childFragmentManager.findFragmentByTag("android:switcher:${R.id.view_pager}:$position") as? ContentListFragment
+            ?: ContentListFragment()
 
     private fun setupViews() {
         toolbar.setupWithNavController(findNavController())
@@ -252,40 +275,24 @@ class LibraryFragment : ReWatchPlayerFragment() {
                 }
             }
         }
-        channelList.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            addItemDecoration(DividerItemDecoration(requireContext(), RecyclerView.VERTICAL))
-            adapter = mChannelListAdapter
+        viewPager.apply {
+            adapter = object :
+                FragmentPagerAdapter(childFragmentManager, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
+                override fun getCount(): Int = 3
+                override fun getItem(position: Int): Fragment {
+                    return when (position) {
+                        0 -> channelFrag
+                        1 -> playlistFrag
+                        else -> bookmarkFrag
+                    }
+                }
+            }
+            offscreenPageLimit = 3
+            setPageTransformer(false, NoPageTransformer())
         }
-        playlistList.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(8f).toInt()))
-            adapter = mPlaylistAdapter
-        }
-        bookmarkList.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(8f).toInt()))
-            adapter = mBookmarkListAdapter
-        }
-        loadingView.hide()
     }
 
     private fun setupOptionMenu() {
-//        toolbar.inflateMenu(R.menu.library_option_menu)
-//        toolbar.setOnMenuItemClickListener {
-//            when (it.itemId) {
-//                R.id.refresh_list -> {
-//                    viewModel.refreshList()
-//                }
-//                R.id.edit_item -> {
-//                    viewModel.setEditMode(true)
-//                }
-//                R.id.confirm_delete -> {
-//                    viewModel.setEditMode(false)
-//                }
-//            }
-//            true
-//        }
         toolbar.apply {
             inflateMenu(R.menu.library_option_menu2)
             setOnMenuItemClickListener {
@@ -300,34 +307,17 @@ class LibraryFragment : ReWatchPlayerFragment() {
     }
 
     private fun setListForDisplayMode(displayMode: LibraryViewModel.DisplayMode) {
-        when (displayMode) {
-            LibraryViewModel.DisplayMode.CHANNEL -> {
-                channelList.visibility = View.VISIBLE
-                playlistList.visibility = View.INVISIBLE
-                bookmarkList.visibility = View.INVISIBLE
-            }
-            LibraryViewModel.DisplayMode.PLAYLISTS -> {
-                channelList.visibility = View.INVISIBLE
-                playlistList.visibility = View.VISIBLE
-                bookmarkList.visibility = View.INVISIBLE
-            }
-            LibraryViewModel.DisplayMode.BOOKMARKED -> {
-                channelList.visibility = View.INVISIBLE
-                playlistList.visibility = View.INVISIBLE
-                bookmarkList.visibility = View.VISIBLE
-            }
+        viewPager.currentItem = when (displayMode) {
+            LibraryViewModel.DisplayMode.CHANNEL -> 0
+            LibraryViewModel.DisplayMode.PLAYLISTS -> 1
+            LibraryViewModel.DisplayMode.BOOKMARKED -> 2
         }
     }
 
-//    private fun setMenuItemVisibility(isEditMode: Boolean) {
-//        with(toolbar.menu) {
-//            setGroupVisible(R.id.library_option_group, !isEditMode)
-//            setGroupVisible(R.id.library_edit_group, isEditMode)
-//        }
-//    }
-
-    private class ListTypeAdapter(context: Context): ArrayAdapter<String>(context,
-        R.layout.list_type_adapter_view, R.id.tv_type) {
+    private class ListTypeAdapter(context: Context) : ArrayAdapter<String>(
+        context,
+        R.layout.list_type_adapter_view, R.id.tv_type
+    ) {
         private val list = listOf(
             Pair(R.string.library_list_channel, R.drawable.ic_subscriptions_white),
             Pair(R.string.library_list_playlist, R.drawable.ic_view_list_white),
@@ -343,7 +333,11 @@ class LibraryFragment : ReWatchPlayerFragment() {
         }
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-            val view = convertView ?: LayoutInflater.from(context).inflate(R.layout.list_type_adapter_view, parent, false)
+            val view = convertView ?: LayoutInflater.from(context).inflate(
+                R.layout.list_type_adapter_view,
+                parent,
+                false
+            )
             view.findViewById<ImageView>(R.id.iv_type).apply {
                 setImageResource(list[position].second)
             }
@@ -356,5 +350,9 @@ class LibraryFragment : ReWatchPlayerFragment() {
         override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
             return getView(position, convertView, parent)
         }
+    }
+
+    companion object {
+        private val DEFAULT_DISPLAY_MODE = LibraryViewModel.DisplayMode.PLAYLISTS.name
     }
 }

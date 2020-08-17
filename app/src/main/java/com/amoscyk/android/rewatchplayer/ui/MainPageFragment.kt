@@ -21,10 +21,9 @@ import kotlinx.android.synthetic.main.fragment_main_page.view.*
 
 class MainPageFragment : ReWatchPlayerFragment() {
 
-    private var rootView: View? = null
-    private val bottomNav by lazy { rootView!!.main_bottom_nav }
-    private val playerViewPadding by lazy { rootView!!.player_view_padding }
-    val contentContainer by lazy { rootView!!.content_container }
+    private val bottomNav by lazy { view!!.main_bottom_nav }
+    private val playerViewPadding by lazy { view!!.player_view_padding }
+    val contentContainer by lazy { view!!.content_container }
 
     private var hasActionMode = false
     private var currentPlayerSize = VideoPlayerLayout.PlayerSize.DISMISS
@@ -44,10 +43,7 @@ class MainPageFragment : ReWatchPlayerFragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        if (rootView == null) {
-            rootView = inflater.inflate(R.layout.fragment_main_page, container, false)
-        }
-        return rootView
+        return inflater.inflate(R.layout.fragment_main_page, container, false)
     }
 
 
@@ -84,7 +80,7 @@ class MainPageFragment : ReWatchPlayerFragment() {
     }
 
     private fun updateViews() {
-        TransitionManager.beginDelayedTransition(rootView as ViewGroup, Slide(Gravity.BOTTOM).apply {
+        TransitionManager.beginDelayedTransition(view as ViewGroup, Slide(Gravity.BOTTOM).apply {
             addTarget(playerViewPadding)
             addTarget(bottomNav)
         })

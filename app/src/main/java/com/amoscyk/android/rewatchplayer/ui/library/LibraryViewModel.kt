@@ -38,6 +38,7 @@ class LibraryViewModel(
 
     private val loadChannelLock = AtomicBoolean(false)
     private val loadPlaylistLock = AtomicBoolean(false)
+    private val loadBookmarkLock = AtomicBoolean(false)
 
     private var _channelListResHolder = ListResponseHolder<RPSubscription>()
     private val _channelListRes = MutableLiveData<RPSubscriptionListResponse>()
@@ -69,7 +70,6 @@ class LibraryViewModel(
 
     init {
         _editMode.value = false
-        _currentDisplayMode.value = DisplayMode.PLAYLISTS
     }
 
     override fun onCleared() {
@@ -120,6 +120,7 @@ class LibraryViewModel(
                 override fun run() {
                     reachRefreshBookmarkListTime = true
                     if (_currentDisplayMode.value == DisplayMode.BOOKMARKED) {
+                        Log.d("MOMO", "setBookmarkListTimer")
                         loadBookmarkList()
                     }
                 }
@@ -129,7 +130,8 @@ class LibraryViewModel(
 
     /* function to be called by activity when start, determine which list to display and set refresh
      timer */
-    fun getVideoList() {
+    fun getList() {
+        Log.d("MOMO", "getVideoList")
         when (_currentDisplayMode.value) {
             DisplayMode.CHANNEL -> {
                 if (reachRefreshChannelTime) loadChannelList()
@@ -148,6 +150,7 @@ class LibraryViewModel(
     }
 
     fun refreshList() {
+        Log.d("MOMO", "refreshList")
         when (_currentDisplayMode.value) {
             // TODO: should notify user list has been reloaded
             DisplayMode.CHANNEL -> {
@@ -168,7 +171,9 @@ class LibraryViewModel(
     }
 
     fun setDisplayMode(displayMode: DisplayMode) {
+        if (displayMode == _currentDisplayMode.value) return
         _currentDisplayMode.value = displayMode
+        Log.d("MOMO", "setDisplayMode")
         when (displayMode) {
             DisplayMode.CHANNEL -> {
                 if (reachRefreshChannelTime && _editMode.value == false) {
@@ -191,6 +196,7 @@ class LibraryViewModel(
 
     fun setEditMode(isActive: Boolean) {
         if (_editMode.value == isActive) return
+        Log.d("MOMO", "setEditMode")
         _editMode.value = isActive
         if (!isActive) {
             if (_currentDisplayMode.value == DisplayMode.CHANNEL && reachRefreshChannelTime) {
@@ -244,13 +250,16 @@ class LibraryViewModel(
     }
 
     private fun loadBookmarkList() {
-        viewModelScope.launch {
-            _showLoadingBookmarked.loading {
-                _bookmarkList.value =
-                    youtubeRepository.getBookmarkedVideoMetaWithPlayerResource()
-
-                Log.d("MOMO", "load bookmark")
-                setBookmarkListTimer()
+        if (!loadBookmarkLock.get()) {
+            loadBookmarkLock.set(true)
+            viewModelScope.launch {
+                _showLoadingBookmarked.loading {
+                    _bookmarkList.value =
+                        youtubeRepository.getBookmarkedVideoMetaWithPlayerResource()
+                    Log.d("MOMO", "load bookmark")
+                    setBookmarkListTimer()
+                }
+                loadBookmarkLock.set(false)
             }
         }
     }
