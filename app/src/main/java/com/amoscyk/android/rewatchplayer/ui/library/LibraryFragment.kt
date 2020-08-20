@@ -18,6 +18,7 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager.widget.ViewPager
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.ui.*
@@ -30,11 +31,12 @@ class LibraryFragment : ReWatchPlayerFragment() {
 
     private var actionMode: ActionMode? = null
     private val toolbar get() = view!!.toolbar
-    private val typeSpinner get() = view!!.spinner_list_type
     private val viewPager get() = view!!.view_pager
+    private val tabLayout get() = view!!.tab_layout
     private lateinit var channelFrag: ContentListFragment
     private lateinit var playlistFrag: ContentListFragment
     private lateinit var bookmarkFrag: ContentListFragment
+    private lateinit var historyFrag: ContentListFragment
     private val viewModel by viewModels<LibraryViewModel> { viewModelFactory }
     private val mainViewModel by activityViewModels<MainViewModel> { viewModelFactory }
 
@@ -51,7 +53,11 @@ class LibraryFragment : ReWatchPlayerFragment() {
         override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
             when (item.itemId) {
                 R.id.confirm_delete -> {
-                    viewModel.removeBookmark(mBookmarkListAdapter.getSelectedItemsId())
+                    if (currentDisplayMode == LibraryViewModel.DisplayMode.BOOKMARKED) {
+                        viewModel.removeBookmark(mBookmarkListAdapter.getSelectedItemsId())
+                    } else if (currentDisplayMode == LibraryViewModel.DisplayMode.HISTORY) {
+                        viewModel.removeWatchHistory(mHistoryListAdapter.getSelectedItemsId())
+                    }
                 }
             }
             return true
@@ -67,7 +73,6 @@ class LibraryFragment : ReWatchPlayerFragment() {
     private var currentDisplayMode = LibraryViewModel.DisplayMode.CHANNEL
     private var isEditMode = false
 
-    private lateinit var mTypeSpinnerAdapter: ListTypeAdapter
     private val mChannelListAdapter = SubscriptionListAdapter(onItemClick = {
         findNavController().navigate(LibraryFragmentDirections.showChannelDetail(it.channelId))
     }).apply {
@@ -102,18 +107,37 @@ class LibraryFragment : ReWatchPlayerFragment() {
         }
         setHasStableIds(true)
     }
+    private val mHistoryListAdapter = WatchHistoryListAdapter().apply {
+        setOnItemClickListener { position, meta ->
+            if (isEditMode) {
+                toggleItemSelection(position)
+                actionMode?.title = getSelectedItemsId().size.toString()
+            } else {
+                mainActivity?.playVideoForId(meta.videoId)
+            }
+        }
+        setOnItemLongClickListener { position, meta ->
+            viewModel.setEditMode(true)
+            toggleItemSelection(position)
+            actionMode?.title = getSelectedItemsId().size.toString()
+            true
+        }
+        setHasStableIds(true)
+    }
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-
-        mTypeSpinnerAdapter = ListTypeAdapter(context)
 
         mainViewModel.currentAccountName.observe(this, Observer {
             viewModel.refreshList()
         })
         viewModel.editMode.observe(this, Observer {
             isEditMode = it
-            mBookmarkListAdapter.setEditMode(it)
+            if (currentDisplayMode == LibraryViewModel.DisplayMode.BOOKMARKED) {
+                mBookmarkListAdapter.setEditMode(it)
+            } else if (currentDisplayMode == LibraryViewModel.DisplayMode.HISTORY) {
+                mHistoryListAdapter.setEditMode(it)
+            }
             if (it) {
                 actionMode = (requireActivity() as AppCompatActivity).startSupportActionMode(
                     actionModeCallback
@@ -124,7 +148,6 @@ class LibraryFragment : ReWatchPlayerFragment() {
         })
         viewModel.currentDisplayMode.observe(this, Observer {
             currentDisplayMode = it
-            typeSpinner.setSelection(it.ordinal)
             setListForDisplayMode(it)
         })
         viewModel.channelList.observe(this, Observer {
@@ -137,6 +160,9 @@ class LibraryFragment : ReWatchPlayerFragment() {
         })
         viewModel.bookmarkList.observe(this, Observer {
             mBookmarkListAdapter.submitList(it.map { it.videoMeta })
+        })
+        viewModel.historyList.observe(this, Observer {
+            mHistoryListAdapter.submitList(it)
         })
         viewModel.showLoadingChannel.observe(this, Observer { event ->
             event.getContentIfNotHandled {
@@ -171,6 +197,17 @@ class LibraryFragment : ReWatchPlayerFragment() {
                 }
             }
         })
+        viewModel.showLoadingHistory.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                if (!it.loadMore) {
+                    if (it.isLoading) {
+                        historyFrag.beginLoadingView()
+                    } else {
+                        historyFrag.endLoadingView()
+                    }
+                }
+            }
+        })
         viewModel.bookmarkRemoveCount.observe(this, Observer { event ->
             event.getContentIfNotHandled {
                 Snackbar.make(
@@ -183,9 +220,16 @@ class LibraryFragment : ReWatchPlayerFragment() {
             }
         })
 
-        mainViewModel.bookmarkedVid.observe(this, Observer {
-            // if bookmark count changed, refresh list
-            viewModel.notifyBookmarkChanged()
+        viewModel.historyRemoveCount.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                Snackbar.make(
+                    view!!,
+                    getString(R.string.library_history_removed, it),
+                    Snackbar.LENGTH_SHORT
+                ).show()
+                viewModel.setEditMode(false)
+                viewModel.refreshList()
+            }
         })
     }
 
@@ -200,6 +244,7 @@ class LibraryFragment : ReWatchPlayerFragment() {
         channelFrag = getContentListFragment(0)
         playlistFrag = getContentListFragment(1)
         bookmarkFrag = getContentListFragment(2)
+        historyFrag = getContentListFragment(3)
         channelFrag.setupRecyclerView {
             it.layoutManager = LinearLayoutManager(requireContext())
             it.addItemDecoration(DividerItemDecoration(requireContext(), RecyclerView.VERTICAL))
@@ -214,6 +259,11 @@ class LibraryFragment : ReWatchPlayerFragment() {
             it.layoutManager = LinearLayoutManager(requireContext())
             it.addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(8f).toInt()))
             it.adapter = mBookmarkListAdapter
+        }
+        historyFrag.setupRecyclerView {
+            it.layoutManager = LinearLayoutManager(requireContext())
+            it.addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(8f).toInt()))
+            it.adapter = mHistoryListAdapter
         }
     }
 
@@ -258,38 +308,46 @@ class LibraryFragment : ReWatchPlayerFragment() {
 
     private fun setupViews() {
         toolbar.setupWithNavController(findNavController())
-        typeSpinner.apply {
-            adapter = mTypeSpinnerAdapter
-            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(
-                    parent: AdapterView<*>?,
-                    view: View?,
-                    position: Int,
-                    id: Long
-                ) {
-                    viewModel.setDisplayMode(LibraryViewModel.DisplayMode.values()[position])
-                }
-
-                override fun onNothingSelected(parent: AdapterView<*>?) {
-
-                }
-            }
-        }
         viewPager.apply {
             adapter = object :
                 FragmentPagerAdapter(childFragmentManager, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
-                override fun getCount(): Int = 3
+                override fun getCount(): Int = 4
                 override fun getItem(position: Int): Fragment {
                     return when (position) {
                         0 -> channelFrag
                         1 -> playlistFrag
-                        else -> bookmarkFrag
+                        2 -> bookmarkFrag
+                        else -> historyFrag
+                    }
+                }
+                override fun getPageTitle(position: Int): CharSequence? {
+                    return when (position) {
+                        0 -> getString(R.string.library_list_channel)
+                        1 -> getString(R.string.library_list_playlist)
+                        2 -> getString(R.string.library_list_bookmarked)
+                        else -> getString(R.string.library_list_watch_history)
                     }
                 }
             }
-            offscreenPageLimit = 3
-            setPageTransformer(false, NoPageTransformer())
+            addOnPageChangeListener(object : ViewPager.OnPageChangeListener {
+                override fun onPageScrollStateChanged(state: Int) {
+
+                }
+                override fun onPageSelected(position: Int) {
+                    viewModel.setEditMode(false)
+                    viewModel.setDisplayMode(LibraryViewModel.DisplayMode.values()[position])
+                }
+                override fun onPageScrolled(
+                    position: Int,
+                    positionOffset: Float,
+                    positionOffsetPixels: Int
+                ) {
+
+                }
+            })
+            offscreenPageLimit = 4
         }
+        tabLayout.setupWithViewPager(viewPager)
     }
 
     private fun setupOptionMenu() {
@@ -311,44 +369,7 @@ class LibraryFragment : ReWatchPlayerFragment() {
             LibraryViewModel.DisplayMode.CHANNEL -> 0
             LibraryViewModel.DisplayMode.PLAYLISTS -> 1
             LibraryViewModel.DisplayMode.BOOKMARKED -> 2
-        }
-    }
-
-    private class ListTypeAdapter(context: Context) : ArrayAdapter<String>(
-        context,
-        R.layout.list_type_adapter_view, R.id.tv_type
-    ) {
-        private val list = listOf(
-            Pair(R.string.library_list_channel, R.drawable.ic_subscriptions_white),
-            Pair(R.string.library_list_playlist, R.drawable.ic_view_list_white),
-            Pair(R.string.library_list_bookmarked, R.drawable.ic_bookmark_white)
-        )
-
-        override fun getCount(): Int {
-            return list.size
-        }
-
-        override fun getItem(position: Int): String? {
-            return context.getString(list[position].first)
-        }
-
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-            val view = convertView ?: LayoutInflater.from(context).inflate(
-                R.layout.list_type_adapter_view,
-                parent,
-                false
-            )
-            view.findViewById<ImageView>(R.id.iv_type).apply {
-                setImageResource(list[position].second)
-            }
-            view.findViewById<TextView>(R.id.tv_type).apply {
-                text = getItem(position)
-            }
-            return view
-        }
-
-        override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
-            return getView(position, convertView, parent)
+            LibraryViewModel.DisplayMode.HISTORY -> 3
         }
     }
 

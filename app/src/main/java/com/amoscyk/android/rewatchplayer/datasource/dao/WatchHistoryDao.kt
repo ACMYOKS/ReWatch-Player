@@ -19,4 +19,7 @@ interface WatchHistoryDao {
 
     @Delete
     fun delete(vararg histories: WatchHistory): Int
+
+    @Query("DELETE FROM watch_history WHERE username = :username AND video_id IN (:videoIds)")
+    fun delete(username: String, videoIds: Array<String>): Int
 }

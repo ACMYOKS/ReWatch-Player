@@ -2,7 +2,7 @@
     <string name="app_name">ReWatch Player</string>
 
     <!-- Main Page -->
-    <string name="main_bottom_nav_title_home">Home</string>
+    <string name="main_bottom_nav_title_home">Explore</string>
     <string name="main_bottom_nav_title_library">Library</string>
     <string name="main_bottom_nav_title_downloads">Downloads</string>
     <string name="main_bottom_nav_title_about">About</string>
@@ -41,6 +41,7 @@
     <string name="player_error_no_yt_info">No YTInfo</string>
     <string name="player_error_no_available_quality">No available quality</string>
     <string name="player_error_unknown">Unknown error</string>
+    <string name="player_error_malformed_url">Cannot handle malformed URL / non YouTube URL</string>
 
     <string name="player_archive_new_tasks">%1$d new task(s) added</string>
     <string name="player_archive_no_new_tasks">required file(s) already exist</string>
@@ -48,9 +49,11 @@
     <!-- Library -->
     <string name="library_list_channel">Channel</string>
     <string name="library_list_playlist">Playlist</string>
-    <string name="library_list_bookmarked">Bookmarked</string>
+    <string name="library_list_bookmarked">Bookmark</string>
+    <string name="library_list_watch_history">Watch history</string>
     <string name="library_action_remove_bookmark">Remove bookmark</string>
     <string name="library_bookmark_removed">%1$d bookmark(s) removed</string>
+    <string name="library_history_removed">%1$d history(ies) removed</string>
 
     <!-- Channel -->
     <string name="channel_subscriber_count">%1$d subscribers</string>

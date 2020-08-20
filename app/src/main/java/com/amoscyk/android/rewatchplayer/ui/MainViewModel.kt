@@ -116,8 +116,7 @@ class MainViewModel(
     private val _archiveResult = MutableLiveData<Resource<ArchiveResult>>()
     val archiveResult: LiveData<Resource<ArchiveResult>> = _archiveResult
 
-    private val _bookmarkedVid = MutableLiveData<List<String>>()
-    val bookmarkedVid: LiveData<List<String>> = _bookmarkedVid
+    val bookmarkedVid: LiveData<List<String>> = youtubeRepository.getBookmarkedVideoId()
 
     //    private val adaptiveVideoTagPriorityList = listOf(266, 264, 299, 137, 298, 136, 135, 134, 133)
     private val adaptiveVideoTagPriorityList = listOf(298, 136, 135, 134, 133, 160, 299, 137, 264, 138, 266)
@@ -479,12 +478,6 @@ class MainViewModel(
         }
     }
 
-    fun refreshBookmarkedVid() {
-        viewModelScope.launch {
-            _bookmarkedVid.value = youtubeRepository.getBookmarkedVideoId()
-        }
-    }
-
     fun setBookmarked(videoId: String, bookmarked: Boolean) {
         viewModelScope.launch {
             if (bookmarked) {
@@ -492,18 +485,8 @@ class MainViewModel(
             } else {
                 youtubeRepository.removeBookmark(arrayOf(videoId))
             }
-            _bookmarkedVid.value = youtubeRepository.getBookmarkedVideoId()
         }
     }
-
-//    fun toggleBookmarkStatus(videoId: String) {
-//        viewModelScope.launch {
-//            val count = youtubeRepository.toggleBookmarked(videoId)
-//            if (count == 1) {
-//                _bookmarkToggled.value = videoId
-//            }
-//        }
-//    }
 
     suspend fun getVideoMetas(videos: List<RPVideo>): List<VideoMeta> {
         return youtubeRepository.getVideoMeta(videos)

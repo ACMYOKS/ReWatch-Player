@@ -21,7 +21,7 @@ fun YouTube.Videos.List.getResponse(): RPVideoListResponse = execute().let { res
         pageToken = this.pageToken,
         prevPageToken = res.prevPageToken,
         nextPageToken = res.nextPageToken,
-        totalResults = res.pageInfo.totalResults,
-        resultsPerPage = res.pageInfo.resultsPerPage
+        totalResults = res.pageInfo.totalResults ?: 0,
+        resultsPerPage = res.pageInfo.resultsPerPage ?: 0
     )
 }

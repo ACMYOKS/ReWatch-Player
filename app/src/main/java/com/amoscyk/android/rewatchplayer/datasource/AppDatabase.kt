@@ -3,10 +3,7 @@ package com.amoscyk.android.rewatchplayer.datasource
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.amoscyk.android.rewatchplayer.datasource.dao.PlayerResourceDao
-import com.amoscyk.android.rewatchplayer.datasource.dao.VideoBookmarkDao
-import com.amoscyk.android.rewatchplayer.datasource.dao.VideoMetaDao
-import com.amoscyk.android.rewatchplayer.datasource.dao.WatchHistoryDao
+import com.amoscyk.android.rewatchplayer.datasource.dao.*
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.PlayerResource
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoBookmark
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
@@ -23,4 +20,5 @@ abstract class AppDatabase: RoomDatabase() {
     abstract fun videoMetaDao(): VideoMetaDao
     abstract fun watchHistoryDao(): WatchHistoryDao
     abstract fun videoBookmarkDao(): VideoBookmarkDao
+    abstract fun watchHistoryVideoMetaDao(): WatchHistoryVideoMetaDao
 }

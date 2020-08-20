@@ -5,10 +5,10 @@ import com.amoscyk.android.rewatchplayer.datasource.vo.local.PlayerResource
 
 @Dao
 interface PlayerResourceDao {
-    @Query("SELECT * FROM player_resources")
+    @Query("SELECT * FROM player_resources ORDER BY video_id, itag")
     fun getAll(): List<PlayerResource>
 
-    @Query("SELECT * FROM player_resources WHERE video_id IN (:videoIds)")
+    @Query("SELECT * FROM player_resources WHERE video_id IN (:videoIds) ORDER BY video_id, itag")
     fun getByVideoId(vararg videoIds: String): List<PlayerResource>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

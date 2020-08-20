@@ -221,7 +221,6 @@ class VideoListFragment : ReWatchPlayerFragment() {
 
     private fun fetchVideoList() {
         viewModel.setPlaylist(args.playlist)
-        mainViewModel.refreshBookmarkedVid()
     }
 
 }

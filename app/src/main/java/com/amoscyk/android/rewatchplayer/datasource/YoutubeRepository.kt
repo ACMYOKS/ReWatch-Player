@@ -3,7 +3,8 @@ package com.amoscyk.android.rewatchplayer.datasource
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.liveData
+import androidx.lifecycle.map
+import androidx.lifecycle.switchMap
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPThumbnailDetails
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.*
@@ -308,18 +309,17 @@ class YoutubeRepository(
         }
 
 
-    suspend fun getBookmarkedVideoMetaWithPlayerResource(): List<VideoMetaWithPlayerResource> =
-        withContext(Dispatchers.IO) {
-            return@withContext currentAccountName.value?.let { username ->
-                appDatabase.videoMetaDao().getBookmarkedWithPlayerResource(username)
-            } ?: listOf()
+    fun getBookmarkedVideoMetaWithPlayerResource(): LiveData<List<VideoMetaWithPlayerResource>> =
+        currentAccountName.switchMap { username -> appDatabase.videoMetaDao().getBookmarkedWithPlayerResource(username) }
+
+
+    fun getBookmarkedVideoId(): LiveData<List<String>> =
+        currentAccountName.switchMap { username ->
+            appDatabase.videoBookmarkDao().getAllForUser(username).map {
+                    bookmarks -> bookmarks.map { it.videoId }
+            }
         }
 
-    suspend fun getBookmarkedVideoId(): List<String> = withContext(Dispatchers.IO) {
-        return@withContext currentAccountName.value?.let { username ->
-            appDatabase.videoBookmarkDao().getAllForUser(username).map { it.videoId }
-        } ?: listOf()
-    }
 
     suspend fun addBookmark(videoId: String) = withContext(Dispatchers.IO) {
         currentAccountName.value?.let { username ->
@@ -376,6 +376,9 @@ class YoutubeRepository(
             } ?: listOf()
         }
 
+    fun getWatchHistoryVideoMeta(): LiveData<List<WatchHistoryVideoMeta>> =
+        currentAccountName.switchMap { appDatabase.watchHistoryVideoMetaDao().getAllForUser(it) }
+
     suspend fun insertWatchHistory(history: WatchHistory): Int = withContext(Dispatchers.IO) {
         appDatabase.watchHistoryDao().insert(history).size
     }
@@ -389,6 +392,13 @@ class YoutubeRepository(
                 ).size
             } ?: 0
         }
+
+
+    suspend fun removeWatchHistory(videoIds: Array<String>): Int = withContext(Dispatchers.IO) {
+        currentAccountName.value?.let { username ->
+            appDatabase.watchHistoryDao().delete(username, videoIds)
+        } ?: 0
+    }
 
     companion object {
         private const val MAX_VIDEO_RESULTS: Long = 30

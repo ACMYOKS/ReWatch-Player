@@ -1,5 +1,6 @@
 package com.amoscyk.android.rewatchplayer.datasource.dao
 
+import androidx.lifecycle.LiveData
 import androidx.room.*
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMetaWithPlayerResource
@@ -30,7 +31,7 @@ interface VideoMetaDao {
 
     @Transaction
     @Query("SELECT * FROM video_metas WHERE video_id in (SELECT video_id FROM video_bookmarks WHERE username = :username)")
-    fun getBookmarkedWithPlayerResource(username: String): List<VideoMetaWithPlayerResource>
+    fun getBookmarkedWithPlayerResource(username: String): LiveData<List<VideoMetaWithPlayerResource>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(vararg videoMetas: VideoMeta): List<Long>

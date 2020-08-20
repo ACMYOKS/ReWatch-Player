@@ -1,15 +1,16 @@
 package com.amoscyk.android.rewatchplayer.datasource.dao
 
+import androidx.lifecycle.LiveData
 import androidx.room.*
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoBookmark
 
 @Dao
 interface VideoBookmarkDao {
-    @Query("SELECT * FROM video_bookmarks")
-    fun getAll(): List<VideoBookmark>
+    @Query("SELECT * FROM video_bookmarks ORDER BY id")
+    fun getAll(): LiveData<List<VideoBookmark>>
 
-    @Query("SELECT * FROM video_bookmarks WHERE username = :username")
-    fun getAllForUser(username: String): List<VideoBookmark>
+    @Query("SELECT * FROM video_bookmarks WHERE username = :username ORDER BY id")
+    fun getAllForUser(username: String): LiveData<List<VideoBookmark>>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insert(vararg bookmark: VideoBookmark): List<Long>

@@ -49,6 +49,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.bottom_sheet_dialog_user_option.view.*
 import java.io.File
+import java.net.URL
 
 
 class MainActivity : ReWatchPlayerActivity() {
@@ -511,22 +512,48 @@ class MainActivity : ReWatchPlayerActivity() {
             }
         })
 
-        viewModel.refreshBookmarkedVid()
-
         // handle implicit intent from hyperlink
-        if (intent.action == Intent.ACTION_VIEW) {
-            intent.data?.let { data ->
-                val videoId: String? = when (data.host) {
-                    "m.youtube.com", "www.youtube.com", "youtube.com" -> {
-                        data.getQueryParameter("v")
+        when (intent.action) {
+            Intent.ACTION_VIEW -> {
+                intent.data?.let { data ->
+                    val videoId: String? = when (data.host) {
+                        "m.youtube.com", "www.youtube.com", "youtube.com" -> {
+                            data.getQueryParameter("v")
+                        }
+                        "youtu.be" -> {
+                            data.lastPathSegment
+                        }
+                        else -> null
                     }
-                    "youtu.be" -> {
-                        data.lastPathSegment
-                    }
-                    else -> null
+                    // search video
+                    viewModel.playVideoForId(this, videoId, true)
                 }
-                // search video
-                viewModel.playVideoForId(this, videoId, true)
+            }
+            Intent.ACTION_SEND -> {
+                if (intent.type == "text/plain") {
+                    intent.getStringExtra(Intent.EXTRA_TEXT)?.let { text ->
+                        runCatching {
+                            val url = URL(text)
+                            val videoId: String? = when (url.host) {
+                                "m.youtube.com", "www.youtube.com", "youtube.com" -> {
+                                    url.query.split("&").firstOrNull { it.contains("v=") }?.replace("v=", "")
+                                }
+                                "youtu.be" -> {
+                                    url.path.split("/").lastOrNull()
+                                }
+                                else -> null
+                            }
+                            // search video
+                            viewModel.playVideoForId(this, videoId, true)
+                        }.onFailure {
+                            AlertDialog.Builder(this)
+                                .setTitle(R.string.player_error_title)
+                                .setMessage(R.string.player_error_malformed_url)
+                                .create()
+                                .show()
+                        }
+                    }
+                }
             }
         }
     }
