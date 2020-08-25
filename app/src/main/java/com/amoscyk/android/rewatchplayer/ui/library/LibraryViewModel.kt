@@ -116,7 +116,7 @@ class LibraryViewModel(
     /* function to be called by activity when start, determine which list to display and set refresh
      timer */
     fun getList() {
-        Log.d("MOMO", "getVideoList")
+        Log.d("AppConstant.TAG", "getVideoList")
         when (_currentDisplayMode.value) {
             DisplayMode.CHANNEL -> {
                 if (reachRefreshChannelTime) loadChannelList()
@@ -131,7 +131,7 @@ class LibraryViewModel(
     }
 
     fun refreshList() {
-        Log.d("MOMO", "refreshList")
+        Log.d("AppConstant.TAG", "refreshList")
         when (_currentDisplayMode.value) {
             // TODO: should notify user list has been reloaded
             DisplayMode.CHANNEL -> {
@@ -149,7 +149,7 @@ class LibraryViewModel(
     fun setDisplayMode(displayMode: DisplayMode) {
         if (displayMode == _currentDisplayMode.value) return
         _currentDisplayMode.value = displayMode
-        Log.d("MOMO", "setDisplayMode")
+        Log.d("AppConstant.TAG", "setDisplayMode")
         when (displayMode) {
             DisplayMode.CHANNEL -> {
                 if (reachRefreshChannelTime && _editMode.value == false) {
@@ -166,7 +166,7 @@ class LibraryViewModel(
 
     fun setEditMode(isActive: Boolean) {
         if (_editMode.value == isActive) return
-        Log.d("MOMO", "setEditMode")
+        Log.d("AppConstant.TAG", "setEditMode")
         _editMode.value = isActive
         if (!isActive) {
             if (_currentDisplayMode.value == DisplayMode.CHANNEL && reachRefreshChannelTime) {
@@ -185,7 +185,7 @@ class LibraryViewModel(
                 _showLoadingChannel.loading {
                     runCatching {
                         _channelListRes.value = youtubeRepository.getUserSubscribedChannels()
-                        Log.d("MOMO", "load channel")
+                        Log.d("AppConstant.TAG", "load channel")
                         setChannelTimer()
                     }.onFailure {
                         Log.e(AppConstant.TAG, it.message.orEmpty())
@@ -224,7 +224,7 @@ class LibraryViewModel(
                 _playlistListResHolder = ListResponseHolder()
                 _showLoadingPlaylist.loading {
                     runCatching {
-                        Log.d("MOMO", "load playlist")
+                        Log.d("AppConstant.TAG", "load playlist")
                         _playlistListRes.value = youtubeRepository.getUserPlaylist()
                         setPlaylistTimer()
                     }.onFailure {

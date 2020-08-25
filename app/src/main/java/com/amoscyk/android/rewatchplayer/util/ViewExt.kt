@@ -1,8 +1,12 @@
 package com.amoscyk.android.rewatchplayer.util
 
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import androidx.annotation.ColorInt
@@ -44,4 +48,20 @@ fun Activity.hideSystemUI() {
             or View.SYSTEM_UI_FLAG_FULLSCREEN)
     window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS
             or WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+}
+
+@SuppressLint("SourceLockedOrientationActivity")
+fun Activity.toggleLockedRotation() {
+    when (resources.configuration.orientation) {
+        Configuration.ORIENTATION_LANDSCAPE -> {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+        }
+        Configuration.ORIENTATION_PORTRAIT -> {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
+        }
+    }
+}
+
+fun View.isTouchEventInsideTarget(ev: MotionEvent): Boolean {
+    return ev.x in left.toFloat()..right.toFloat() && ev.y in top.toFloat()..bottom.toFloat()
 }

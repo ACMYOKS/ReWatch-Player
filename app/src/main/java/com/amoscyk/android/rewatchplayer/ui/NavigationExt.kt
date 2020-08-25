@@ -1,6 +1,7 @@
 package com.amoscyk.android.rewatchplayer.ui
 
 import android.util.SparseArray
+import android.view.MenuItem
 import androidx.core.util.forEach
 import androidx.core.util.set
 import androidx.fragment.app.FragmentManager
@@ -15,7 +16,8 @@ fun BottomNavigationView.setupWithNavController(
     navGraphIds: List<Int>,
     fragmentManager: FragmentManager,
     containerId: Int,
-    requireAttach: Boolean
+    requireAttach: Boolean,
+    onSelectedChange: ((item: MenuItem) -> Unit)? = null
 ) {
     val graphIdToTagMap = SparseArray<String>()
     var firstFragmentTagId = 0
@@ -49,6 +51,7 @@ fun BottomNavigationView.setupWithNavController(
         } else {
             val newSelectedItemTag = graphIdToTagMap[item.itemId]
             if (newSelectedItemTag != selectedItemTag) {
+                onSelectedChange?.invoke(item)
                 // attach nav host fragment for newly selected item
                 val selectedFrag = fragmentManager.findFragmentByTag(newSelectedItemTag)
                         as NavHostFragment

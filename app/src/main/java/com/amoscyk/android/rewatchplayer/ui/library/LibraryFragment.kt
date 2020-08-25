@@ -210,11 +210,10 @@ class LibraryFragment : ReWatchPlayerFragment() {
         })
         viewModel.bookmarkRemoveCount.observe(this, Observer { event ->
             event.getContentIfNotHandled {
-                Snackbar.make(
-                    view!!,
+                mainFragment?.showSnackbar(
                     getString(R.string.library_bookmark_removed, it),
                     Snackbar.LENGTH_SHORT
-                ).show()
+                )
                 viewModel.setEditMode(false)
                 viewModel.refreshList()
             }
@@ -222,11 +221,10 @@ class LibraryFragment : ReWatchPlayerFragment() {
 
         viewModel.historyRemoveCount.observe(this, Observer { event ->
             event.getContentIfNotHandled {
-                Snackbar.make(
-                    view!!,
+                mainFragment?.showSnackbar(
                     getString(R.string.library_history_removed, it),
                     Snackbar.LENGTH_SHORT
-                ).show()
+                )
                 viewModel.setEditMode(false)
                 viewModel.refreshList()
             }

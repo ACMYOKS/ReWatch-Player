@@ -54,7 +54,7 @@ import java.net.URL
 
 class MainActivity : ReWatchPlayerActivity() {
 
-    private val mPlayerLayout by lazy { findViewById<VideoPlayerLayout>(R.id.video_player_layout) }
+//    private val mPlayerLayout by lazy { findViewById<VideoPlayerLayout>(R.id.video_player_layout) }
 
     private var mLoadingDialog: AlertDialog? = null
 
@@ -86,8 +86,10 @@ class MainActivity : ReWatchPlayerActivity() {
         } else if (position == 4) {
             Intent.createChooser(Intent().apply {
                 action = Intent.ACTION_SEND
-                putExtra(Intent.EXTRA_TEXT, "https://youtu.be/" +
-                        viewModel.videoData.value!!.videoMeta.videoMeta.videoId)
+                putExtra(
+                    Intent.EXTRA_TEXT, "https://youtu.be/" +
+                            viewModel.videoData.value!!.videoMeta.videoMeta.videoId
+                )
                 type = "text/plain"
             }, getString(R.string.player_share_title)).also { startActivity(it) }
         }
@@ -96,7 +98,10 @@ class MainActivity : ReWatchPlayerActivity() {
     private val extraPlayerOptions by lazy {
         listOf(
             PlayerOption(getString(R.string.player_option_info), R.drawable.ic_info),
-            PlayerOption(getString(R.string.player_option_resolution), R.mipmap.ic_action_resolution),
+            PlayerOption(
+                getString(R.string.player_option_resolution),
+                R.mipmap.ic_action_resolution
+            ),
             PlayerOption(getString(R.string.player_option_archive), R.drawable.ic_archive_white),
             PlayerOption(getString(R.string.player_option_speed), R.drawable.ic_slow_motion_video),
             PlayerOption(getString(R.string.player_option_share), R.drawable.ic_share)
@@ -122,6 +127,16 @@ class MainActivity : ReWatchPlayerActivity() {
 
     private val mPlayerListener = object : Player.EventListener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (isInPictureInPictureMode) {
+                    setPictureInPictureParams(
+                        PictureInPictureParams.Builder().apply {
+                            if (isPlaying) setPauseAction()
+                            else setPlayAction()
+                        }.build()
+                    )
+                }
+            }
             if (isPlaying) {
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             } else {
@@ -171,31 +186,41 @@ class MainActivity : ReWatchPlayerActivity() {
                 Log.d(AppConstant.TAG, "$TAG mobile data connected: ${it.name}")
             })
         }
-        SPIntLiveData(appSharedPreference,
+        SPIntLiveData(
+            appSharedPreference,
             PreferenceKey.ALLOW_VIDEO_STREAMING_ENV,
-            AppSettings.DEFAULT_ALLOW_VIDEO_STREAMING_ENV).apply {
+            AppSettings.DEFAULT_ALLOW_VIDEO_STREAMING_ENV
+        ).apply {
             observe(this@MainActivity, Observer {
                 allowPlayUsingMobile = it == 1
                 viewModel.notifyIsAllowedPlayUsingMobile(allowPlayUsingMobile)
             })
         }
-        SPIntLiveData(appSharedPreference,
+        SPIntLiveData(
+            appSharedPreference,
             PreferenceKey.PLAYER_SKIP_FORWARD_TIME,
-            AppSettings.DEFAULT_PLAYER_SKIP_FORWARD_SECOND).apply {
+            AppSettings.DEFAULT_PLAYER_SKIP_FORWARD_SECOND
+        ).apply {
             observe(this@MainActivity, Observer {
-                mPlayerLayout.playerControlView.setFastForwardIncrementMs(it * 1000)
+                //                mPlayerLayout.playerControlView.setFastForwardIncrementMs(it * 1000)
+                getMainFragment()?.playerControl?.setFastForwardIncrementMs(it * 1000)
             })
         }
-        SPIntLiveData(appSharedPreference,
+        SPIntLiveData(
+            appSharedPreference,
             PreferenceKey.PLAYER_SKIP_BACKWARD_TIME,
-            AppSettings.DEFAULT_PLAYER_SKIP_BACKWARD_SECOND).apply {
+            AppSettings.DEFAULT_PLAYER_SKIP_BACKWARD_SECOND
+        ).apply {
             observe(this@MainActivity, Observer {
-                mPlayerLayout.playerControlView.setRewindIncrementMs(it * 1000)
+                //                mPlayerLayout.playerControlView.setRewindIncrementMs(it * 1000)
+                getMainFragment()?.playerControl?.setRewindIncrementMs(it * 1000)
             })
         }
-        SPIntLiveData(appSharedPreference,
+        SPIntLiveData(
+            appSharedPreference,
             PreferenceKey.ALLOW_DOWNLOAD_ENV,
-            AppSettings.DEFAULT_ALLOW_DOWNLOAD_ENV).apply {
+            AppSettings.DEFAULT_ALLOW_DOWNLOAD_ENV
+        ).apply {
             observe(this@MainActivity, Observer {
                 allowDownloadUsingMobile = it == 1
                 viewModel.notifyIsAllowedDownloadUsingMobile(allowDownloadUsingMobile)
@@ -223,7 +248,8 @@ class MainActivity : ReWatchPlayerActivity() {
                     Toast.makeText(this, "Checking...", Toast.LENGTH_SHORT).show()
                 }
                 Status.SUCCESS -> {
-                    viewModel.playVideoForId(this, res.data!!,
+                    viewModel.playVideoForId(
+                        this, res.data!!,
                         appSharedPreference.getBoolean(
                             PreferenceKey.PLAYER_PLAY_DOWNLOADED_IF_EXIST,
                             AppSettings.DEFAULT_PLAYER_PLAY_DOWNLOADED_IF_EXIST
@@ -271,26 +297,9 @@ class MainActivity : ReWatchPlayerActivity() {
 
         })
 
-        object : MediatorLiveData<Boolean>() {
-            var vid = listOf<String>()
-            var currentVid: String? = null
-            init {
-                addSource(viewModel.bookmarkedVid) {
-                    vid = it
-                    value = currentVid in vid
-                }
-                addSource(viewModel.videoData) {
-                    currentVid = it.videoMeta.videoMeta.videoId
-                    value = currentVid!! in vid
-                }
-            }
-        }.observe(this, Observer { isBookmarked ->
-            setBookmarkButton(isBookmarked)
-        })
-
         viewModel.videoData.observe(this, Observer { viewData ->
             val meta = viewData.videoMeta.videoMeta
-            mPlayerLayout.setTitle(meta.title)
+            getMainFragment()?.setTitle(meta.title)
             val itags = meta.itags
             val vTags = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMATS.filter {
                 itags.contains(it.key)
@@ -309,9 +318,10 @@ class MainActivity : ReWatchPlayerActivity() {
                     findNavController(R.id.main_page_nav_host_fragment)
                         .navigate(LibraryFragmentDirections.showChannelDetail(meta.channelId))
                     if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                        handleRotation()
+                        toggleLockedRotation()
                     }
-                    mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.SMALL)
+//                    mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.SMALL)
+                    getMainFragment()?.setPlayerSize(MainPageFragment.PlayerSize.SMALL)
                 })
             }
         })
@@ -380,28 +390,22 @@ class MainActivity : ReWatchPlayerActivity() {
         viewModel.archiveResult.observe(this, Observer { result ->
             when (result.status) {
                 Status.SUCCESS -> {
-                    getMainFragment()?.contentContainer?.let {
-                        Snackbar.make(
-                            it,
-                            result.data!!.taskCount.let {
-                                if (it > 0) {
-                                    getString(R.string.player_archive_new_tasks).format(it)
-                                } else {
-                                    getString(R.string.player_archive_no_new_tasks)
-                                }
-                            },
-                            Snackbar.LENGTH_SHORT
-                        ).show()
-                    }
+                    getMainFragment()?.showSnackbar(
+                        result.data!!.taskCount.let {
+                            if (it > 0) {
+                                getString(R.string.player_archive_new_tasks).format(it)
+                            } else {
+                                getString(R.string.player_archive_no_new_tasks)
+                            }
+                        },
+                        Snackbar.LENGTH_SHORT
+                    )
                 }
                 Status.ERROR -> {
-                    getMainFragment()?.contentContainer?.let {
-                        Snackbar.make(
-                            it,
-                            result.stringMessage,
-                            Snackbar.LENGTH_SHORT
-                        ).show()
-                    }
+                    getMainFragment()?.showSnackbar(
+                        result.stringMessage,
+                        Snackbar.LENGTH_SHORT
+                    )
                 }
                 else -> {
                 }
@@ -536,7 +540,8 @@ class MainActivity : ReWatchPlayerActivity() {
                             val url = URL(text)
                             val videoId: String? = when (url.host) {
                                 "m.youtube.com", "www.youtube.com", "youtube.com" -> {
-                                    url.query.split("&").firstOrNull { it.contains("v=") }?.replace("v=", "")
+                                    url.query.split("&").firstOrNull { it.contains("v=") }
+                                        ?.replace("v=", "")
                                 }
                                 "youtu.be" -> {
                                     url.path.split("/").lastOrNull()
@@ -563,7 +568,8 @@ class MainActivity : ReWatchPlayerActivity() {
 
         mPlayerServiceReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                playbackPosition = intent.getLongExtra(AudioPlayerService.EXTRA_KEY_PLAYBACK_POSITION, 0L)
+                playbackPosition =
+                    intent.getLongExtra(AudioPlayerService.EXTRA_KEY_PLAYBACK_POSITION, 0L)
                 Log.d("MainActivity", "audio service broadcast receiver: $playbackPosition")
                 viewModel.startPlayingVideo()
             }
@@ -623,11 +629,12 @@ class MainActivity : ReWatchPlayerActivity() {
 
     @SuppressLint("SourceLockedOrientationActivity")
     override fun onBackPressed() {
-        if (mPlayerLayout.isFullscreen) {
+        val mainFrag = getMainFragment()
+        if (mainFrag != null && mainFrag.isFullscreen) {
             if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
                 requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
             } else {
-                mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.SMALL)
+                mainFrag.setPlayerSize(MainPageFragment.PlayerSize.SMALL)
             }
         } else if (onBackPressedDispatcher.hasEnabledCallbacks()) {
             onBackPressedDispatcher.onBackPressed()
@@ -644,24 +651,24 @@ class MainActivity : ReWatchPlayerActivity() {
         }
     }
 
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-
-        when (newConfig.orientation) {
-            Configuration.ORIENTATION_LANDSCAPE -> {
-                mPlayerLayout.setEnableTransition(!mPlayerLayout.isFullscreen)
-                if (mPlayerLayout.isSmall) {
-                    mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.FULLSCREEN)
-                }
-                if (mPlayerLayout.isFullscreen) hideSystemUI()
-                else showSystemUI()
-            }
-            Configuration.ORIENTATION_PORTRAIT -> {
-                mPlayerLayout.setEnableTransition(true)
-                showSystemUI()
-            }
-        }
-    }
+//    override fun onConfigurationChanged(newConfig: Configuration) {
+//        super.onConfigurationChanged(newConfig)
+//
+//        when (newConfig.orientation) {
+//            Configuration.ORIENTATION_LANDSCAPE -> {
+//                mPlayerLayout.setEnableTransition(!mPlayerLayout.isFullscreen)
+//                if (mPlayerLayout.isSmall) {
+//                    mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.FULLSCREEN)
+//                }
+//                if (mPlayerLayout.isFullscreen) hideSystemUI()
+//                else showSystemUI()
+//            }
+//            Configuration.ORIENTATION_PORTRAIT -> {
+//                mPlayerLayout.setEnableTransition(true)
+//                showSystemUI()
+//            }
+//        }
+//    }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         if (hasFocus) {
@@ -669,7 +676,7 @@ class MainActivity : ReWatchPlayerActivity() {
             when (resources.configuration.orientation) {
                 Configuration.ORIENTATION_PORTRAIT -> showSystemUI()
                 Configuration.ORIENTATION_LANDSCAPE -> {
-                    if (mPlayerLayout.isFullscreen) hideSystemUI()
+                    if (getMainFragment()?.isFullscreen == true) hideSystemUI()
                     else showSystemUI()
                 }
             }
@@ -699,21 +706,25 @@ class MainActivity : ReWatchPlayerActivity() {
                         setPlayAction()
                     }
                 }.build())
-                mPlayerLayout.hideControlView()
+                getMainFragment()?.hideControlView()
                 mPipActionReceiver = object : BroadcastReceiver() {
                     override fun onReceive(context: Context, intent: Intent) {
                         when (intent.action) {
                             ACTION_PIP_PLAY -> {
                                 exoPlayer?.playWhenReady = true
-                                setPictureInPictureParams(PictureInPictureParams.Builder()
-                                    .setPauseAction()
-                                    .build())
+                                setPictureInPictureParams(
+                                    PictureInPictureParams.Builder()
+                                        .setPauseAction()
+                                        .build()
+                                )
                             }
                             ACTION_PIP_PAUSE -> {
                                 exoPlayer?.playWhenReady = false
-                                setPictureInPictureParams(PictureInPictureParams.Builder()
-                                    .setPlayAction()
-                                    .build())
+                                setPictureInPictureParams(
+                                    PictureInPictureParams.Builder()
+                                        .setPlayAction()
+                                        .build()
+                                )
                             }
                         }
                     }
@@ -729,6 +740,8 @@ class MainActivity : ReWatchPlayerActivity() {
         }
     }
 
+    fun getPlayer(): ExoPlayer? = exoPlayer
+
     private fun initPlayer() {
         if (exoPlayer == null) {
             exoPlayer = ExoPlayerFactory.newSimpleInstance(this, DefaultTrackSelector(),
@@ -741,7 +754,7 @@ class MainActivity : ReWatchPlayerActivity() {
                         return super.shouldContinueLoading(bufferedDurationUs, playbackSpeed)
                     }
                 })
-            mPlayerLayout.setPlayer(exoPlayer)
+//            mPlayerLayout.setPlayer(exoPlayer)
             exoPlayer!!.seekTo(currentWindow, playbackPosition)
             exoPlayer!!.addListener(mPlayerListener)
         }
@@ -758,68 +771,68 @@ class MainActivity : ReWatchPlayerActivity() {
     }
 
     private fun setupViews() {
-        mPlayerLayout.apply {
-            toolbar.apply {
-                inflateMenu(R.menu.player_option_menu)
-                setOnMenuItemClickListener {
-                    when (it.itemId) {
-                        R.id.bookmark -> {
-                            viewModel.videoData.value?.videoMeta?.videoMeta?.videoId?.let { vid ->
-                                viewModel.setBookmarked(vid, true)
-                            }
-                        }
-                        R.id.remove_bookmark -> {
-                            viewModel.videoData.value?.videoMeta?.videoMeta?.videoId?.let { vid ->
-                                viewModel.setBookmarked(vid, false)
-                            }
-                        }
-                        R.id.rotation -> {
-                            handleRotation()
-                        }
-                        R.id.other_action -> {
-                            mOptionDialog?.show()
-                        }
-                    }
-                    true
-                }
-                setBookmarkButton(false)        // set visibility before view data is loaded
-            }
-            setPlayerSizeListener(object : VideoPlayerLayout.PlayerSizeListener {
-                @SuppressLint("SourceLockedOrientationActivity")
-                override fun onStart(
-                    start: VideoPlayerLayout.PlayerSize,
-                    end: VideoPlayerLayout.PlayerSize
-                ) {
-                    mPlayerSizeListeners.forEach { it.onStart(start, end) }
-                    if (start == VideoPlayerLayout.PlayerSize.DISMISS && end == VideoPlayerLayout.PlayerSize.FULLSCREEN) {
-                        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
-                    }
-                }
-
-                @SuppressLint("SourceLockedOrientationActivity")
-                override fun onComplete(current: VideoPlayerLayout.PlayerSize) {
-                    // when there is transition, check if player size is fullscreen,
-                    // if true then disable user transition when orientation is not portrait
-                    mPlayerSizeListeners.forEach { it.onComplete(current) }
-                    when (current) {
-                        VideoPlayerLayout.PlayerSize.FULLSCREEN -> {
-                            val orientation = resources.configuration.orientation
-                            setEnableTransition(orientation == Configuration.ORIENTATION_PORTRAIT)
-                            if (orientation == Configuration.ORIENTATION_LANDSCAPE) hideSystemUI()
-                            else showSystemUI()
-                        }
-                        VideoPlayerLayout.PlayerSize.SMALL -> {
-                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
-                            showSystemUI()
-                        }
-                        VideoPlayerLayout.PlayerSize.DISMISS -> {
-                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-                            showSystemUI()
-                        }
-                    }
-                }
-            })
-        }
+//        mPlayerLayout.apply {
+//            toolbar.apply {
+//                inflateMenu(R.menu.player_option_menu)
+//                setOnMenuItemClickListener {
+//                    when (it.itemId) {
+//                        R.id.bookmark -> {
+//                            viewModel.videoData.value?.videoMeta?.videoMeta?.videoId?.let { vid ->
+//                                viewModel.setBookmarked(vid, true)
+//                            }
+//                        }
+//                        R.id.remove_bookmark -> {
+//                            viewModel.videoData.value?.videoMeta?.videoMeta?.videoId?.let { vid ->
+//                                viewModel.setBookmarked(vid, false)
+//                            }
+//                        }
+//                        R.id.rotation -> {
+//                            handleRotation()
+//                        }
+//                        R.id.other_action -> {
+//                            mOptionDialog?.show()
+//                        }
+//                    }
+//                    true
+//                }
+//                setBookmarkButton(false)        // set visibility before view data is loaded
+//            }
+//            setPlayerSizeListener(object : VideoPlayerLayout.PlayerSizeListener {
+//                @SuppressLint("SourceLockedOrientationActivity")
+//                override fun onStart(
+//                    start: VideoPlayerLayout.PlayerSize,
+//                    end: VideoPlayerLayout.PlayerSize
+//                ) {
+//                    mPlayerSizeListeners.forEach { it.onStart(start, end) }
+//                    if (start == VideoPlayerLayout.PlayerSize.DISMISS && end == VideoPlayerLayout.PlayerSize.FULLSCREEN) {
+//                        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
+//                    }
+//                }
+//
+//                @SuppressLint("SourceLockedOrientationActivity")
+//                override fun onComplete(current: VideoPlayerLayout.PlayerSize) {
+//                    // when there is transition, check if player size is fullscreen,
+//                    // if true then disable user transition when orientation is not portrait
+//                    mPlayerSizeListeners.forEach { it.onComplete(current) }
+//                    when (current) {
+//                        VideoPlayerLayout.PlayerSize.FULLSCREEN -> {
+//                            val orientation = resources.configuration.orientation
+//                            setEnableTransition(orientation == Configuration.ORIENTATION_PORTRAIT)
+//                            if (orientation == Configuration.ORIENTATION_LANDSCAPE) hideSystemUI()
+//                            else showSystemUI()
+//                        }
+//                        VideoPlayerLayout.PlayerSize.SMALL -> {
+//                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+//                            showSystemUI()
+//                        }
+//                        VideoPlayerLayout.PlayerSize.DISMISS -> {
+//                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+//                            showSystemUI()
+//                        }
+//                    }
+//                }
+//            })
+//        }
         mOptionDialog = PlayerBottomSheetDialogBuilder.createDialog(this) {
             it.recycler_view.apply {
                 adapter = mOptionAdapter.apply { submitList(extraPlayerOptions) }
@@ -828,7 +841,8 @@ class MainActivity : ReWatchPlayerActivity() {
         }
         mVideoInfoDialog = VideoInfoBottomSheetDialog(this)
         mResOptionDialog = VideoQualityOptionDialog(this).apply {
-            setOnQualityOptionSelectedListener(object : VideoQualityOptionDialog.OnQualityOptionSelectedListener {
+            setOnQualityOptionSelectedListener(object :
+                VideoQualityOptionDialog.OnQualityOptionSelectedListener {
                 override fun onQualityOptionSelected(vTag: Int, aTag: Int) {
                     // save playback state
                     exoPlayer?.let {
@@ -840,7 +854,8 @@ class MainActivity : ReWatchPlayerActivity() {
             })
         }
         mArchiveOptionDialog = ArchiveOptionDialog(this).apply {
-            setOnArchiveOptionSelectedListener(object : ArchiveOptionDialog.OnArchiveOptionSelectedListener {
+            setOnArchiveOptionSelectedListener(object :
+                ArchiveOptionDialog.OnArchiveOptionSelectedListener {
                 override fun onArchiveOptionSelected(vTag: Int, aTag: Int) {
                     viewModel.archiveVideo(this@MainActivity, vTag, aTag)
                 }
@@ -849,33 +864,14 @@ class MainActivity : ReWatchPlayerActivity() {
         mPlaybackSpeedDialog = PlaybackSpeedDialog(
             this
         ).apply {
-            setOnPlaybackSpeedChangeListener(object : PlaybackSpeedDialog.OnPlaybackSpeedChangeListener {
+            setOnPlaybackSpeedChangeListener(object :
+                PlaybackSpeedDialog.OnPlaybackSpeedChangeListener {
                 override fun onPlaybackSpeedChange(newPlaybackSpeed: Float) {
                     viewModel.setPlaybackSpeed(newPlaybackSpeed)
                 }
             })
         }
         mLoadingDialog = ProgressDialogUtil.create(this)
-    }
-
-    @SuppressLint("SourceLockedOrientationActivity")
-    private fun handleRotation() {
-        when (resources.configuration.orientation) {
-            Configuration.ORIENTATION_LANDSCAPE -> {
-                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
-            }
-            Configuration.ORIENTATION_PORTRAIT -> {
-                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
-            }
-        }
-    }
-
-    private fun setBookmarkButton(isBookmarked: Boolean) {
-        val toolbar = mPlayerLayout.toolbar
-        val btnBookmark = toolbar.menu.findItem(R.id.bookmark)
-        val btnRemoveBookmark = toolbar.menu.findItem(R.id.remove_bookmark)
-        btnBookmark.isVisible = !isBookmarked
-        btnRemoveBookmark.isVisible = isBookmarked
     }
 
     fun playVideoForId(videoId: String, forceFindFile: Boolean = false) {
@@ -900,21 +896,23 @@ class MainActivity : ReWatchPlayerActivity() {
         viewModel.showArchiveOption(videoId)
     }
 
+    fun getPlayerOptionDialog() = mOptionDialog
+
     private fun showPlayerView() {
-        mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.FULLSCREEN)
+        getMainFragment()?.setPlayerSize(MainPageFragment.PlayerSize.FULLSCREEN)
     }
 
     private fun dismissPlayerView() {
-        mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.DISMISS)
+        getMainFragment()?.setPlayerSize(MainPageFragment.PlayerSize.DISMISS)
     }
 
-    fun addPlayerSizeListener(listener: VideoPlayerLayout.PlayerSizeListener) {
-        mPlayerSizeListeners.add(listener)
-    }
-
-    fun removePlayerSizeListener(listener: VideoPlayerLayout.PlayerSizeListener) {
-        mPlayerSizeListeners.remove(listener)
-    }
+//    fun addPlayerSizeListener(listener: VideoPlayerLayout.PlayerSizeListener) {
+//        mPlayerSizeListeners.add(listener)
+//    }
+//
+//    fun removePlayerSizeListener(listener: VideoPlayerLayout.PlayerSizeListener) {
+//        mPlayerSizeListeners.remove(listener)
+//    }
 
     private fun prepareMediaResource(vararg uri: Uri?) {
         uri.mapNotNull { progressiveSrcFactory.createMediaSource(it) }.apply {
@@ -954,17 +952,37 @@ class MainActivity : ReWatchPlayerActivity() {
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun PictureInPictureParams.Builder.setPauseAction(): PictureInPictureParams.Builder =
-        setActions(listOf(RemoteAction(Icon.createWithResource(this@MainActivity,
-            R.drawable.exo_controls_pause), "Pause", "Pause video",
-            PendingIntent.getBroadcast(this@MainActivity, REQUEST_CODE_PIP_PAUSE,
-                Intent(ACTION_PIP_PAUSE), 0))))
+        setActions(
+            listOf(
+                RemoteAction(
+                    Icon.createWithResource(
+                        this@MainActivity,
+                        R.drawable.exo_controls_pause
+                    ), "Pause", "Pause video",
+                    PendingIntent.getBroadcast(
+                        this@MainActivity, REQUEST_CODE_PIP_PAUSE,
+                        Intent(ACTION_PIP_PAUSE), 0
+                    )
+                )
+            )
+        )
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun PictureInPictureParams.Builder.setPlayAction(): PictureInPictureParams.Builder =
-        setActions(listOf(RemoteAction(Icon.createWithResource(this@MainActivity,
-            R.drawable.exo_controls_play), "Play", "Play video",
-            PendingIntent.getBroadcast(this@MainActivity, REQUEST_CODE_PIP_PLAY,
-                Intent(ACTION_PIP_PLAY), 0))))
+        setActions(
+            listOf(
+                RemoteAction(
+                    Icon.createWithResource(
+                        this@MainActivity,
+                        R.drawable.exo_controls_play
+                    ), "Play", "Play video",
+                    PendingIntent.getBroadcast(
+                        this@MainActivity, REQUEST_CODE_PIP_PLAY,
+                        Intent(ACTION_PIP_PLAY), 0
+                    )
+                )
+            )
+        )
 
     private fun startPlayService() {
         val viewData = viewModel.videoData.value!!
@@ -986,8 +1004,7 @@ class MainActivity : ReWatchPlayerActivity() {
     }
 
     fun getMainFragment(): MainPageFragment? =
-        supportFragmentManager.findFragmentById(R.id.root_nav_container)?.
-            childFragmentManager?.fragments?.firstOrNull() as? MainPageFragment
+        supportFragmentManager.findFragmentById(R.id.root_nav_container)?.childFragmentManager?.fragments?.firstOrNull() as? MainPageFragment
 
     companion object {
         const val TAG = "MainActivity"

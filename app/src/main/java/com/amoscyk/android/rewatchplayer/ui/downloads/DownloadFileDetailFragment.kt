@@ -61,11 +61,11 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
                 lifecycleScope.launch {
                     val result = viewModel.deleteSelectedPlayerResources(requireContext())
                     if (result.status == Status.SUCCESS) {
-                        Snackbar.make(view!!, "Item(s) deleted!", Snackbar.LENGTH_SHORT).show()
+                        mainFragment?.showSnackbar("Item(s) deleted!", Snackbar.LENGTH_SHORT)
                         viewModel.getVideoMetaWithPlayerResource(listOf(navArgs.videoId))
                     } else {
-                        Snackbar.make(view!!, (result.message as? String) ?: "error",
-                            Snackbar.LENGTH_SHORT).show()
+                        mainFragment?.showSnackbar(result.message as? String ?: "error",
+                            Snackbar.LENGTH_SHORT)
                     }
                     actionMode?.finish()
                 }
