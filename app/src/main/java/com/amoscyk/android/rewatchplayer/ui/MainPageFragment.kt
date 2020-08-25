@@ -61,6 +61,7 @@ class MainPageFragment : ReWatchPlayerFragment() {
         object : MediatorLiveData<Boolean>() {
             var vid = listOf<String>()
             var currentVid: String? = null
+
             init {
                 addSource(mainViewModel.bookmarkedVid) {
                     vid = it
@@ -89,6 +90,10 @@ class MainPageFragment : ReWatchPlayerFragment() {
         setupBottomNavigation(savedInstanceState == null)
         setupView()
         doPendingUiUpdate()
+        Handler().postDelayed({
+            motionLayout.setStateAndDisableOtherTransitions(R.id.dismiss)
+        }, 0L)
+
     }
 
     override fun onStart() {
@@ -96,10 +101,6 @@ class MainPageFragment : ReWatchPlayerFragment() {
         // if last open tab is not set, use default tab
         bottomNav.selectedItemId =
             activity!!.appSharedPreference.getInt(PreferenceKey.LAST_OPEN_TAB_ID, -1)
-
-        Handler().postDelayed({
-            motionLayout.setStateAndDisableOtherTransitions(R.id.dismiss)
-        }, 0L)
     }
 
     override fun onStop() {
@@ -120,12 +121,21 @@ class MainPageFragment : ReWatchPlayerFragment() {
     private fun setupView() {
         motionLayout.apply {
             setTransitionListener(object : MotionLayout.TransitionListener {
-                override fun onTransitionTrigger(motionLayout: MotionLayout?, triggerId: Int, positive: Boolean, progress: Float) {
+                override fun onTransitionTrigger(
+                    motionLayout: MotionLayout?,
+                    triggerId: Int,
+                    positive: Boolean,
+                    progress: Float
+                ) {
 
                 }
 
                 @SuppressLint("SourceLockedOrientationActivity")
-                override fun onTransitionStarted(motionLayout: MotionLayout?, startId: Int, endId: Int) {
+                override fun onTransitionStarted(
+                    motionLayout: MotionLayout?,
+                    startId: Int,
+                    endId: Int
+                ) {
                     playerControl.hide()
                     if (endId == R.id.fullscreen) {
                         activity?.requestedOrientation =
@@ -138,9 +148,15 @@ class MainPageFragment : ReWatchPlayerFragment() {
                 }
 
                 @SuppressLint("SourceLockedOrientationActivity")
-                override fun onTransitionChange(motionLayout: MotionLayout?, startId: Int, endId: Int, progress: Float) {
+                override fun onTransitionChange(
+                    motionLayout: MotionLayout?,
+                    startId: Int,
+                    endId: Int,
+                    progress: Float
+                ) {
                     if (startId == R.id.fullscreen && endId == R.id.small && progress > 0.9) {
-                        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+                        activity?.requestedOrientation =
+                            ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
                     }
                 }
 
@@ -148,7 +164,10 @@ class MainPageFragment : ReWatchPlayerFragment() {
                 override fun onTransitionCompleted(motionLayout: MotionLayout?, currentId: Int) {
                     when (currentId) {
                         R.id.fullscreen -> {
-                            Log.d(AppConstant.TAG, "transition completed, is fullscreen, show control view")
+                            Log.d(
+                                AppConstant.TAG,
+                                "transition completed, is fullscreen, show control view"
+                            )
                             // sync visibility setting of player control view with motion layout
                             Handler().postDelayed({ playerControl.show() }, 0)
                             val orientation = resources.configuration.orientation
@@ -241,11 +260,13 @@ class MainPageFragment : ReWatchPlayerFragment() {
     }
 
     fun setPlayerSize(size: PlayerSize) {
-        motionLayout.transitionToState(when (size) {
-            PlayerSize.DISMISS -> R.id.dismiss
-            PlayerSize.SMALL -> R.id.small
-            PlayerSize.FULLSCREEN -> R.id.fullscreen
-        })
+        motionLayout.transitionToState(
+            when (size) {
+                PlayerSize.DISMISS -> R.id.dismiss
+                PlayerSize.SMALL -> R.id.small
+                PlayerSize.FULLSCREEN -> R.id.fullscreen
+            }
+        )
     }
 
     fun showControlView() {
@@ -307,7 +328,8 @@ class MainPageFragment : ReWatchPlayerFragment() {
                 R.navigation.home,
                 R.navigation.library,
                 R.navigation.downloads,
-                R.navigation.settings),
+                R.navigation.settings
+            ),
             childFragmentManager,
             R.id.main_page_nav_host_fragment,
             requireAttach

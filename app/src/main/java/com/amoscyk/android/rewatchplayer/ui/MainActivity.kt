@@ -568,10 +568,16 @@ class MainActivity : ReWatchPlayerActivity() {
 
         mPlayerServiceReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                playbackPosition =
-                    intent.getLongExtra(AudioPlayerService.EXTRA_KEY_PLAYBACK_POSITION, 0L)
-                Log.d("MainActivity", "audio service broadcast receiver: $playbackPosition")
-                viewModel.startPlayingVideo()
+                val playbackPos = intent.getLongExtra(AudioPlayerService.EXTRA_KEY_PLAYBACK_POSITION, 0L)
+                val videoId = intent.getStringExtra(AudioPlayerService.EXTRA_KEY_VIDEO_ID)
+                if (viewModel.videoData.value?.videoMeta?.videoMeta?.videoId != videoId) {
+                    // no playing resource, restart killed app while foreground playing
+                    viewModel.playVideoForId(this@MainActivity, videoId, true, playbackPos)
+                } else {
+                    playbackPosition = playbackPos
+                    Log.d("MainActivity", "audio service broadcast receiver: $playbackPosition")
+                    viewModel.startPlayingVideo()
+                }
             }
         }
         registerReceiver(mPlayerServiceReceiver, IntentFilter().apply {
@@ -987,6 +993,7 @@ class MainActivity : ReWatchPlayerActivity() {
     private fun startPlayService() {
         val viewData = viewModel.videoData.value!!
         val intent = AudioPlayerService.IntentBuilder(this)
+            .setVideoId(viewData.videoMeta.videoMeta.videoId)
             .setUriList(viewModel.resourceUri.value!!.uriList.toTypedArray())
             .setPlaybackPosition(playbackPosition)
             .setTitle(viewData.videoMeta.videoMeta.title)

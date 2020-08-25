@@ -235,7 +235,7 @@ class MainViewModel(
         return ResourceTag(vTag, aTag)
     }
 
-    fun playVideoForId(context: Context, videoId: String?, findFile: Boolean) {
+    fun playVideoForId(context: Context, videoId: String?, findFile: Boolean, playbackPos: Long = 0) {
         viewModelScope.launch {
             if (videoId == null) {
                 _getVideoResult.value = Event(GetVideoResult(videoId, GetVideoResult.Error.EMPTY_VIDEO_ID))
@@ -251,12 +251,15 @@ class MainViewModel(
                 _currentVideoData.value = pendingVideoData
                 val resTag = getPreferredITagForPlaying(context, pendingVideoData!!, findFile)
                 var lastPlayPos: Long? = null
-                youtubeRepository.getWatchHistory(arrayOf(videoId)).firstOrNull()?.let {
-                    if (it.lastWatchPosMillis > 0 &&
-                        round(it.lastWatchPosMillis / 1000f) <
-                        round(DateTimeHelper.getDurationMillis(pendingVideoData!!.videoMeta.videoMeta.duration) / 1000f)
-                    ) {
-                        lastPlayPos = it.lastWatchPosMillis
+                if (playbackPos != 0L) lastPlayPos = playbackPos
+                else {
+                    youtubeRepository.getWatchHistory(arrayOf(videoId)).firstOrNull()?.let {
+                        if (it.lastWatchPosMillis > 0 &&
+                            round(it.lastWatchPosMillis / 1000f) <
+                            round(DateTimeHelper.getDurationMillis(pendingVideoData!!.videoMeta.videoMeta.duration) / 1000f)
+                        ) {
+                            lastPlayPos = it.lastWatchPosMillis
+                        }
                     }
                 }
                 setQuality(resTag.vTag, resTag.aTag, lastPlayPos)

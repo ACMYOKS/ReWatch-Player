@@ -9,6 +9,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.IBinder
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import com.amoscyk.android.rewatchplayer.R
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.ExoPlayerFactory
@@ -30,6 +31,7 @@ class AudioPlayerService : Service() {
     }
     private var notiMngr: PlayerNotificationManager? = null
 
+    private var videoId: String? = null
     private var title: String? = null
     private var content: String? = null
 
@@ -73,7 +75,11 @@ class AudioPlayerService : Service() {
                     stopSelf()
                 }
             })
-        notiMngr!!.setPlayer(exoPlayer)
+        notiMngr!!.apply {
+            setPlayer(exoPlayer)
+            setPriority(NotificationCompat.PRIORITY_HIGH)
+            setBadgeIconType(NotificationCompat.BADGE_ICON_NONE)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -83,6 +89,7 @@ class AudioPlayerService : Service() {
                 @Suppress("UNCHECKED_CAST")
                 val resUris = extra.map { it as Uri }.toTypedArray()
                 val playbackPos = intent.getLongExtra(EXTRA_KEY_PLAYBACK_POSITION, 0)
+                videoId = intent.getStringExtra(EXTRA_KEY_VIDEO_ID)
                 title = intent.getStringExtra(EXTRA_KEY_VIDEO_TITLE)
                 content = intent.getStringExtra(EXTRA_KEY_VIDEO_CONTENT)
                 prepareMediaResource(resUris)
@@ -101,7 +108,8 @@ class AudioPlayerService : Service() {
 
     override fun onDestroy() {
         sendBroadcast(Intent(ACTION_GET_PLAYBACK_POSITION)
-            .putExtra(EXTRA_KEY_PLAYBACK_POSITION, exoPlayer?.currentPosition ?: 0L))
+            .putExtra(EXTRA_KEY_PLAYBACK_POSITION, exoPlayer?.currentPosition ?: 0L)
+            .putExtra(EXTRA_KEY_VIDEO_ID, videoId))
         notiMngr?.setPlayer(null)
         exoPlayer?.release()
         exoPlayer = null
@@ -119,11 +127,16 @@ class AudioPlayerService : Service() {
     }
 
     class IntentBuilder(val context: Context) {
+        private var _videoId: String? = null
         private var _urlList = arrayOf<Uri>()
         private var _playbackPos = 0L
         private var _title: String? = null
         private var _content: String? = null
 
+        fun setVideoId(videoId: String): IntentBuilder {
+            _videoId = videoId
+            return this
+        }
         fun setUriList(urlList: Array<Uri>): IntentBuilder {
             _urlList = urlList
             return this
@@ -142,6 +155,7 @@ class AudioPlayerService : Service() {
         }
         fun build(): Intent {
             return Intent(context, AudioPlayerService::class.java)
+                .putExtra(EXTRA_KEY_VIDEO_ID, _videoId)
                 .putExtra(EXTRA_KEY_URI_LIST, _urlList)
                 .putExtra(EXTRA_KEY_PLAYBACK_POSITION, _playbackPos)
                 .putExtra(EXTRA_KEY_VIDEO_TITLE, _title)
@@ -152,6 +166,7 @@ class AudioPlayerService : Service() {
     companion object {
         const val EXTRA_KEY_URI_LIST = "com.amoscyk.android.rewatchplayer.service.URI_LIST"
         const val EXTRA_KEY_PLAYBACK_POSITION = "com.amoscyk.android.rewatchplayer.service.PLAYBACK_POSITION"
+        const val EXTRA_KEY_VIDEO_ID = "com.amoscyk.android.rewatchplayer.service.VIDEO_ID"
         const val EXTRA_KEY_VIDEO_TITLE = "com.amoscyk.android.rewatchplayer.service.VIDEO_TITLE"
         const val EXTRA_KEY_VIDEO_CONTENT = "com.amoscyk.android.rewatchplayer.service.VIDEO_CONTENT"
         const val ACTION_GET_PLAYBACK_POSITION = "com.amoscyk.android.rewatchplayer.service.ACTION_GET_PLAYBACK_POSITION"
