@@ -8,40 +8,40 @@ import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMetaWithPlayer
 @Dao
 interface VideoMetaDao {
     @Query("SELECT * FROM video_metas")
-    fun getAll(): List<VideoMeta>
+    suspend fun getAll(): List<VideoMeta>
 
     @Query("SELECT * FROM video_metas WHERE video_id IN (:videoIds)")
-    fun getByVideoId(vararg videoIds: String): List<VideoMeta>
+    suspend fun getByVideoId(vararg videoIds: String): List<VideoMeta>
 
     @Transaction
     @Query("SELECT * FROM video_metas WHERE video_id in (SELECT video_id FROM video_bookmarks WHERE username = :username)")
-    fun getBookmarked(username: String): List<VideoMeta>
+    suspend fun getBookmarked(username: String): List<VideoMeta>
 
     @Transaction
     @Query("SELECT * FROM video_metas")
-    fun getAllWithPlayerResource(): List<VideoMetaWithPlayerResource>
+    suspend fun getAllWithPlayerResource(): List<VideoMetaWithPlayerResource>
 
     @Transaction
     @Query("SELECT * FROM video_metas WHERE video_id IN (:videoIds)")
-    fun getByVideoIdWithPlayerResource(vararg videoIds: String): List<VideoMetaWithPlayerResource>
+    suspend fun getByVideoIdWithPlayerResource(vararg videoIds: String): List<VideoMetaWithPlayerResource>
 
     @Transaction
     @Query("SELECT * FROM video_metas INNER JOIN player_resources ON video_metas.video_id = player_resources.video_id GROUP BY video_metas.video_id")
-    fun getAllExistingPlayerResource(): List<VideoMetaWithPlayerResource>
+    suspend fun getAllExistingPlayerResource(): List<VideoMetaWithPlayerResource>
 
     @Transaction
     @Query("SELECT * FROM video_metas WHERE video_id in (SELECT video_id FROM video_bookmarks WHERE username = :username)")
     fun getBookmarkedWithPlayerResource(username: String): LiveData<List<VideoMetaWithPlayerResource>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(vararg videoMetas: VideoMeta): List<Long>
+    suspend fun insert(vararg videoMetas: VideoMeta): List<Long>
 
     @Update
-    fun update(vararg videoMetas: VideoMeta): Int
+    suspend fun update(vararg videoMetas: VideoMeta): Int
 
     @Delete
-    fun delete(vararg videoMetas: VideoMeta): Int
+    suspend fun delete(vararg videoMetas: VideoMeta): Int
 
     @Query("DELETE FROM video_metas WHERE video_id = :videoId")
-    fun deleteByVideoId(videoId: String): Int
+    suspend fun deleteByVideoId(videoId: String): Int
 }

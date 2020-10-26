@@ -13,15 +13,3 @@ data class RPSubscriptionListResponse(
     val totalResults: Int,
     val resultsPerPage: Int
 )
-
-fun YouTube.Subscriptions.List.getResponse() = execute().let { res ->
-    RPSubscriptionListResponse(
-        request = this,
-        items = res.items.map { it.toRPSubscription() },
-        pageToken = this.pageToken,
-        prevPageToken = res.prevPageToken,
-        nextPageToken = res.nextPageToken,
-        totalResults = res.pageInfo.totalResults ?: 0,
-        resultsPerPage = res.pageInfo.resultsPerPage ?: 0
-    )
-}

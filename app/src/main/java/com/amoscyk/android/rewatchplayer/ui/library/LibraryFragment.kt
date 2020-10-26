@@ -4,7 +4,6 @@ package com.amoscyk.android.rewatchplayer.ui.library
 import android.content.Context
 import android.os.Bundle
 import android.view.*
-import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
 import androidx.core.content.edit
@@ -21,11 +20,14 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager.widget.ViewPager
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
+import com.amoscyk.android.rewatchplayer.datasource.vo.NoNetworkException
+import com.amoscyk.android.rewatchplayer.datasource.vo.ServerErrorException
 import com.amoscyk.android.rewatchplayer.ui.*
 import com.amoscyk.android.rewatchplayer.util.*
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_library.view.*
+import java.net.SocketTimeoutException
 
 class LibraryFragment : ReWatchPlayerFragment() {
 
@@ -37,6 +39,7 @@ class LibraryFragment : ReWatchPlayerFragment() {
     private lateinit var playlistFrag: ContentListFragment
     private lateinit var bookmarkFrag: ContentListFragment
     private lateinit var historyFrag: ContentListFragment
+    private var indefiniteSb: Snackbar? = null      // special ref for snackbar with indefinite show duration
     private val viewModel by viewModels<LibraryViewModel> { viewModelFactory }
     private val mainViewModel by activityViewModels<MainViewModel> { viewModelFactory }
 
@@ -149,6 +152,10 @@ class LibraryFragment : ReWatchPlayerFragment() {
         viewModel.currentDisplayMode.observe(this, Observer {
             currentDisplayMode = it
             setListForDisplayMode(it)
+            if (indefiniteSb != null) {
+                indefiniteSb!!.dismiss()
+                indefiniteSb = null
+            }
         })
         viewModel.channelList.observe(this, Observer {
             mChannelListAdapter.submitList(it.accumulatedItems + it.newItems)
@@ -229,6 +236,47 @@ class LibraryFragment : ReWatchPlayerFragment() {
                 viewModel.refreshList()
             }
         })
+
+        viewModel.exceptionEvent.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                val e = it.e
+                val actionTag = it.actionTag
+                when (e) {
+                    is SocketTimeoutException -> {
+                        mainFragment?.apply {
+                            indefiniteSb =
+                                newSnackbar(R.string.error_loading_resource, Snackbar.LENGTH_INDEFINITE)
+                                    .setAction(R.string.retry) {
+                                        when (actionTag) {
+                                            "refresh_list" -> viewModel.refreshList()
+                                            "load_more_channels" -> viewModel.loadMoreChannels()
+                                            "load_more_playlists" -> viewModel.loadMorePlaylists()
+                                        }
+                                    }
+                            indefiniteSb!!.show()
+                        }
+                    }
+                    is NoNetworkException -> {
+                        mainFragment?.apply {
+                            indefiniteSb =
+                                newSnackbar(R.string.error_network_disconnected, Snackbar.LENGTH_INDEFINITE)
+                                    .setAction(R.string.retry) {
+                                        when (actionTag) {
+                                            "refresh_list" -> viewModel.refreshList()
+                                            "load_more_channels" -> viewModel.loadMoreChannels()
+                                            "load_more_playlists" -> viewModel.loadMorePlaylists()
+                                        }
+                                    }
+                            indefiniteSb!!.show()
+                        }
+                    }
+                    else -> {
+                        mainFragment?.newSnackbar(e.message ?: getString(R.string.error_unknown), Snackbar.LENGTH_LONG)
+                            ?.show()
+                    }
+                }
+            }
+        })
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -285,8 +333,7 @@ class LibraryFragment : ReWatchPlayerFragment() {
                 if (it == null) {
                     edit { putString(PreferenceKey.LIBRARY_LIST_MODE, DEFAULT_DISPLAY_MODE) }
                     DEFAULT_DISPLAY_MODE
-                }
-                else it
+                } else it
             }
         }
         viewModel.setDisplayMode(LibraryViewModel.DisplayMode.valueOf(displayMode))
@@ -298,6 +345,10 @@ class LibraryFragment : ReWatchPlayerFragment() {
         requireActivity().appSharedPreference.apply {
             edit { putString(PreferenceKey.LIBRARY_LIST_MODE, currentDisplayMode.name) }
         }
+        if (indefiniteSb != null) {
+            indefiniteSb!!.dismiss()
+            indefiniteSb = null
+        }
     }
 
     private fun getContentListFragment(position: Int): ContentListFragment =
@@ -308,7 +359,10 @@ class LibraryFragment : ReWatchPlayerFragment() {
         toolbar.setupWithNavController(findNavController())
         viewPager.apply {
             adapter = object :
-                FragmentPagerAdapter(childFragmentManager, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
+                FragmentPagerAdapter(
+                    childFragmentManager,
+                    BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT
+                ) {
                 override fun getCount(): Int = 4
                 override fun getItem(position: Int): Fragment {
                     return when (position) {
@@ -318,6 +372,7 @@ class LibraryFragment : ReWatchPlayerFragment() {
                         else -> historyFrag
                     }
                 }
+
                 override fun getPageTitle(position: Int): CharSequence? {
                     return when (position) {
                         0 -> getString(R.string.library_list_channel)
@@ -331,10 +386,12 @@ class LibraryFragment : ReWatchPlayerFragment() {
                 override fun onPageScrollStateChanged(state: Int) {
 
                 }
+
                 override fun onPageSelected(position: Int) {
                     viewModel.setEditMode(false)
                     viewModel.setDisplayMode(LibraryViewModel.DisplayMode.values()[position])
                 }
+
                 override fun onPageScrolled(
                     position: Int,
                     positionOffset: Float,

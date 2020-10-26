@@ -1,6 +1,10 @@
 package com.amoscyk.android.rewatchplayer.datasource
 
 import android.content.Context
+import com.amoscyk.android.rewatchplayer.datasource.vo.GmsUsernameNotSetException
+import com.amoscyk.android.rewatchplayer.datasource.vo.GooglePlayServicesNotAvailableException
+import com.amoscyk.android.rewatchplayer.datasource.vo.NoNetworkException
+import com.amoscyk.android.rewatchplayer.util.isNetworkConnected
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.api.client.extensions.android.http.AndroidHttp
@@ -43,15 +47,19 @@ class YoutubeServiceProvider(context: Context) {
 
     val youtubeService: YouTube
         get() {
-            val transport = AndroidHttp.newCompatibleTransport()
-            return YouTube.Builder(transport,
-                JSON_FACTORY, credential)
+            if (!isGooglePlayServicesAvailable) throw GooglePlayServicesNotAvailableException()
+            if (credential.selectedAccountName == null) throw GmsUsernameNotSetException()
+            if (!mContext.isNetworkConnected) throw NoNetworkException()
+            return YouTube.Builder(
+                AndroidHttp.newCompatibleTransport(),
+                JacksonFactory.getDefaultInstance()
+            ) {
+                credential.initialize(it)
+                it.connectTimeout = 10000       // 10 seconds
+                it.readTimeout = 10000          // 10 seconds
+            }
                 .setApplicationName("ReWatch Player")
                 .build()
         }
-
-    companion object {
-        private val JSON_FACTORY = JacksonFactory.getDefaultInstance()
-    }
 
 }

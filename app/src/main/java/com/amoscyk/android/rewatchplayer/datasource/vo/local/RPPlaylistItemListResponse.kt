@@ -13,15 +13,3 @@ data class RPPlaylistItemListResponse(
     val totalResults: Int,
     val resultsPerPage: Int
 )
-
-fun YouTube.PlaylistItems.List.getResponse(): RPPlaylistItemListResponse = execute().let { res ->
-    RPPlaylistItemListResponse(
-        request = this,
-        items = res.items.map { it.toRPPlaylistItem() },
-        pageToken = this.pageToken,
-        prevPageToken = res.prevPageToken,
-        nextPageToken = res.nextPageToken,
-        totalResults = res.pageInfo.totalResults ?: 0,
-        resultsPerPage = res.pageInfo.resultsPerPage ?: 0
-    )
-}

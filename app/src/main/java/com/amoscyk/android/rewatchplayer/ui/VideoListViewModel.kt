@@ -1,5 +1,6 @@
 package com.amoscyk.android.rewatchplayer.ui
 
+import android.util.Log
 import androidx.lifecycle.*
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.datasource.vo.*
@@ -33,9 +34,8 @@ class VideoListViewModel(
     private val _showVideoLoading = MutableLiveData<ListLoadingStateEvent>()
     val showVideoLoading: LiveData<ListLoadingStateEvent> = _showVideoLoading
 
-//    private val _videoResource = MutableLiveData<VideoListResponseResource>()
-//    private val _videoList = _videoResource.switchMap { it.resource }
-//    val videoList: LiveData<Resource<List<RPVideo>>> = _videoList
+    private val _exceptionEvent = MutableLiveData<Event<ExceptionWithActionTag>>()
+    val exceptionEvent: LiveData<Event<ExceptionWithActionTag>> = _exceptionEvent
 
     private var _currentPlaylist: RPPlaylist? = null
 
@@ -51,19 +51,24 @@ class VideoListViewModel(
         }
     }
 
-    fun setPlaylist(playlist: RPPlaylist) {
+    fun setPlaylist(playlist: RPPlaylist, reset: Boolean = false) {
         viewModelScope.launch {
-            if (playlist != _currentPlaylist) {
+            if (reset || playlist != _currentPlaylist) {
                 _currentPlaylist = playlist
                 _title.value = playlist.title
+                val o1 = _playlistItemListResHolder
+                val o2 = _videoListResHolder
                 _playlistItemListResHolder = ListResponseHolder()
                 _videoListResHolder = ListResponseHolder()
-//                _playlistResponse.value =
-//                    youtubeRepository.loadPlaylistItemForPlaylist(playlist.id)
                 _showListItemLoading.loading {
-                    runCatching {
+                    try {
                         _playlistItemListRes.value =
                             youtubeRepository.getPlaylistItemForPlaylist(playlist.id)
+                    } catch(e: Exception) {
+                        Log.e("ALERT", "VideoListViewModel: ${e.message.orEmpty()}")
+                        emitException(e, "set_playlist")
+                        _playlistItemListResHolder = o1
+                        _videoListResHolder = o2
                     }
                 }
             }
@@ -73,28 +78,36 @@ class VideoListViewModel(
     fun setPlaylistItems(items: List<RPPlaylistItem>) {
         viewModelScope.launch {
             _showVideoLoading.loading {
-                runCatching {
+                try {
                     _videoListRes.value = youtubeRepository.getVideosById(items.map { it.videoId })
+                } catch(e: Exception) {
+                    Log.e("ALERT", "VideoListViewModel: ${e.message.orEmpty()}")
+                    emitException(e, "set_playlist_items")
                 }
             }
-//            _videoResource.value = youtubeRepository.loadVideoResultResource(items.map { it.videoId })
         }
     }
 
     fun loadMoreVideos() {
         viewModelScope.launch {
-            //            _playlistResponse.value?.loadMoreResource()
             _playlistItemListRes.value?.apply {
                 if (nextPageToken != null) {
                     _showListItemLoading.loading(true) {
-                        runCatching {
+                        try {
                             _playlistItemListRes.value =
                                 youtubeRepository.getPlaylistItemForPlaylist(_currentPlaylist!!.id, nextPageToken)
+                        } catch (e: Exception) {
+                            Log.e("ALERT", "VideoListViewModel: ${e.message.orEmpty()}")
+                            emitException(e, "load_more_videos")
                         }
                     }
                 }
             }
         }
+    }
+
+    private fun emitException(e: Exception, actionTag: String) {
+        _exceptionEvent.value = Event(ExceptionWithActionTag(e, actionTag))
     }
 
 }

@@ -9,6 +9,7 @@ import androidx.lifecycle.*
 import com.amoscyk.android.rewatchplayer.AppConstant
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.datasource.vo.Event
+import com.amoscyk.android.rewatchplayer.datasource.vo.*
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
 import com.amoscyk.android.rewatchplayer.datasource.vo.Resource
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
@@ -24,7 +25,7 @@ import kotlin.math.round
 
 class MainViewModel(
     private val youtubeRepository: YoutubeRepository
-): ViewModel() {
+) : ViewModel() {
 
     val currentAccountName: LiveData<String> = youtubeRepository.currentAccountName
 
@@ -58,9 +59,12 @@ class MainViewModel(
 //    val availableITag: LiveData<List<Int>> = _availableITag
 
     private val _videoResSelection = MutableLiveData<List<PlayerSelection<VideoQualitySelection>>>()
-    val videoResSelection: LiveData<List<PlayerSelection<VideoQualitySelection>>> = _videoResSelection
-    private val _audioQualitySelection = MutableLiveData<List<PlayerSelection<VideoQualitySelection>>>()
-    val audioQualitySelection: LiveData<List<PlayerSelection<VideoQualitySelection>>> = _audioQualitySelection
+    val videoResSelection: LiveData<List<PlayerSelection<VideoQualitySelection>>> =
+        _videoResSelection
+    private val _audioQualitySelection =
+        MutableLiveData<List<PlayerSelection<VideoQualitySelection>>>()
+    val audioQualitySelection: LiveData<List<PlayerSelection<VideoQualitySelection>>> =
+        _audioQualitySelection
 
     private val _playbackParams = MutableLiveData<PlaybackParameters>(PlaybackParameters.DEFAULT)
     val playbackParams: LiveData<PlaybackParameters> = _playbackParams
@@ -68,7 +72,7 @@ class MainViewModel(
 //    private var selectedATag = -1
 //    private var isAdaptive = false
 
-//    private var _videoId = ""
+    //    private var _videoId = ""
 //    private var _allUrlMap = mapOf<Int, String>()
 //    private var _allFileMap = mapOf<Int, String>()
     private var _isWifiConnected = false
@@ -88,7 +92,8 @@ class MainViewModel(
     val stopPlayingCurrent: LiveData<Event<Unit>> = _stopPlayingCurrent
 
     private val _shouldAskUserRestoreWatchPosition = MutableLiveData<Event<WatchHistory>>()
-    val shouldAskUserRestoreWatchPosition: LiveData<Event<WatchHistory>> = _shouldAskUserRestoreWatchPosition
+    val shouldAskUserRestoreWatchPosition: LiveData<Event<WatchHistory>> =
+        _shouldAskUserRestoreWatchPosition
 
     private val _shouldStartPlayVideo = MutableLiveData<Event<Unit>>()
     val shouldStartPlayVideo: LiveData<Event<Unit>> = _shouldStartPlayVideo
@@ -99,7 +104,7 @@ class MainViewModel(
     private val _getVideoResult = MutableLiveData<Event<GetVideoResult>>()
     val getVideoResult: LiveData<Event<GetVideoResult>> = _getVideoResult
 
-//    private var pendingFetchVideoId: String? = null
+    //    private var pendingFetchVideoId: String? = null
     private var pendingVTag: Int? = null
     private var pendingATag: Int? = null
 
@@ -119,14 +124,26 @@ class MainViewModel(
     val bookmarkedVid: LiveData<List<String>> = youtubeRepository.getBookmarkedVideoId()
 
     //    private val adaptiveVideoTagPriorityList = listOf(266, 264, 299, 137, 298, 136, 135, 134, 133)
-    private val adaptiveVideoTagPriorityList = listOf(298, 136, 135, 134, 133, 160, 299, 137, 264, 138, 266)
+    private val adaptiveVideoTagPriorityList =
+        listOf(298, 136, 135, 134, 133, 160, 299, 137, 264, 138, 266)
     private val adaptiveAudioTagPriorityList = listOf(141, 140, 139)
     private val muxedVideoTagPriorityList = listOf(38, 37, 85, 84, 22, 83, 82, 18)
 
-    fun notifyIsWifiConnected(isWifiConnected: Boolean) { _isWifiConnected = isWifiConnected }
-    fun notifyIsMobileDataConnected(isMobileDataConnected: Boolean) { _isMobileDataConnected = isMobileDataConnected }
-    fun notifyIsAllowedPlayUsingMobile(isAllowedPlayUsingMobile: Boolean) { _isAllowedPlayUsingMobile = isAllowedPlayUsingMobile }
-    fun notifyIsAllowedDownloadUsingMobile(isAllowedDownloadUsingMobile: Boolean) { _isAllowedDownloadUsingMobile = isAllowedDownloadUsingMobile }
+    fun notifyIsWifiConnected(isWifiConnected: Boolean) {
+        _isWifiConnected = isWifiConnected
+    }
+
+    fun notifyIsMobileDataConnected(isMobileDataConnected: Boolean) {
+        _isMobileDataConnected = isMobileDataConnected
+    }
+
+    fun notifyIsAllowedPlayUsingMobile(isAllowedPlayUsingMobile: Boolean) {
+        _isAllowedPlayUsingMobile = isAllowedPlayUsingMobile
+    }
+
+    fun notifyIsAllowedDownloadUsingMobile(isAllowedDownloadUsingMobile: Boolean) {
+        _isAllowedDownloadUsingMobile = isAllowedDownloadUsingMobile
+    }
 
     fun setAccountName(accountName: String?) {
         youtubeRepository.setAccountName(accountName)
@@ -149,6 +166,20 @@ class MainViewModel(
         }
     }
 
+//    fun getYtInfo() {
+//        viewModelScope.launch {
+//            runCatching {
+//                return@runCatching youtubeRepository.getYtInfo("n_DdqP65APY")
+//            }.getOrElse {
+//                Log.e("MOMO", it.message.orEmpty())
+//                it.printStackTrace()
+//                return@getOrElse null
+//            }?.let {
+//                Log.d("MOMO", it.videoDetails.title)
+//            }
+//        }
+//    }
+
     @Throws(Exception::class)
     private suspend fun initResource(videoId: String): VideoViewData {
         var fileMap = mapOf<Int, String>()
@@ -159,8 +190,8 @@ class MainViewModel(
         val metas = youtubeRepository.getVideoMetaWithPlayerResource(arrayOf(videoId))
         if (metas.isEmpty() || metas.first().playerResources.isEmpty()) {
             // fetch network resource
-            youtubeRepository.loadYTInfoForVideoId(videoId)?.let { info ->
-                urlMap = info.urlMap
+            youtubeRepository.getYtInfo(videoId)?.let { info ->
+                urlMap = (info.formats + info.adaptiveFormats).associateBy({ it.itag }) { it.url }
                 youtubeRepository.getVideoMetaWithPlayerResource(arrayOf(videoId)).let { m ->
                     if (m.isEmpty()) {
                         throw NoVideoMetaException()
@@ -172,7 +203,12 @@ class MainViewModel(
         } else {
             metas.firstOrNull()?.let { meta ->
                 videoMeta = meta
-                fileMap = meta.playerResources.associate { Pair(it.itag, "${it.filepath}/${it.filename}") }
+                fileMap = meta.playerResources.associate {
+                    Pair(
+                        it.itag,
+                        "${it.filepath}/${it.filename}"
+                    )
+                }
             } ?: throw NoVideoMetaException()
         }
         val history = youtubeRepository.getWatchHistory(arrayOf(videoId)).firstOrNull()
@@ -184,8 +220,8 @@ class MainViewModel(
         var videoMeta: VideoMetaWithPlayerResource? = null
 
         // fetch network resource
-        youtubeRepository.loadYTInfoForVideoId(videoId)?.let { info ->
-            urlMap = info.urlMap
+        youtubeRepository.getYtInfo(videoId)?.let { info ->
+            urlMap = (info.formats + info.adaptiveFormats).associateBy({ it.itag }) { it.url }
             youtubeRepository.getVideoMetaWithPlayerResource(arrayOf(videoId)).let { m ->
                 if (m.isEmpty()) {
                     throw NoVideoMetaException()
@@ -198,9 +234,11 @@ class MainViewModel(
     }
 
     @Throws(Exception::class)
-    private suspend fun getPreferredITagForPlaying(context: Context,
-                                                   videoViewData: VideoViewData,
-                                                   findFile: Boolean): ResourceTag {
+    private suspend fun getPreferredITagForPlaying(
+        context: Context,
+        videoViewData: VideoViewData,
+        findFile: Boolean
+    ): ResourceTag {
         if (findFile) {
             val dlIdList = videoViewData.videoMeta.playerResources.map { it.downloadId }
             val dlMngr = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
@@ -235,10 +273,16 @@ class MainViewModel(
         return ResourceTag(vTag, aTag)
     }
 
-    fun playVideoForId(context: Context, videoId: String?, findFile: Boolean, playbackPos: Long = 0) {
+    fun playVideoForId(
+        context: Context,
+        videoId: String?,
+        findFile: Boolean,
+        playbackPos: Long = 0
+    ) {
         viewModelScope.launch {
             if (videoId == null) {
-                _getVideoResult.value = Event(GetVideoResult(videoId, GetVideoResult.Error.EMPTY_VIDEO_ID))
+                _getVideoResult.value =
+                    Event(GetVideoResult(videoId, GetVideoResult.Error.EMPTY_VIDEO_ID))
                 return@launch
             }
             _isLoadingVideo.value = Event(true)
@@ -266,12 +310,16 @@ class MainViewModel(
                 setPlaybackSpeed(1f)
                 pendingVideoData = null
             }.onFailure {
-                _getVideoResult.value = Event(GetVideoResult(videoId, when (it) {
-                    is NoVideoMetaException -> GetVideoResult.Error.NO_VIDEO_META
-                    is NoYtInfoException -> GetVideoResult.Error.NO_YT_INFO
-                    is NoAvailableQualityException -> GetVideoResult.Error.NO_QUALITY
-                    else -> GetVideoResult.Error.UNKNOWN
-                }))
+                _getVideoResult.value = Event(
+                    GetVideoResult(
+                        videoId, when (it) {
+                            is NoVideoMetaException -> GetVideoResult.Error.NO_VIDEO_META
+                            is NoYtInfoException -> GetVideoResult.Error.NO_YT_INFO
+                            is NoAvailableQualityException -> GetVideoResult.Error.NO_QUALITY
+                            else -> GetVideoResult.Error.UNKNOWN
+                        }
+                    )
+                )
                 pendingVideoData = null
             }
             _isLoadingVideo.value = Event(false)
@@ -295,24 +343,37 @@ class MainViewModel(
         viewModelScope.launch {
             _currentVideoData.value?.let { viewData ->
                 if (listOfNotNull(vTag, aTag).all { it in viewData.fileMap }) {
-                    _resourceUri.value = ResourceUri(listOf(vTag!!, aTag!!).mapNotNull { viewData.fileMap[it]?.toUri() }, lastPlayPos)
+                    _resourceUri.value = ResourceUri(
+                        listOf(
+                            vTag!!,
+                            aTag!!
+                        ).mapNotNull { viewData.fileMap[it]?.toUri() }, lastPlayPos
+                    )
                     _selectedTags.value = ResourceTag(vTag, aTag)
                     _isLocalBuffering = true
                     return@launch
                 }
-                if (viewData.urlMap.isEmpty() || !viewData.urlMap.containsKey(vTag) && !viewData.urlMap.containsKey(aTag)) {
+                if (viewData.urlMap.isEmpty() || !viewData.urlMap.containsKey(vTag) && !viewData.urlMap.containsKey(
+                        aTag
+                    )
+                ) {
                     viewData.urlMap = fetchUrlMap(viewData.videoMeta.videoMeta.videoId)
                     if (viewData.urlMap.isEmpty()
                         || vTag != null && !viewData.urlMap.containsKey(vTag)
-                        || aTag != null && !viewData.urlMap.containsKey(aTag)) {
+                        || aTag != null && !viewData.urlMap.containsKey(aTag)
+                    ) {
                         // emit error message
-                        _responseAction.value = Resource.error("no url for video ${viewData.videoMeta.videoMeta.videoId}",
-                            ResponseActionType.DO_NOTHING)
+                        _responseAction.value = Resource.error(
+                            "no url for video ${viewData.videoMeta.videoMeta.videoId}",
+                            ResponseActionType.DO_NOTHING
+                        )
                     }
                 }
                 if (!_isAllowedPlayUsingMobile && _isMobileDataConnected) {
-                    _responseAction.value = Resource.success(ResponseActionType.SHOW_ENABLE_MOBILE_DATA_USAGE_ALERT,
-                        "Mobile data connected. Enable play video using mobile data?")
+                    _responseAction.value = Resource.success(
+                        ResponseActionType.SHOW_ENABLE_MOBILE_DATA_USAGE_ALERT,
+                        "Mobile data connected. Enable play video using mobile data?"
+                    )
                     pendingVTag = vTag
                     pendingATag = aTag
                 } else {
@@ -347,13 +408,16 @@ class MainViewModel(
     }
 
     private suspend fun fetchUrlMap(videoId: String): Map<Int, String> =
-        youtubeRepository.loadYTInfoForVideoId(videoId)?.urlMap.orEmpty()
+        youtubeRepository.getYtInfo(videoId)?.let { info ->
+            (info.formats + info.adaptiveFormats).associateBy({ it.itag }) { it.url }
+        }.orEmpty()
 
     fun showArchiveOption(videoId: String) {
         viewModelScope.launch {
             val viewData = archiveData
             if (viewData == null || (viewData.videoMeta.videoMeta.videoId != videoId ||
-                        viewData.urlMap.isEmpty())) {
+                        viewData.urlMap.isEmpty())
+            ) {
                 _isLoadingVideo.value = Event(true)
                 runCatching {
                     archiveData = initArchiveResource(videoId)
@@ -432,20 +496,21 @@ class MainViewModel(
                                     return@launch
                                 }
                             }
-                            val id = DownloadManager.Request(Uri.parse(archiveData!!.urlMap[tag])).let { req ->
-                                req.setDestinationInExternalFilesDir(
-                                    context,
-                                    FileDownloadHelper.DIR_DOWNLOAD,
-                                    filename
-                                )
-                                req.setAllowedNetworkTypes(
-                                    if (!_isAllowedDownloadUsingMobile) DownloadManager.Request.NETWORK_WIFI
-                                    else DownloadManager.Request.NETWORK_WIFI or DownloadManager.Request.NETWORK_MOBILE
-                                )
-                                req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_ONLY_COMPLETION)
-                                req.setTitle(videoId)
-                                dlMngr.enqueue(req)
-                            }
+                            val id = DownloadManager.Request(Uri.parse(archiveData!!.urlMap[tag]))
+                                .let { req ->
+                                    req.setDestinationInExternalFilesDir(
+                                        context,
+                                        FileDownloadHelper.DIR_DOWNLOAD,
+                                        filename
+                                    )
+                                    req.setAllowedNetworkTypes(
+                                        if (!_isAllowedDownloadUsingMobile) DownloadManager.Request.NETWORK_WIFI
+                                        else DownloadManager.Request.NETWORK_WIFI or DownloadManager.Request.NETWORK_MOBILE
+                                    )
+                                    req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_ONLY_COMPLETION)
+                                    req.setTitle(videoId)
+                                    dlMngr.enqueue(req)
+                                }
                             youtubeRepository.addPlayerResource(
                                 videoId, tag,
                                 FileDownloadHelper.getDir(context).absolutePath, filename, 0,
@@ -457,11 +522,20 @@ class MainViewModel(
                     }
                     return@fold acc
                 }
-                _archiveResult.value = Resource.success(ArchiveResult(videoId, listOfNotNull(videoTag, audioTag), count))
+                _archiveResult.value = Resource.success(
+                    ArchiveResult(
+                        videoId,
+                        listOfNotNull(videoTag, audioTag),
+                        count
+                    )
+                )
                 return@launch
             }
             _archiveResult.value =
-                Resource.error("no video id", ArchiveResult("", listOfNotNull(videoTag, audioTag), 0))
+                Resource.error(
+                    "no video id",
+                    ArchiveResult("", listOfNotNull(videoTag, audioTag), 0)
+                )
         }
     }
 
@@ -500,10 +574,6 @@ class MainViewModel(
             youtubeRepository.upsertVideoMeta(videoMeta)
         }
     }
-
-    class NoVideoMetaException : Exception("No video meta")
-    class NoYtInfoException : Exception("No YtInfo")
-    class NoAvailableQualityException : Exception("No available quality")
 
     data class VideoViewData(
         var urlMap: Map<Int, String>,
@@ -551,7 +621,7 @@ class MainViewModel(
     data class VideoQualitySelection(
         val quality: String,
         val itag: Int
-    ): SelectableItemWithTitle {
+    ) : SelectableItemWithTitle {
         override fun getTitle(): String = quality
     }
 

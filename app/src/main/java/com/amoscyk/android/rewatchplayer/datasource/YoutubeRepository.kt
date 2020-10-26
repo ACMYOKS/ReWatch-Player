@@ -7,21 +7,25 @@ import androidx.lifecycle.map
 import androidx.lifecycle.switchMap
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPThumbnailDetails
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
+import com.amoscyk.android.rewatchplayer.datasource.vo.cloud.CloudSvcErrorHandler
+import com.amoscyk.android.rewatchplayer.datasource.vo.cloud.YtInfo
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.*
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeExtractor
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeOpenService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.threeten.bp.Duration
+import java.net.ConnectException
 
 class YoutubeRepository(
     private val ytApiServiceProvider: YoutubeServiceProvider,
     private val ytOpenService: YouTubeOpenService,
+    private val rpCloudService: RpCloudService,
     private val appDatabase: AppDatabase
 ) {
 
     private val ytExtractor = YouTubeExtractor(ytOpenService)
-    private val ytApiService = ytApiServiceProvider.youtubeService
+    private val ytApiService get() = ytApiServiceProvider.youtubeService
 
     private val _currentAccountName = MutableLiveData<String>()
     val currentAccountName: LiveData<String> = _currentAccountName
@@ -226,32 +230,47 @@ class YoutubeRepository(
 
     }
 
-    suspend fun loadYTInfoForVideoId(videoId: String): YouTubeExtractor.YTInfo? =
-        withContext(Dispatchers.IO) {
-            val ytInfo = ytExtractor.extractInfo(videoId)
-            ytInfo?.videoDetails?.let {
-                val record = appDatabase.videoMetaDao().getByVideoId(it.videoId)
-                val meta = VideoMeta(
-                    videoId = it.videoId,
-                    title = it.title,
-                    channelId = it.channelId,
-                    channelTitle = it.author,
-                    description = it.shortDescription,
-                    duration = Duration.ofSeconds(
-                        ytInfo.videoDetails.lengthSeconds.toLongOrNull() ?: 0
-                    ).toString(),
-                    thumbnails = RPThumbnailDetails(),
-                    tags = it.keywords,
-                    itags = ytInfo.urlMap.keys.toList()
-                )
-                appDatabase.videoMetaDao().apply {
-                    if (record.isEmpty()) insert(meta)
-                    else update(meta)
-                }
-                return@let
+    @Throws
+    suspend fun getYtInfo(videoId: String): YtInfo? = withContext(Dispatchers.IO) {
+        val call = rpCloudService.getYtInfo(videoId).execute()
+        if (call.isSuccessful) {
+            return@withContext call.body()?.also { info ->
+                val meta = info.getVideoMeta()
+                val record = appDatabase.videoMetaDao().getByVideoId(info.videoDetails.videoId)
+                if (record.isEmpty()) appDatabase.videoMetaDao().insert(meta)
+                else appDatabase.videoMetaDao().update(meta)
             }
-            return@withContext ytInfo
+        } else {
+            throw CloudSvcErrorHandler.getError(call.errorBody())
         }
+    }
+
+//    suspend fun loadYTInfoForVideoId(videoId: String): YouTubeExtractor.YTInfo? =
+//        withContext(Dispatchers.IO) {
+//            val ytInfo = ytExtractor.extractInfo(videoId)
+//            ytInfo?.videoDetails?.let {
+//                val record = appDatabase.videoMetaDao().getByVideoId(it.videoId)
+//                val meta = VideoMeta(
+//                    videoId = it.videoId,
+//                    title = it.title,
+//                    channelId = it.channelId,
+//                    channelTitle = it.author,
+//                    description = it.shortDescription,
+//                    duration = Duration.ofSeconds(
+//                        ytInfo.videoDetails.lengthSeconds.toLongOrNull() ?: 0
+//                    ).toString(),
+//                    thumbnails = RPThumbnailDetails(),
+//                    tags = it.keywords,
+//                    itags = ytInfo.urlMap.keys.toList()
+//                )
+//                appDatabase.videoMetaDao().apply {
+//                    if (record.isEmpty()) insert(meta)
+//                    else update(meta)
+//                }
+//                return@let
+//            }
+//            return@withContext ytInfo
+//        }
 
 
     suspend fun addPlayerResource(
@@ -310,13 +329,15 @@ class YoutubeRepository(
 
 
     fun getBookmarkedVideoMetaWithPlayerResource(): LiveData<List<VideoMetaWithPlayerResource>> =
-        currentAccountName.switchMap { username -> appDatabase.videoMetaDao().getBookmarkedWithPlayerResource(username) }
+        currentAccountName.switchMap { username ->
+            appDatabase.videoMetaDao().getBookmarkedWithPlayerResource(username)
+        }
 
 
     fun getBookmarkedVideoId(): LiveData<List<String>> =
         currentAccountName.switchMap { username ->
-            appDatabase.videoBookmarkDao().getAllForUser(username).map {
-                    bookmarks -> bookmarks.map { it.videoId }
+            appDatabase.videoBookmarkDao().getAllForUser(username).map { bookmarks ->
+                bookmarks.map { it.videoId }
             }
         }
 
@@ -326,7 +347,8 @@ class YoutubeRepository(
             appDatabase.videoBookmarkDao().insert(username, videoId)
             // add VideoMeta for bookmarked video to ease Bookmark list display
             if (appDatabase.videoMetaDao().getByVideoId(videoId).isEmpty()) {
-                loadYTInfoForVideoId(videoId)
+                getYtInfo(videoId)
+//                loadYTInfoForVideoId(videoId)
             }
         }
         return@withContext
@@ -385,7 +407,10 @@ class YoutubeRepository(
 
     suspend fun insertWatchHistory(videoId: String, currentTime: Long, playbackPos: Long): Int =
         withContext(Dispatchers.IO) {
-            Log.d("YtRepo", "insert history for video $videoId, at $currentTime, at pos $playbackPos")
+            Log.d(
+                "YtRepo",
+                "insert history for video $videoId, at $currentTime, at pos $playbackPos"
+            )
             currentAccountName.value?.let { username ->
                 appDatabase.watchHistoryDao().insert(
                     WatchHistory(videoId, username, currentTime, playbackPos)

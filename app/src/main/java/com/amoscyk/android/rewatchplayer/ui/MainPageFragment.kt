@@ -14,6 +14,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.view.ActionMode
 import androidx.constraintlayout.motion.widget.MotionLayout
+import androidx.core.view.children
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.Observer
@@ -286,12 +287,14 @@ class MainPageFragment : ReWatchPlayerFragment() {
     }
 
     fun showSnackbar(resId: Int, duration: Int) {
-        Snackbar.make(getViewForSnackbar(), resId, duration).show()
+        newSnackbar(resId, duration).show()
     }
-
     fun showSnackbar(text: CharSequence, duration: Int) {
-        Snackbar.make(getViewForSnackbar(), text, duration).show()
+        newSnackbar(text, duration).show()
     }
+    fun newSnackbar(resId: Int, duration: Int) = Snackbar.make(getViewForSnackbar(), resId, duration)
+    fun newSnackbar(text: CharSequence, duration: Int) = Snackbar.make(getViewForSnackbar(), text, duration)
+
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)

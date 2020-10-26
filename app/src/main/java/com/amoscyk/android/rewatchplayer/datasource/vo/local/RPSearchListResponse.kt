@@ -13,15 +13,3 @@ data class RPSearchListResponse(
     val totalResults: Int,
     val resultsPerPage: Int
 )
-
-fun YouTube.Search.List.getResponse(): RPSearchListResponse = execute().let { res ->
-    RPSearchListResponse(
-        request = this,
-        items = res.items.map { it.toRPSearchResult() },
-        pageToken = this.pageToken,
-        prevPageToken = res.prevPageToken,
-        nextPageToken = res.nextPageToken,
-        totalResults = res.pageInfo.totalResults ?: 0,
-        resultsPerPage = res.pageInfo.resultsPerPage ?: 0
-    )
-}

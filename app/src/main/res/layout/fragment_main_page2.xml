@@ -1,21 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.amoscyk.android.rewatchplayer.ui.InterveneTransitionMotionLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:id="@+id/root_view"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    app:motionDebug="NO_DEBUG"
-    app:layoutDescription="@xml/motion_scene_main_page_fragment">
+    android:id="@+id/root_view"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:layoutDescription="@xml/motion_scene_main_page_fragment"
+    app:motionDebug="NO_DEBUG">
+
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:id="@+id/content_container"
         android:layout_width="match_parent"
         android:layout_height="0dp">
+
         <FrameLayout
             android:id="@+id/main_page_nav_host_fragment"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
+            android:layout_height="match_parent" />
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/main_bottom_nav"
         android:layout_width="match_parent"
@@ -26,66 +29,75 @@
         app:itemTextColor="@color/bottom_nav_item_color"
         app:labelVisibilityMode="labeled"
         app:menu="@menu/main_navigation_menu" />
+
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:id="@+id/player_holder"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#222222"/>
+        android:background="#222222" />
+
     <TextView
         android:id="@+id/tv_video_title_small"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:textSize="14sp"
-        android:textColor="@android:color/white"
-        android:singleLine="true"
         android:ellipsize="marquee"
-        android:marqueeRepeatLimit="marquee_forever"/>
+        android:gravity="center_vertical"
+        android:marqueeRepeatLimit="marquee_forever"
+        android:singleLine="true"
+        android:textColor="@android:color/white"
+        android:textSize="14sp" />
+
     <ImageButton
         android:id="@+id/btn_playback_small"
         android:layout_width="48dp"
         android:layout_height="48dp"
+        android:background="@android:color/transparent"
         android:src="@drawable/ic_play_arrow_white"
-        android:tint="@android:color/darker_gray"
-        android:background="@android:color/transparent"/>
+        android:tint="@android:color/darker_gray" />
+
     <ImageButton
         android:id="@+id/btn_close_small"
         android:layout_width="48dp"
         android:layout_height="48dp"
+        android:background="@android:color/transparent"
         android:src="@drawable/ic_close_white"
-        android:tint="@android:color/darker_gray"
-        android:background="@android:color/transparent"/>
+        android:tint="@android:color/darker_gray" />
+
     <com.google.android.exoplayer2.ui.PlayerView
         android:id="@+id/player_view"
         android:layout_width="0dp"
-        android:layout_height="0dp"/>
+        android:layout_height="0dp" />
+
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/player_toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="#AA000000">
+
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent">
+
             <TextView
                 android:id="@+id/tv_video_title"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
-                tools:text="Video Title"
-                android:textSize="18sp"
-                android:singleLine="true"
                 android:ellipsize="marquee"
+                android:gravity="center_vertical"
                 android:marqueeRepeatLimit="marquee_forever"
-                android:textColor="@android:color/white"/>
+                android:singleLine="true"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="Video Title" />
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.appcompat.widget.Toolbar>
+
     <com.google.android.exoplayer2.ui.PlayerControlView
         android:id="@+id/player_control"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content" />
 </com.amoscyk.android.rewatchplayer.ui.InterveneTransitionMotionLayout>

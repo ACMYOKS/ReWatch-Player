@@ -31,7 +31,7 @@ abstract class ReWatchPlayerFragment: Fragment() {
     }
 
     val mainActivity: MainActivity? get() = activity as? MainActivity
-    val mainFragment: MainPageFragment? get() = parentFragment as? MainPageFragment
+    val mainFragment: MainPageFragment? get() = mainActivity?.getMainFragment()
 
     companion object {
         const val REQUEST_GOOGLE_USER_AUTH = 1000

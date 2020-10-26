@@ -13,15 +13,3 @@ data class RPChannelListResponse(
     val totalResults: Int,
     val resultsPerPage: Int
 )
-
-fun YouTube.Channels.List.getResponse(): RPChannelListResponse = execute().let { res ->
-    RPChannelListResponse(
-        request = this,
-        items = res.items.map { it.toRPChannel() },
-        pageToken = this.pageToken,
-        prevPageToken = res.prevPageToken,
-        nextPageToken = res.nextPageToken,
-        totalResults = res.pageInfo.totalResults ?: 0,
-        resultsPerPage = res.pageInfo.resultsPerPage ?: 0
-    )
-}

@@ -54,7 +54,7 @@ class VideoSearchViewModel(
             searchListResHolder = ListResponseHolder()
             viewModelScope.launch {
                 _showLoading.loading {
-                    _searchIdResult.value = youtubeRepository.loadYTInfoForVideoId(videoId)?.let {
+                    _searchIdResult.value = youtubeRepository.getYtInfo(videoId)?.let {
                         youtubeRepository.getVideoMeta(arrayOf(videoId)).firstOrNull()?.let {
                             listOf(it)
                         }

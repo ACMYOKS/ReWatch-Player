@@ -11,6 +11,7 @@ import com.amoscyk.android.rewatchplayer.datasource.vo.local.RPSubscriptionListR
 import kotlinx.coroutines.launch
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.Exception
 
 class LibraryViewModel(
     private val youtubeRepository: YoutubeRepository
@@ -69,6 +70,9 @@ class LibraryViewModel(
     val bookmarkRemoveCount: LiveData<Event<Int>> = _bookmarkRemoveCount
     private val _historyRemoveCount = MutableLiveData<Event<Int>>()
     val historyRemoveCount: LiveData<Event<Int>> = _historyRemoveCount
+
+    private val _exceptionEvent = MutableLiveData<Event<ExceptionWithActionTag>>()
+    val exceptionEvent: LiveData<Event<ExceptionWithActionTag>> = _exceptionEvent
 
     init {
         _editMode.value = false
@@ -181,15 +185,18 @@ class LibraryViewModel(
         if (!loadChannelLock.get()) {
             loadChannelLock.set(true)
             viewModelScope.launch {
+                val oListResHolder = _channelListResHolder
                 _channelListResHolder = ListResponseHolder()
                 _showLoadingChannel.loading {
-                    runCatching {
+                    try {
                         _channelListRes.value = youtubeRepository.getUserSubscribedChannels()
                         Log.d("AppConstant.TAG", "load channel")
-                        setChannelTimer()
-                    }.onFailure {
-                        Log.e(AppConstant.TAG, it.message.orEmpty())
+                    } catch(e: Exception) {
+                        Log.e(AppConstant.TAG, e.message.orEmpty())
+                        _channelListResHolder = oListResHolder
+                        emitExceptionEvent(e, "refresh_list")
                     }
+                    setChannelTimer()
                 }
                 loadChannelLock.set(false)
             }
@@ -203,11 +210,12 @@ class LibraryViewModel(
                 _channelListRes.value?.apply {
                     if (nextPageToken != null) {
                         _showLoadingChannel.loading(true) {
-                            runCatching {
+                            try {
                                 _channelListRes.value =
                                     youtubeRepository.getUserSubscribedChannels(nextPageToken)
-                            }.onFailure {
-                                Log.e(AppConstant.TAG, it.message.orEmpty())
+                            } catch(e: Exception) {
+                                Log.e(AppConstant.TAG, e.message.orEmpty())
+                                emitExceptionEvent(e, "load_more_channels")
                             }
                         }
                     }
@@ -221,15 +229,18 @@ class LibraryViewModel(
         if (!loadPlaylistLock.get()) {
             loadPlaylistLock.set(true)
             viewModelScope.launch {
+                val oListResHolder = _playlistListResHolder
                 _playlistListResHolder = ListResponseHolder()
                 _showLoadingPlaylist.loading {
-                    runCatching {
+                    try {
                         Log.d("AppConstant.TAG", "load playlist")
                         _playlistListRes.value = youtubeRepository.getUserPlaylist()
-                        setPlaylistTimer()
-                    }.onFailure {
-                        Log.e(AppConstant.TAG, it.message.orEmpty())
+                    } catch(e: Exception) {
+                        Log.e(AppConstant.TAG, e.message.orEmpty())
+                        _playlistListResHolder = oListResHolder
+                        emitExceptionEvent(e, "refresh_list")
                     }
+                    setPlaylistTimer()
                 }
                 loadPlaylistLock.set(false)
             }
@@ -243,11 +254,12 @@ class LibraryViewModel(
                 _playlistListRes.value?.apply {
                     if (nextPageToken != null) {
                         _showLoadingPlaylist.loading(true) {
-                            runCatching {
+                            try {
                                 _playlistListRes.value =
                                     youtubeRepository.getUserPlaylist(nextPageToken)
-                            }.onFailure {
-                                Log.e(AppConstant.TAG, it.message.orEmpty())
+                            } catch(e: Exception) {
+                                Log.e(AppConstant.TAG, e.message.orEmpty())
+                                emitExceptionEvent(e, "load_more_playlists")
                             }
                         }
                     }
@@ -267,6 +279,10 @@ class LibraryViewModel(
         viewModelScope.launch {
             _historyRemoveCount.value = Event(youtubeRepository.removeWatchHistory(videoIds.toTypedArray()))
         }
+    }
+
+    private fun emitExceptionEvent(e: Exception, actionTag: String) {
+        _exceptionEvent.value = Event(ExceptionWithActionTag(e, actionTag))
     }
 
     companion object {

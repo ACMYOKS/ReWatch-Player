@@ -70,13 +70,13 @@ class PlayerViewModel(
         viewModelScope.launch {
             val isOnlineMode = _isOnlineMode.value ?: return@launch
             if (isOnlineMode) {
-                youtubeRepository.loadYTInfoForVideoId(videoId)?.let { info ->
+                youtubeRepository.getYtInfo(videoId)?.let { info ->
                     youtubeRepository.getVideoMetaWithPlayerResource(arrayOf(videoId)).let { metaList ->
                         if (metaList.isNotEmpty()) {
                             val meta = metaList[0]
                             _currentVideoMeta.value = meta
                             _availableITag.value = meta.videoMeta.itags
-                            _allUrlMap = info.urlMap
+                            _allUrlMap = (info.formats + info.adaptiveFormats).associateBy({ it.itag }) { it.url }
                             getAvailableQuality(meta.videoMeta.itags)
                             setDefaultQuality(false)
                             pendingFetchVideoId = null

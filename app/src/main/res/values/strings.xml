@@ -80,12 +80,18 @@
     <string name="download_reason_error_unhandled_http_code">Unhandled HTTP code</string>
     <string name="download_reason_error_unknown">Unknown</string>
 
+    <!--  Common error  -->
+    <string name="error_loading_resource">Error occurred while loading resource</string>
+    <string name="error_network_disconnected">Network disconnected</string>
+    <string name="error_unknown">Unknown error</string>
+
     <!-- Common string -->
     <string name="confirm_text">OK</string>
     <string name="negative_text">No</string>
     <string name="cancel_text">Cancel</string>
     <string name="default_text">Default</string>
-    <string name="empty_list">no item</string>
+    <string name="empty_list">No item</string>
+    <string name="retry">Retry</string>
 
     <!-- Setting -->
     <string name="setting_account">Account</string>

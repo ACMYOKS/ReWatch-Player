@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "985700820705",
+    "firebase_url": "https://pacific-formula-257111.firebaseio.com",
+    "project_id": "pacific-formula-257111",
+    "storage_bucket": "pacific-formula-257111.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:985700820705:android:14dc900c4a80df327c79a0",
+        "android_client_info": {
+          "package_name": "com.amoscyk.android.rewatchplayer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "985700820705-dmr41e3qnqtad2jgb69h6salhk6ia2m5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNunChqDxKrUs1gQpT0qxXpYZwDmJyDG0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "985700820705-dmr41e3qnqtad2jgb69h6salhk6ia2m5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -13,15 +13,3 @@ data class RPVideoListResponse(
     val totalResults: Int,
     val resultsPerPage: Int
 )
-
-fun YouTube.Videos.List.getResponse(): RPVideoListResponse = execute().let { res ->
-    RPVideoListResponse(
-        request = this,
-        items = res.items.map { it.toRPVideo() },
-        pageToken = this.pageToken,
-        prevPageToken = res.prevPageToken,
-        nextPageToken = res.nextPageToken,
-        totalResults = res.pageInfo.totalResults ?: 0,
-        resultsPerPage = res.pageInfo.resultsPerPage ?: 0
-    )
-}

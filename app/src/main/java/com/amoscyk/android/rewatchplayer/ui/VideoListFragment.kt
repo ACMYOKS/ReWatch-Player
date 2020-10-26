@@ -22,10 +22,13 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
+import com.amoscyk.android.rewatchplayer.datasource.vo.NoNetworkException
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
 import com.amoscyk.android.rewatchplayer.util.dpToPx
 import com.amoscyk.android.rewatchplayer.viewModelFactory
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
+import java.net.SocketTimeoutException
 
 class VideoListFragment : ReWatchPlayerFragment() {
 
@@ -74,6 +77,7 @@ class VideoListFragment : ReWatchPlayerFragment() {
             viewModel.loadMoreVideos()
         }
     }
+    private var snackbar: Snackbar? = null
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -112,10 +116,6 @@ class VideoListFragment : ReWatchPlayerFragment() {
             }
         })
 
-        viewModel.showVideoLoading.observe(this, Observer {
-
-        })
-
         viewModel.playlistItemList.observe(this, Observer {
             viewModel.setPlaylistItems(it.newItems)
             mListAdapter.setEnableInfiniteLoad(!it.isEndOfList)
@@ -128,56 +128,36 @@ class VideoListFragment : ReWatchPlayerFragment() {
             }
         })
 
-//        viewModel.playlistResource.observe(this, Observer { res ->
-//            when (res.status) {
-//                Status.SUCCESS -> {
-//                    mLoadingView.hide()
-//                    viewModel.setPlaylistItems(res.data?.newItems.orEmpty())
-//                }
-//                Status.ERROR -> {
-//                    mLoadingView.hide()
-//                }
-//                Status.LOADING -> {
-//                    mLoadingView.show()
-//                }
-//            }
-//        })
-
-//        viewModel.videoList.observe(this, Observer { resource ->
-//            when (resource.status) {
-//                Status.SUCCESS -> {
-//                    val hideMainLoadingView = (mListAdapter.itemCount == 0)
-//                    lifecycleScope.launch {
-//                        videoMetas = videoMetas + mainViewModel.getVideoMetas(resource.data.orEmpty())
-//                        if (hideMainLoadingView) {
-//                            mLoadingView.hide()
-//                        } else {
-//                            mListAdapter.setShowLoadingAtBottom(false)
-//                        }
-//                        mListAdapter.submitList(videoMetas)
-//                    }
-//                }
-//                Status.ERROR -> {
-//                    if (mListAdapter.itemCount == 0) {
-//                        mLoadingView.hide()
-//                    } else {
-//                        mListAdapter.setShowLoadingAtBottom(false)
-//                    }
-//                }
-//                Status.LOADING -> {
-//                    if (mListAdapter.itemCount == 0) {
-//                        mLoadingView.show()
-//                    } else {
-//                        mListAdapter.setShowLoadingAtBottom(true)
-//                    }
-//                }
-//            }
-//
-//        })
-
         viewModel.isEditMode.observe(this, Observer {
             mOnBackPressedCallback.isEnabled = it
             mListAdapter.setEditMode(it)
+        })
+
+        viewModel.exceptionEvent.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                when (it.e) {
+                    is SocketTimeoutException -> {
+                        mainFragment?.apply {
+                            snackbar = newSnackbar(
+                                R.string.error_loading_resource,
+                                Snackbar.LENGTH_INDEFINITE
+                            ).setAction(R.string.retry) {
+                                viewModel.setPlaylist(args.playlist, true)
+                            }.apply { show() }
+                        }
+                    }
+                    is NoNetworkException -> {
+                        mainFragment?.apply {
+                            snackbar = newSnackbar(
+                                R.string.error_network_disconnected,
+                                Snackbar.LENGTH_INDEFINITE
+                            ).setAction(R.string.retry) {
+                                viewModel.setPlaylist(args.playlist, true)
+                            }.apply { show() }
+                        }
+                    }
+                }
+            }
         })
     }
 
