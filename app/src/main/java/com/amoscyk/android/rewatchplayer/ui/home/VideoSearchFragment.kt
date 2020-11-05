@@ -56,7 +56,7 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
             viewModel.loadMoreResource()
         }
         setOnItemClickListener { position, meta ->
-            mainViewModel.playVideoForId(requireContext(), meta.videoId, true)
+            mainViewModel.readyVideo(meta.videoId)
         }
     }
 

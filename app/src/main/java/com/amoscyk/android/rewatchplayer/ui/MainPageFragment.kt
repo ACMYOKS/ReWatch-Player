@@ -69,7 +69,7 @@ class MainPageFragment : ReWatchPlayerFragment() {
                     value = currentVid in vid
                 }
                 addSource(mainViewModel.videoData) {
-                    currentVid = it.videoMeta.videoMeta.videoId
+                    currentVid = it.videoMeta.videoId
                     value = currentVid!! in vid
                 }
             }
@@ -230,12 +230,12 @@ class MainPageFragment : ReWatchPlayerFragment() {
             setOnMenuItemClickListener {
                 when (it.itemId) {
                     R.id.bookmark -> {
-                        mainViewModel.videoData.value?.videoMeta?.videoMeta?.videoId?.let { vid ->
+                        mainViewModel.videoData.value?.videoMeta?.videoId?.let { vid ->
                             mainViewModel.setBookmarked(vid, true)
                         }
                     }
                     R.id.remove_bookmark -> {
-                        mainViewModel.videoData.value?.videoMeta?.videoMeta?.videoId?.let { vid ->
+                        mainViewModel.videoData.value?.videoMeta?.videoId?.let { vid ->
                             mainViewModel.setBookmarked(vid, false)
                         }
                     }

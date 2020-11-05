@@ -53,7 +53,7 @@ class VideoListFragment : ReWatchPlayerFragment() {
         setArchivable(true)
         setBookmarkable(true)
         setOnArchiveClickListener { position, meta ->
-            mainActivity?.showArchiveOption(meta.videoId)
+            mainViewModel.readyArchive(meta.videoId)
         }
         setOnBookmarkClickListener { position, meta ->
             mainViewModel.setBookmarked(meta.videoId, !isBookmarked(position))
@@ -63,7 +63,8 @@ class VideoListFragment : ReWatchPlayerFragment() {
             if (isEditMode) {
                 toggleItemSelection(position)
             } else {
-                mainActivity?.playVideoForId(meta.videoId)
+//                mainActivity?.playVideoForId(meta.videoId)
+                mainViewModel.readyVideo(meta.videoId)
             }
         }
 //        setOnItemLongClickListener { position, meta ->

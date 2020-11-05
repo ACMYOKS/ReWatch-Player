@@ -4,14 +4,10 @@ import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.app.PictureInPictureParams
 import android.app.RemoteAction
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
-import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -19,7 +15,6 @@ import android.util.Log
 import android.util.Rational
 import android.view.View
 import android.view.WindowManager
-import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
@@ -27,7 +22,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.view.ActionMode
 import androidx.core.content.edit
 import androidx.core.net.toUri
-import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.Observer
 import androidx.navigation.findNavController
 import androidx.recyclerview.widget.DiffUtil
@@ -39,12 +33,9 @@ import com.amoscyk.android.rewatchplayer.service.AudioPlayerService
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel.ResponseActionType
 import com.amoscyk.android.rewatchplayer.ui.library.LibraryFragmentDirections
 import com.amoscyk.android.rewatchplayer.ui.player.*
+import com.amoscyk.android.rewatchplayer.ui.viewcontrol.SnackbarControl
 import com.amoscyk.android.rewatchplayer.util.*
 import com.google.android.exoplayer2.*
-import com.google.android.exoplayer2.source.MergingMediaSource
-import com.google.android.exoplayer2.source.ProgressiveMediaSource
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.bottom_sheet_dialog_user_option.view.*
@@ -54,7 +45,9 @@ import java.net.URL
 
 class MainActivity : ReWatchPlayerActivity() {
 
-//    private val mPlayerLayout by lazy { findViewById<VideoPlayerLayout>(R.id.video_player_layout) }
+    data class Resolution(val itag: Int, val quality: String) : SelectableItemWithTitle {
+        override fun getTitle() = quality
+    }
 
     private var mLoadingDialog: AlertDialog? = null
 
@@ -63,7 +56,10 @@ class MainActivity : ReWatchPlayerActivity() {
     private var mVideoInfoDialog: VideoInfoBottomSheetDialog? = null
     private var mArchiveOptionDialog: ArchiveOptionDialog? = null
     private var mResOptionDialog: VideoQualityOptionDialog? = null
+    private var mResOptionDialog2: BottomSheetDialog? = null
     private var mPlaybackSpeedDialog: PlaybackSpeedDialog? = null
+    private var mPlaybackSpeedDialog2: PlaybackSpeedDialog2? = null
+    private var mPlaybackSpeedAdvanceDialog: PlaybackSpeedAdvanceDialog? = null
 
     // player option view related class
     private val mOptionAdapter = PlayerOptionAdapter({ option, position ->
@@ -71,27 +67,25 @@ class MainActivity : ReWatchPlayerActivity() {
         if (position == 0) {
             mVideoInfoDialog?.show()
         } else if (position == 1) {
-            mResOptionDialog?.show()
+            mResOptionDialog2?.show()
         } else if (position == 2) {
-            viewModel.videoData.value?.videoMeta!!.videoMeta.videoId.let { vid ->
-                showArchiveOption(vid)
+            viewModel.videoData.value?.let { videoData ->
+                viewModel.readyArchive(videoData.videoMeta.videoId)
             }
         } else if (position == 3) {
-            viewModel.playbackParams.value?.speed?.let { speed ->
-                mPlaybackSpeedDialog?.apply {
-                    setPlaybackMultiplier(speed)
-                    show()
-                }
-            }
+            mPlaybackSpeedAdvanceDialog?.show()
         } else if (position == 4) {
-            Intent.createChooser(Intent().apply {
-                action = Intent.ACTION_SEND
-                putExtra(
-                    Intent.EXTRA_TEXT, "https://youtu.be/" +
-                            viewModel.videoData.value!!.videoMeta.videoMeta.videoId
-                )
-                type = "text/plain"
-            }, getString(R.string.player_share_title)).also { startActivity(it) }
+            viewModel.videoData.value?.let { videoData ->
+                Intent.createChooser(Intent().apply {
+                    action = Intent.ACTION_SEND
+                    putExtra(
+                        Intent.EXTRA_TEXT, "https://youtu.be/" +
+                                videoData.videoMeta.videoId
+                    )
+                    type = "text/plain"
+                }, getString(R.string.player_share_title)).also { startActivity(it) }
+            }
+
         }
     })
 
@@ -107,23 +101,22 @@ class MainActivity : ReWatchPlayerActivity() {
             PlayerOption(getString(R.string.player_option_share), R.drawable.ic_share)
         )
     }
+    private val resSelectionAdapter = PlayerSelectionAdapter({
+        mResOptionDialog2?.dismiss()
+        viewModel.changeQualityV2(it.item.itag)
+    }, object : DiffUtil.ItemCallback<PlayerSelection<Resolution>>() {
+        override fun areItemsTheSame(
+            oldItem: PlayerSelection<Resolution>,
+            newItem: PlayerSelection<Resolution>
+        ) = oldItem.item == newItem.item && oldItem.selected == newItem.selected
+
+        override fun areContentsTheSame(
+            oldItem: PlayerSelection<Resolution>,
+            newItem: PlayerSelection<Resolution>
+        ) = oldItem == newItem
+    })
 
     private val viewModel by viewModels<MainViewModel> { viewModelFactory }
-
-    private var isWifiConnected = false
-    private var isMobileDataConnected = false
-    private var allowPlayUsingMobile = false
-    private var allowDownloadUsingMobile = false
-
-    private var exoPlayer: SimpleExoPlayer? = null
-    private var playbackPosition: Long = 0
-    private var currentWindow: Int = 0
-    private val defaultFactory: DefaultDataSourceFactory by lazy {
-        DefaultDataSourceFactory(this, getString(R.string.app_name))
-    }
-    private val progressiveSrcFactory: ProgressiveMediaSource.Factory by lazy {
-        ProgressiveMediaSource.Factory(defaultFactory)
-    }
 
     private val mPlayerListener = object : Player.EventListener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -146,7 +139,7 @@ class MainActivity : ReWatchPlayerActivity() {
 
         override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
             if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
-                exoPlayer?.apply {
+                getPlayer()?.apply {
                     viewModel.saveWatchHistory(currentPosition)
                 }
             }
@@ -168,93 +161,30 @@ class MainActivity : ReWatchPlayerActivity() {
             viewModel.setAccountName(it)
         }
 
-        initPlayer()
+        viewModel.initPlayer(this)
+        getPlayer()?.addListener(mPlayerListener)
         setupViews()
 
-        val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        ConnectivityLiveData(connMgr, ConnectivityLiveData.TransportType.WIFI).apply {
-            observe(this@MainActivity, Observer {
-                isWifiConnected = it == ConnectivityLiveData.ConnectivityStatus.CONNECTED
-                viewModel.notifyIsWifiConnected(isWifiConnected)
-                Log.d(AppConstant.TAG, "$TAG wifi connected: ${it.name}")
-            })
-        }
-        ConnectivityLiveData(connMgr, ConnectivityLiveData.TransportType.MOBILE).apply {
-            observe(this@MainActivity, Observer {
-                isMobileDataConnected = it == ConnectivityLiveData.ConnectivityStatus.CONNECTED
-                viewModel.notifyIsMobileDataConnected(isMobileDataConnected)
-                Log.d(AppConstant.TAG, "$TAG mobile data connected: ${it.name}")
-            })
-        }
-        SPIntLiveData(
-            appSharedPreference,
-            PreferenceKey.ALLOW_VIDEO_STREAMING_ENV,
-            AppSettings.DEFAULT_ALLOW_VIDEO_STREAMING_ENV
-        ).apply {
-            observe(this@MainActivity, Observer {
-                allowPlayUsingMobile = it == 1
-                viewModel.notifyIsAllowedPlayUsingMobile(allowPlayUsingMobile)
-            })
-        }
-        SPIntLiveData(
-            appSharedPreference,
-            PreferenceKey.PLAYER_SKIP_FORWARD_TIME,
-            AppSettings.DEFAULT_PLAYER_SKIP_FORWARD_SECOND
-        ).apply {
-            observe(this@MainActivity, Observer {
-                //                mPlayerLayout.playerControlView.setFastForwardIncrementMs(it * 1000)
-                getMainFragment()?.playerControl?.setFastForwardIncrementMs(it * 1000)
-            })
-        }
-        SPIntLiveData(
-            appSharedPreference,
-            PreferenceKey.PLAYER_SKIP_BACKWARD_TIME,
-            AppSettings.DEFAULT_PLAYER_SKIP_BACKWARD_SECOND
-        ).apply {
-            observe(this@MainActivity, Observer {
-                //                mPlayerLayout.playerControlView.setRewindIncrementMs(it * 1000)
-                getMainFragment()?.playerControl?.setRewindIncrementMs(it * 1000)
-            })
-        }
-        SPIntLiveData(
-            appSharedPreference,
-            PreferenceKey.ALLOW_DOWNLOAD_ENV,
-            AppSettings.DEFAULT_ALLOW_DOWNLOAD_ENV
-        ).apply {
-            observe(this@MainActivity, Observer {
-                allowDownloadUsingMobile = it == 1
-                viewModel.notifyIsAllowedDownloadUsingMobile(allowDownloadUsingMobile)
-            })
-        }
+        viewModel.skipForwardSecond.observe(this, Observer {
+            getMainFragment()?.playerControl?.setFastForwardIncrementMs(it * 1000)
+        })
+
+        viewModel.skipBackwardSecond.observe(this, Observer {
+            getMainFragment()?.playerControl?.setRewindIncrementMs(it * 1000)
+        })
 
         viewModel.needShowArchiveOption.observe(this, Observer { event ->
             event.getContentIfNotHandled { mArchiveOptionDialog?.show() }
         })
 
-//        viewModel.bookmarkToggled.observe(this, Observer {
-//            viewModel.videoMeta.value?.apply {
-//                bookmarked = !bookmarked
-//                setBookmarkButton(bookmarked)
-//            }
-//            viewModel.videoData.value?.videoMeta?.videoMeta?.apply {
-//                bookmarked = !bookmarked
-//                setBookmarkButton(bookmarked)
-//            }
-//        })
-
+        // FIXME: change intent handling, show list instead of direct showing
         viewModel.searchVideoResource.observe(this, Observer { res ->
             when (res.status) {
                 Status.LOADING -> {
                     Toast.makeText(this, "Checking...", Toast.LENGTH_SHORT).show()
                 }
                 Status.SUCCESS -> {
-                    viewModel.playVideoForId(
-                        this, res.data!!,
-                        appSharedPreference.getBoolean(
-                            PreferenceKey.PLAYER_PLAY_DOWNLOADED_IF_EXIST,
-                            AppSettings.DEFAULT_PLAYER_PLAY_DOWNLOADED_IF_EXIST
-                        )
-                    )
+                    viewModel.readyVideo(res.data!!)
                 }
                 Status.ERROR -> {
                     Toast.makeText(
@@ -266,9 +196,13 @@ class MainActivity : ReWatchPlayerActivity() {
             }
         })
 
-//        viewModel.videoMeta.observe(this, Observer { meta ->
-//            mPlayerLayout.setTitle(meta.title)
-//            setBookmarkButton(meta.bookmarked)
+        viewModel.bookmarkedVid.observe(this, Observer {
+
+        })
+
+        viewModel.videoData.observe(this, Observer { viewData ->
+            val meta = viewData.videoMeta
+            getMainFragment()?.setTitle(meta.title)
 //            val itags = meta.itags
 //            val vTags = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMATS.filter {
 //                itags.contains(it.key)
@@ -280,37 +214,6 @@ class MainActivity : ReWatchPlayerActivity() {
 //                setVideoTags(vTags.keys.toList())
 //                setAudioVTags(aTags.keys.toList())
 //            }
-//            mVideoInfoDialog?.apply {
-//                setVideoMeta(meta)
-//                setViewChannelButtonOnClickListener(View.OnClickListener {
-//                    dismiss()
-//                    findNavController(R.id.main_page_nav_host_fragment)
-//                        .navigate(LibraryFragmentDirections.showChannelDetail(meta.channelId))
-//                    if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-//                        handleRotation()
-//                    }
-//                    mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.SMALL)
-//                })
-//            }
-//        })
-        viewModel.bookmarkedVid.observe(this, Observer {
-
-        })
-
-        viewModel.videoData.observe(this, Observer { viewData ->
-            val meta = viewData.videoMeta.videoMeta
-            getMainFragment()?.setTitle(meta.title)
-            val itags = meta.itags
-            val vTags = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMATS.filter {
-                itags.contains(it.key)
-            })
-            val aTags = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_AUDIO_FORMATS.filter {
-                itags.contains(it.key)
-            })
-            mResOptionDialog?.apply {
-                setVideoTags(vTags.keys.toList())
-                setAudioVTags(aTags.keys.toList())
-            }
             mVideoInfoDialog?.apply {
                 setVideoMeta(meta)
                 setViewChannelButtonOnClickListener(View.OnClickListener {
@@ -320,7 +223,6 @@ class MainActivity : ReWatchPlayerActivity() {
                     if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
                         toggleLockedRotation()
                     }
-//                    mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.SMALL)
                     getMainFragment()?.setPlayerSize(MainPageFragment.PlayerSize.SMALL)
                 })
             }
@@ -347,6 +249,33 @@ class MainActivity : ReWatchPlayerActivity() {
             }
         })
 
+        viewModel.itagControl.observe(this, Observer { control ->
+            val list = control.availableTag.map { itag ->
+                PlayerSelection(
+                    Resolution(
+                        itag,
+                        YouTubeStreamFormatCode.MUX_FORMAT_MAP[itag]
+                            ?: YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMAT_MAP[itag].orEmpty()
+                    ),
+                    itag == control.selectedTag
+                )
+            }
+            resSelectionAdapter.submitList(list)
+        })
+
+        viewModel.archiveEvent.observe(this, Observer { event ->
+            event.getContentIfNotHandled { control ->
+                ArchiveOptionDialog2(this, control.availableTag).apply {
+                    setListener { itag -> control.selection(itag, null) }       // TODO: add support for audio only
+                }.show()
+            }
+        })
+
+        viewModel.playbackSpeedMultiplier.observe(this, Observer {
+            //            mPlaybackSpeedDialog2?.setPlaybackMultiplier(it)
+            mPlaybackSpeedAdvanceDialog?.setPlaybackMultiplier(it)
+        })
+
         viewModel.resourceUri.observe(this, Observer {
             showPlayerView()
             prepareMediaResource(*it.uriList.toTypedArray())
@@ -354,36 +283,51 @@ class MainActivity : ReWatchPlayerActivity() {
                 AlertDialog.Builder(this)
                     .setMessage(R.string.player_restore_last_play_position_message)
                     .setPositiveButton(R.string.confirm_text) { d, i ->
-                        exoPlayer?.apply {
+                        getPlayer()?.apply {
                             playWhenReady = true
-                            seekTo(currentWindow, it.lastPlayPos)
+//                            seekTo(currentWindow, it.lastPlayPos)
                         }
                     }
                     .setNegativeButton(R.string.negative_text) { d, i ->
                         d.cancel()
                     }
                     .setOnCancelListener {
-                        exoPlayer?.apply {
+                        getPlayer()?.apply {
                             playWhenReady = true
-                            seekTo(currentWindow, 0)
+//                            seekTo(currentWindow, 0)
                         }
                     }
                     .create()
                     .show()
             } else {
-                exoPlayer?.apply {
+                getPlayer()?.apply {
                     playWhenReady = true
-                    seekTo(currentWindow, playbackPosition)
+//                    seekTo(currentWindow, playbackPosition)
                 }
             }
         })
 
         viewModel.shouldSaveWatchHistory.observe(this, Observer { event ->
             event.getContentIfNotHandled { videoId ->
-                exoPlayer?.let {
+                getPlayer()?.let {
                     Log.d("MainActivity", "save watch history, ${videoId}, ${it.currentPosition}")
                     viewModel.saveWatchHistory(videoId, it.currentPosition)
                 }
+            }
+        })
+
+        viewModel.snackEvent.observe(this, Observer { event ->
+            event.getContentIfNotHandled { ctrl ->
+                val frag = getMainFragment() ?: return@getContentIfNotHandled
+                val snackbar = frag.newSnackbar(ctrl.title, when (ctrl.duration) {
+                    SnackbarControl.Duration.SHORT -> Snackbar.LENGTH_SHORT
+                    SnackbarControl.Duration.LONG -> Snackbar.LENGTH_LONG
+                    SnackbarControl.Duration.FOREVER -> Snackbar.LENGTH_INDEFINITE
+                })
+                ctrl.action?.let { action ->
+                    snackbar.setAction(action.title) { action.action }
+                }
+                snackbar.show()
             }
         })
 
@@ -422,18 +366,24 @@ class MainActivity : ReWatchPlayerActivity() {
             }
         })
 
+        viewModel.showPlayerView.observe(this, Observer { event ->
+            event.getContentIfNotHandled { show ->
+                if (show) showPlayerView()
+            }
+        })
+
         viewModel.shouldStartPlayVideo.observe(this, Observer { event ->
             event.getContentIfNotHandled {
-                exoPlayer?.let {
+                getPlayer()?.let {
                     it.playWhenReady = true
-                    it.seekTo(currentWindow, playbackPosition)
+//                    it.seekTo(currentWindow, playbackPosition)
                 }
             }
         })
 
         viewModel.shouldStopVideo.observe(this, Observer { event ->
             event.getContentIfNotHandled {
-                exoPlayer?.playWhenReady = false
+                getPlayer()?.playWhenReady = false
             }
         })
 
@@ -457,17 +407,11 @@ class MainActivity : ReWatchPlayerActivity() {
             }
         })
 
-        viewModel.playbackParams.observe(this, Observer {
-            exoPlayer?.playbackParameters = it
+        viewModel.alertEvent.observe(this, Observer { event ->
+            event.getContentIfNotHandled { ctrl ->
+                ctrl.getBuilder(this).create().show()
+            }
         })
-
-//        viewModel.videoResSelection.observe(this, Observer {
-//            mResSelectionAdapter.apply { submitList(it) }
-//        })
-//
-//        viewModel.audioQualitySelection.observe(this, Observer {
-//            mAudioSelectionAdapter.apply { submitList(it) }
-//        })
 
         viewModel.responseAction.observe(this, Observer { res ->
             when (res.status) {
@@ -516,6 +460,7 @@ class MainActivity : ReWatchPlayerActivity() {
             }
         })
 
+        // FIXME: review intent handling
         // handle implicit intent from hyperlink
         when (intent.action) {
             Intent.ACTION_VIEW -> {
@@ -530,7 +475,15 @@ class MainActivity : ReWatchPlayerActivity() {
                         else -> null
                     }
                     // search video
-                    viewModel.playVideoForId(this, videoId, true)
+                    if (videoId != null) {
+                        viewModel.readyVideo(videoId)
+                    } else {
+                        AlertDialog.Builder(this)
+                            .setTitle(R.string.player_error_title)
+                            .setMessage("Cannot find videoId")
+                            .create()
+                            .show()
+                    }
                 }
             }
             Intent.ACTION_SEND -> {
@@ -549,7 +502,15 @@ class MainActivity : ReWatchPlayerActivity() {
                                 else -> null
                             }
                             // search video
-                            viewModel.playVideoForId(this, videoId, true)
+                            if (videoId != null) {
+                                viewModel.readyVideo(videoId)
+                            } else {
+                                AlertDialog.Builder(this)
+                                    .setTitle(R.string.player_error_title)
+                                    .setMessage("Cannot find videoId")
+                                    .create()
+                                    .show()
+                            }
                         }.onFailure {
                             AlertDialog.Builder(this)
                                 .setTitle(R.string.player_error_title)
@@ -568,14 +529,15 @@ class MainActivity : ReWatchPlayerActivity() {
 
         mPlayerServiceReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                val playbackPos = intent.getLongExtra(AudioPlayerService.EXTRA_KEY_PLAYBACK_POSITION, 0L)
+                val playbackPos =
+                    intent.getLongExtra(AudioPlayerService.EXTRA_KEY_PLAYBACK_POSITION, 0L)
                 val videoId = intent.getStringExtra(AudioPlayerService.EXTRA_KEY_VIDEO_ID)
-                if (viewModel.videoData.value?.videoMeta?.videoMeta?.videoId != videoId) {
+                if (viewModel.videoData.value?.videoMeta?.videoId != videoId) {
                     // no playing resource, restart killed app while foreground playing
-                    viewModel.playVideoForId(this@MainActivity, videoId, true, playbackPos)
+                    viewModel.readyVideo(videoId)
                 } else {
-                    playbackPosition = playbackPos
-                    Log.d("MainActivity", "audio service broadcast receiver: $playbackPosition")
+//                    playbackPosition = playbackPos
+//                    Log.d("MainActivity", "audio service broadcast receiver: $playbackPosition")
                     viewModel.startPlayingVideo()
                 }
             }
@@ -593,11 +555,11 @@ class MainActivity : ReWatchPlayerActivity() {
         mPlayerServiceReceiver = null
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-            val wasPlaying = exoPlayer?.isPlaying == true
-            exoPlayer?.apply {
+            val wasPlaying = getPlayer()?.isPlaying == true
+            getPlayer()?.apply {
                 playWhenReady = false
                 viewModel.saveWatchHistory(currentPosition)
-                playbackPosition = currentPosition
+//                playbackPosition = currentPosition
             }
             if (isActivityOnStackTop() && wasPlaying && appSharedPreference.getBoolean(
                     PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
@@ -612,11 +574,11 @@ class MainActivity : ReWatchPlayerActivity() {
     override fun onStop() {
         super.onStop()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            val wasPlaying = exoPlayer?.isPlaying == true
-            exoPlayer?.apply {
+            val wasPlaying = getPlayer()?.isPlaying == true
+            getPlayer()?.apply {
                 playWhenReady = false
                 viewModel.saveWatchHistory(currentPosition)
-                playbackPosition = currentPosition
+//                playbackPosition = currentPosition
             }
             if (isActivityOnStackTop() && wasPlaying && appSharedPreference.getBoolean(
                     PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
@@ -629,7 +591,8 @@ class MainActivity : ReWatchPlayerActivity() {
     }
 
     override fun onDestroy() {
-        releasePlayer()
+        getPlayer()?.removeListener(mPlayerListener)
+        viewModel.releasePlayer()
         super.onDestroy()
     }
 
@@ -656,25 +619,6 @@ class MainActivity : ReWatchPlayerActivity() {
             enterPIPMode()
         }
     }
-
-//    override fun onConfigurationChanged(newConfig: Configuration) {
-//        super.onConfigurationChanged(newConfig)
-//
-//        when (newConfig.orientation) {
-//            Configuration.ORIENTATION_LANDSCAPE -> {
-//                mPlayerLayout.setEnableTransition(!mPlayerLayout.isFullscreen)
-//                if (mPlayerLayout.isSmall) {
-//                    mPlayerLayout.setPlayerSize(VideoPlayerLayout.PlayerSize.FULLSCREEN)
-//                }
-//                if (mPlayerLayout.isFullscreen) hideSystemUI()
-//                else showSystemUI()
-//            }
-//            Configuration.ORIENTATION_PORTRAIT -> {
-//                mPlayerLayout.setEnableTransition(true)
-//                showSystemUI()
-//            }
-//        }
-//    }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         if (hasFocus) {
@@ -706,7 +650,7 @@ class MainActivity : ReWatchPlayerActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (isInPictureInPictureMode) {
                 setPictureInPictureParams(PictureInPictureParams.Builder().apply {
-                    if (exoPlayer?.isPlaying == true) {
+                    if (getPlayer()?.isPlaying == true) {
                         setPauseAction()
                     } else {
                         setPlayAction()
@@ -717,7 +661,7 @@ class MainActivity : ReWatchPlayerActivity() {
                     override fun onReceive(context: Context, intent: Intent) {
                         when (intent.action) {
                             ACTION_PIP_PLAY -> {
-                                exoPlayer?.playWhenReady = true
+                                getPlayer()?.playWhenReady = true
                                 setPictureInPictureParams(
                                     PictureInPictureParams.Builder()
                                         .setPauseAction()
@@ -725,7 +669,7 @@ class MainActivity : ReWatchPlayerActivity() {
                                 )
                             }
                             ACTION_PIP_PAUSE -> {
-                                exoPlayer?.playWhenReady = false
+                                getPlayer()?.playWhenReady = false
                                 setPictureInPictureParams(
                                     PictureInPictureParams.Builder()
                                         .setPlayAction()
@@ -746,103 +690,32 @@ class MainActivity : ReWatchPlayerActivity() {
         }
     }
 
-    fun getPlayer(): ExoPlayer? = exoPlayer
-
-    private fun initPlayer() {
-        if (exoPlayer == null) {
-            exoPlayer = ExoPlayerFactory.newSimpleInstance(this, DefaultTrackSelector(),
-                object : DefaultLoadControl() {
-                    override fun shouldContinueLoading(
-                        bufferedDurationUs: Long,
-                        playbackSpeed: Float
-                    ): Boolean {
-                        if (!allowPlayUsingMobile && !viewModel.isLocalBuffering && !isWifiConnected) return false
-                        return super.shouldContinueLoading(bufferedDurationUs, playbackSpeed)
-                    }
-                })
-//            mPlayerLayout.setPlayer(exoPlayer)
-            exoPlayer!!.seekTo(currentWindow, playbackPosition)
-            exoPlayer!!.addListener(mPlayerListener)
-        }
-    }
-
-    private fun releasePlayer() {
-        if (exoPlayer != null) {
-            playbackPosition = exoPlayer!!.currentPosition
-            currentWindow = exoPlayer!!.currentWindowIndex
-            exoPlayer!!.removeListener(mPlayerListener)
-            exoPlayer!!.release()
-            exoPlayer = null
-        }
-    }
+    fun getPlayer(): ExoPlayer? = viewModel.getPlayer()
 
     private fun setupViews() {
-//        mPlayerLayout.apply {
-//            toolbar.apply {
-//                inflateMenu(R.menu.player_option_menu)
-//                setOnMenuItemClickListener {
-//                    when (it.itemId) {
-//                        R.id.bookmark -> {
-//                            viewModel.videoData.value?.videoMeta?.videoMeta?.videoId?.let { vid ->
-//                                viewModel.setBookmarked(vid, true)
-//                            }
-//                        }
-//                        R.id.remove_bookmark -> {
-//                            viewModel.videoData.value?.videoMeta?.videoMeta?.videoId?.let { vid ->
-//                                viewModel.setBookmarked(vid, false)
-//                            }
-//                        }
-//                        R.id.rotation -> {
-//                            handleRotation()
-//                        }
-//                        R.id.other_action -> {
-//                            mOptionDialog?.show()
-//                        }
-//                    }
-//                    true
-//                }
-//                setBookmarkButton(false)        // set visibility before view data is loaded
-//            }
-//            setPlayerSizeListener(object : VideoPlayerLayout.PlayerSizeListener {
-//                @SuppressLint("SourceLockedOrientationActivity")
-//                override fun onStart(
-//                    start: VideoPlayerLayout.PlayerSize,
-//                    end: VideoPlayerLayout.PlayerSize
-//                ) {
-//                    mPlayerSizeListeners.forEach { it.onStart(start, end) }
-//                    if (start == VideoPlayerLayout.PlayerSize.DISMISS && end == VideoPlayerLayout.PlayerSize.FULLSCREEN) {
-//                        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
-//                    }
-//                }
-//
-//                @SuppressLint("SourceLockedOrientationActivity")
-//                override fun onComplete(current: VideoPlayerLayout.PlayerSize) {
-//                    // when there is transition, check if player size is fullscreen,
-//                    // if true then disable user transition when orientation is not portrait
-//                    mPlayerSizeListeners.forEach { it.onComplete(current) }
-//                    when (current) {
-//                        VideoPlayerLayout.PlayerSize.FULLSCREEN -> {
-//                            val orientation = resources.configuration.orientation
-//                            setEnableTransition(orientation == Configuration.ORIENTATION_PORTRAIT)
-//                            if (orientation == Configuration.ORIENTATION_LANDSCAPE) hideSystemUI()
-//                            else showSystemUI()
-//                        }
-//                        VideoPlayerLayout.PlayerSize.SMALL -> {
-//                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
-//                            showSystemUI()
-//                        }
-//                        VideoPlayerLayout.PlayerSize.DISMISS -> {
-//                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-//                            showSystemUI()
-//                        }
-//                    }
-//                }
-//            })
-//        }
         mOptionDialog = PlayerBottomSheetDialogBuilder.createDialog(this) {
             it.recycler_view.apply {
                 adapter = mOptionAdapter.apply { submitList(extraPlayerOptions) }
                 layoutManager = LinearLayoutManager(this@MainActivity)
+            }
+        }
+        mResOptionDialog2 = PlayerBottomSheetDialogBuilder.createDialog(this) {
+            it.recycler_view.apply {
+                adapter = resSelectionAdapter
+                layoutManager = LinearLayoutManager(this@MainActivity)
+            }
+        }
+//        mPlaybackSpeedDialog2 = PlaybackSpeedDialog2(this).apply {
+//            setOnPlaybackSpeedChangeListener {
+//                viewModel.setPlaybackSpeed(it)
+//            }
+//            setOnAdvanceClickListener(DialogInterface.OnClickListener { dialog, which ->
+//                mPlaybackSpeedAdvanceDialog?.show()
+//            })
+//        }
+        mPlaybackSpeedAdvanceDialog = PlaybackSpeedAdvanceDialog(this).apply {
+            setOnPlaybackSpeedChangeListener {
+                viewModel.setPlaybackSpeed(it)
             }
         }
         mVideoInfoDialog = VideoInfoBottomSheetDialog(this)
@@ -851,22 +724,22 @@ class MainActivity : ReWatchPlayerActivity() {
                 VideoQualityOptionDialog.OnQualityOptionSelectedListener {
                 override fun onQualityOptionSelected(vTag: Int, aTag: Int) {
                     // save playback state
-                    exoPlayer?.let {
-                        currentWindow = it.currentWindowIndex
-                        playbackPosition = it.currentPosition
+                    getPlayer()?.let {
+                        //                        currentWindow = it.currentWindowIndex
+//                        playbackPosition = it.currentPosition
                     }
                     viewModel.setQuality(vTag, aTag)
                 }
             })
         }
-        mArchiveOptionDialog = ArchiveOptionDialog(this).apply {
-            setOnArchiveOptionSelectedListener(object :
-                ArchiveOptionDialog.OnArchiveOptionSelectedListener {
-                override fun onArchiveOptionSelected(vTag: Int, aTag: Int) {
-                    viewModel.archiveVideo(this@MainActivity, vTag, aTag)
-                }
-            })
-        }
+//        mArchiveOptionDialog = ArchiveOptionDialog(this).apply {
+//            setOnArchiveOptionSelectedListener(object :
+//                ArchiveOptionDialog.OnArchiveOptionSelectedListener {
+//                override fun onArchiveOptionSelected(vTag: Int, aTag: Int) {
+//                    viewModel.archiveVideo(this@MainActivity, vTag, aTag)
+//                }
+//            })
+//        }
         mPlaybackSpeedDialog = PlaybackSpeedDialog(
             this
         ).apply {
@@ -880,27 +753,23 @@ class MainActivity : ReWatchPlayerActivity() {
         mLoadingDialog = ProgressDialogUtil.create(this)
     }
 
-    fun playVideoForId(videoId: String, forceFindFile: Boolean = false) {
+//    fun playVideoForId(videoId: String, forceFindFile: Boolean = false) {
 //        playWhenReady = true
-        playbackPosition = 0
+//        playbackPosition = 0
 //        currentWindow = 0
 //        exoPlayer?.let {
 //            it.playWhenReady = false
 //            it.seekTo(currentWindow, 0)
 //            it.playbackParameters = viewModel.playbackParams.value!!
 //        }
-        viewModel.playVideoForId(
-            this, videoId, forceFindFile ||
-                    appSharedPreference.getBoolean(
-                        PreferenceKey.PLAYER_PLAY_DOWNLOADED_IF_EXIST,
-                        AppSettings.DEFAULT_PLAYER_PLAY_DOWNLOADED_IF_EXIST
-                    )
-        )
-    }
-
-    fun showArchiveOption(videoId: String) {
-        viewModel.showArchiveOption(videoId)
-    }
+//        viewModel.playVideoForId(
+//            this, videoId, forceFindFile ||
+//                    appSharedPreference.getBoolean(
+//                        PreferenceKey.PLAYER_PLAY_DOWNLOADED_IF_EXIST,
+//                        AppSettings.DEFAULT_PLAYER_PLAY_DOWNLOADED_IF_EXIST
+//                    )
+//        )
+//    }
 
     fun getPlayerOptionDialog() = mOptionDialog
 
@@ -912,24 +781,17 @@ class MainActivity : ReWatchPlayerActivity() {
         getMainFragment()?.setPlayerSize(MainPageFragment.PlayerSize.DISMISS)
     }
 
-//    fun addPlayerSizeListener(listener: VideoPlayerLayout.PlayerSizeListener) {
-//        mPlayerSizeListeners.add(listener)
-//    }
-//
-//    fun removePlayerSizeListener(listener: VideoPlayerLayout.PlayerSizeListener) {
-//        mPlayerSizeListeners.remove(listener)
-//    }
 
     private fun prepareMediaResource(vararg uri: Uri?) {
-        uri.mapNotNull { progressiveSrcFactory.createMediaSource(it) }.apply {
-            when (size) {
-                0 -> return
-                1 -> exoPlayer?.prepare(first())
-                else -> exoPlayer?.prepare(MergingMediaSource(*toTypedArray()))
-            }
+//        uri.mapNotNull { progressiveSrcFactory.createMediaSource(it) }.apply {
+//            when (size) {
+//                0 -> return
+//                1 -> getPlayer()?.prepare(first())
+//                else -> getPlayer()?.prepare(MergingMediaSource(*toTypedArray()))
+//            }
 //            exoPlayer?.playWhenReady = playWhenReady
 //            exoPlayer?.seekTo(currentWindow, playbackPosition)
-        }
+//        }
     }
 
     private fun getResFileUriIfExist(filename: String): Uri? {
@@ -943,7 +805,7 @@ class MainActivity : ReWatchPlayerActivity() {
                 PreferenceKey.PLAYER_ENABLE_PIP,
                 AppSettings.DEFAULT_PLAYER_ENABLE_PIP
             )
-        ) return exoPlayer?.isPlaying ?: false
+        ) return getPlayer()?.isPlaying ?: false
         return false
     }
 
@@ -993,11 +855,11 @@ class MainActivity : ReWatchPlayerActivity() {
     private fun startPlayService() {
         val viewData = viewModel.videoData.value!!
         val intent = AudioPlayerService.IntentBuilder(this)
-            .setVideoId(viewData.videoMeta.videoMeta.videoId)
+            .setVideoId(viewData.videoMeta.videoId)
             .setUriList(viewModel.resourceUri.value!!.uriList.toTypedArray())
-            .setPlaybackPosition(playbackPosition)
-            .setTitle(viewData.videoMeta.videoMeta.title)
-            .setContent(viewData.videoMeta.videoMeta.channelTitle)
+//            .setPlaybackPosition(playbackPosition)
+            .setTitle(viewData.videoMeta.title)
+            .setContent(viewData.videoMeta.channelTitle)
             .build()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent)

@@ -119,7 +119,7 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
                 mTvVideoId.text = res.videoMeta.videoId
                 mDetailContainer.setOnClickListener {
                     if (viewModel.isEditMode.value == false) {
-                        mainActivity?.playVideoForId(res.videoMeta.videoId, forceFindFile = true)
+                        mainViewModel.readyVideo(res.videoMeta.videoId)
                     }
                 }
                 mAdapter?.submitList(res.playerResources.map { it.toExt() })

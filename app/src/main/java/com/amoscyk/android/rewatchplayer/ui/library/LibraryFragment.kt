@@ -92,14 +92,15 @@ class LibraryFragment : ReWatchPlayerFragment() {
     private val mBookmarkListAdapter = VideoListAdapter().apply {
         setArchivable(true)
         setOnArchiveClickListener { position, meta ->
-            mainActivity?.showArchiveOption(meta.videoId)
+            mainViewModel.readyArchive(meta.videoId)
         }
         setOnItemClickListener { position, meta ->
             if (isEditMode) {
                 toggleItemSelection(position)
                 actionMode?.title = getSelectedItemsId().size.toString()
             } else {
-                mainActivity?.playVideoForId(meta.videoId)
+//                mainActivity?.playVideoForId(meta.videoId)
+                mainViewModel?.readyVideo(meta.videoId)
             }
         }
         setOnItemLongClickListener { position, meta ->
@@ -116,7 +117,8 @@ class LibraryFragment : ReWatchPlayerFragment() {
                 toggleItemSelection(position)
                 actionMode?.title = getSelectedItemsId().size.toString()
             } else {
-                mainActivity?.playVideoForId(meta.videoId)
+//                mainActivity?.playVideoForId(meta.videoId)
+                mainViewModel.readyVideo(meta.videoId)
             }
         }
         setOnItemLongClickListener { position, meta ->

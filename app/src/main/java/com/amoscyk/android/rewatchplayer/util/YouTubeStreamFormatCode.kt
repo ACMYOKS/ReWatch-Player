@@ -4,15 +4,46 @@ object YouTubeStreamFormatCode {
     enum class Container {
         FLV, THREE_GP, MP4, WEBM, HLS, M4A
     }
+
     enum class Content {
         A, V, AV
     }
+
     data class StreamFormat(
         val itag: Int,
         val container: Container,
         val content: Content,
         val resolution: String? = null,
         val bitrate: String? = null
+    )
+
+    val MUX_FORMAT_MAP = mapOf(
+        18 to "360p (MUX)",
+        82 to "360p (MUX)",
+        83 to "480p (MUX)",
+        22 to "720p (MUX)",
+        84 to "720p (MUX)",
+        37 to "1080p (MUX)",
+        85 to "1080p (MUX)",
+        38 to "3072p (MUX)"
+    )
+    val ADAPTIVE_VIDEO_FORMAT_MAP = mapOf(
+        160 to "144p",
+        133 to "240p",
+        134 to "360p",
+        135 to "480p",
+        136 to "720p",
+        298 to "720p60",
+        137 to "1080p",
+        299 to "1080p60",
+        263 to "1440p",
+        138 to "2160p60",
+        266 to "2160p60"
+    )
+    val ADAPTIVE_AUDIO_FORMAT_MAP = sortedMapOf(
+        139 to "48k",
+        140 to "128k",
+        141 to "256k"
     )
 
     val FORMAT_CODES = sortedMapOf(
@@ -109,7 +140,8 @@ object YouTubeStreamFormatCode {
                 YouTubeStreamFormatCode.Container.M4A -> {
                     ADAPTIVE_AUDIO_FORMATS[idx] = value
                 }
-                else -> {}
+                else -> {
+                }
             }
         }
     }

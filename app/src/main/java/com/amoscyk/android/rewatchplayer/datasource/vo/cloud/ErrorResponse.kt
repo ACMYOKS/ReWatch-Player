@@ -17,23 +17,14 @@ class ErrorResponse(
             in 400 until 500 -> {
                 val s = message.orEmpty().toLowerCase(Locale.getDefault())
                 when {
-                    s.contains("no such video id") -> NoSuchVideoIdException(
-                        message
-                    )
-                    s.contains("abscence of argument") -> InvalidArgumentException(
-                        message
-                    )
+                    s.contains("no such video id") -> NoSuchVideoIdException(message)
+                    s.contains("absence of argument") -> InvalidArgumentException(message)
                     else -> Exception(message)
                 }
             }
-            in 500 until 600 -> {
-                ServerErrorException(
-                    message
-                )
-            }
-            else -> {
-                Exception(message)
-            }
+            in 500 until 600 -> ServerErrorException(message)
+
+            else -> Exception(message)
         }
     }
 }

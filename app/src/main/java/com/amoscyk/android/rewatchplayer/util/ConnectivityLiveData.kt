@@ -34,6 +34,11 @@ class ConnectivityLiveData(private val connectivityManager: ConnectivityManager,
 
     override fun onActive() {
         super.onActive()
+        if (transportType == TransportType.WIFI) {
+            postValue(if (connectivityManager.isWifiConnected) ConnectivityStatus.CONNECTED else ConnectivityStatus.DISCONNECTED)
+        } else if (transportType == TransportType.MOBILE) {
+            postValue(if (connectivityManager.isMobileDataConnected) ConnectivityStatus.CONNECTED else ConnectivityStatus.DISCONNECTED)
+        }
         connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
     }
 

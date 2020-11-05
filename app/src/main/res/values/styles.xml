@@ -35,5 +35,13 @@
     <style name="AppBarTitleTextAppearance" parent="TextAppearance.AppCompat.Widget.ActionBar.Title">
         <item name="android:textSize">18sp</item>
     </style>
+    <style name="AlertDialogSubButtonStyle" parent="Widget.AppCompat.Button">
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:textAlignment">center</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">@drawable/btn_circle_bg</item>
+        <item name="android:textColor">@color/btn_circle_text_color</item>
+    </style>
 
 </resources>

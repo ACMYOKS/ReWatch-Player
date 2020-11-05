@@ -246,7 +246,7 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
                     true
                 }
                 btnPlay.setOnClickListener {
-                    mainActivity?.playVideoForId(getItem(adapterPosition).videoMeta.videoId, forceFindFile = true)
+                    mainViewModel.readyVideo(getItem(adapterPosition).videoMeta.videoId)
                 }
                 checkBox.setOnCheckedChangeListener { buttonView, isChecked ->
                     val item = getItem(adapterPosition)

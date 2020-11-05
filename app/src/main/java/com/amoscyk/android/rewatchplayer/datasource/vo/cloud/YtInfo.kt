@@ -14,6 +14,20 @@ data class YtInfo(
 )
 
 @JsonClass(generateAdapter = true)
+data class YtInfo_VideoDetails(
+    @field:Json(name = "videoDetails")
+    val videoDetails: VideoDetails
+)
+
+@JsonClass(generateAdapter = true)
+data class YtInfo_Formats(
+    @field:Json(name = "formats")
+    val formats: List<ResourceFormat> = listOf(),
+    @field:Json(name = "adaptiveFormats")
+    val adaptiveFormats: List<ResourceFormat> = listOf()
+)
+
+@JsonClass(generateAdapter = true)
 data class ResourceFormat(
     @field:Json(name = "itag")
     val itag: Int = -1,

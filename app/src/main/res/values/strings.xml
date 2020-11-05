@@ -19,7 +19,8 @@
     <string name="player_option_archive">archive</string>
     <string name="player_option_speed">speed</string>
     <string name="player_option_share">share</string>
-    <string name="player_dialog_speed_title">Speed</string>
+    <string name="player_dialog_speed_title">Playback speed</string>
+    <string name="player_dialog_speed_advance">Advance</string>
     <string name="player_archive_option_title">Archive</string>
     <string name="player_quality_option_title">Resolution</string>
     <string name="player_share_title">Share link</string>
@@ -36,13 +37,16 @@
     <string name="player_alert_enable_stream_with_mobile_data_cancel">Not able to stream data with mobile data.</string>
     <string name="player_restore_last_play_position_message">Restore last play position?</string>
     <string name="player_error_title">Error</string>
-    <string name="player_error_no_video_id">No video ID</string>
+    <string name="player_error_server_connect_fail">Server connection failed</string>
+    <string name="player_error_no_video_id">No video ID %1$s</string>
     <string name="player_error_no_video_meta">No video meta</string>
     <string name="player_error_no_yt_info">No YTInfo</string>
     <string name="player_error_no_available_quality">No available quality</string>
+    <string name="player_error_server_error">Server error: %1$s</string>
     <string name="player_error_unknown">Unknown error</string>
     <string name="player_error_malformed_url">Cannot handle malformed URL / non YouTube URL</string>
 
+    <string name="player_archive_dialog_message">Select quality:</string>
     <string name="player_archive_new_tasks">%1$d new task(s) added</string>
     <string name="player_archive_no_new_tasks">required file(s) already exist</string>
 

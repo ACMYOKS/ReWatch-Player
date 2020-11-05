@@ -5,17 +5,23 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.map
 import androidx.lifecycle.switchMap
-import com.amoscyk.android.rewatchplayer.datasource.vo.RPThumbnailDetails
-import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
+import com.amoscyk.android.rewatchplayer.datasource.vo.*
 import com.amoscyk.android.rewatchplayer.datasource.vo.cloud.CloudSvcErrorHandler
 import com.amoscyk.android.rewatchplayer.datasource.vo.cloud.YtInfo
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.*
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.RPChannelListResponse
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.RPPlaylistItemListResponse
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.RPPlaylistListResponse
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.RPSearchListResponse
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.RPSubscriptionListResponse
+import com.amoscyk.android.rewatchplayer.datasource.vo.local.RPVideoListResponse
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeExtractor
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeOpenService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.threeten.bp.Duration
 import java.net.ConnectException
+import java.net.SocketTimeoutException
 
 class YoutubeRepository(
     private val ytApiServiceProvider: YoutubeServiceProvider,
@@ -230,7 +236,13 @@ class YoutubeRepository(
 
     }
 
-    @Throws
+    @Throws(
+        ConnectException::class,
+        SocketTimeoutException::class,
+        NoSuchVideoIdException::class,
+        InvalidArgumentException::class,
+        ServerErrorException::class
+    )
     suspend fun getYtInfo(videoId: String): YtInfo? = withContext(Dispatchers.IO) {
         val call = rpCloudService.getYtInfo(videoId).execute()
         if (call.isSuccessful) {

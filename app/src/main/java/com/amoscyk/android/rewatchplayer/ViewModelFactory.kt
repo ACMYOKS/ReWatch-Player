@@ -1,6 +1,7 @@
 package com.amoscyk.android.rewatchplayer
 
 import android.app.Activity
+import android.app.Application
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -18,6 +19,7 @@ import com.amoscyk.android.rewatchplayer.ui.library.LibraryViewModel
 import com.amoscyk.android.rewatchplayer.ui.player.PlayerViewModel
 
 class ViewModelFactory(
+    private val application: Application,
     private val youtubeRepository: YoutubeRepository
 ) : ViewModelProvider.NewInstanceFactory() {
 
@@ -25,7 +27,7 @@ class ViewModelFactory(
     override fun <T : ViewModel?> create(modelClass: Class<T>): T {
         when {
             modelClass.isAssignableFrom(MainViewModel::class.java) -> {
-                return MainViewModel(youtubeRepository) as T
+                return MainViewModel(application, youtubeRepository) as T
             }
             modelClass.isAssignableFrom(StartupAccountViewModel::class.java) -> {
                 return StartupAccountViewModel(youtubeRepository) as T
@@ -68,7 +70,7 @@ class ViewModelFactory(
 val Activity.viewModelFactory: ViewModelFactory
     get() {
         val youtubeRepository = (this.application as ReWatchPlayerApplication).youtubeRepository
-        return ViewModelFactory(youtubeRepository)
+        return ViewModelFactory(application, youtubeRepository)
     }
 
 val Fragment.viewModelFactory: ViewModelFactory
