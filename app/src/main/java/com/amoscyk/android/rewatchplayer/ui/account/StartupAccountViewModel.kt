@@ -1,18 +1,21 @@
 package com.amoscyk.android.rewatchplayer.ui.account
 
 import android.Manifest
+import android.app.Application
 import android.content.Context
 import androidx.core.content.edit
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
+import com.amoscyk.android.rewatchplayer.ui.RPViewModel
 import com.amoscyk.android.rewatchplayer.util.PreferenceKey
 import com.amoscyk.android.rewatchplayer.util.appSharedPreference
 import com.amoscyk.android.rewatchplayer.util.putString
 import pub.devrel.easypermissions.EasyPermissions
 
-class StartupAccountViewModel(private val youtubeRepository: YoutubeRepository) : ViewModel() {
+class StartupAccountViewModel(application: Application, youtubeRepository: YoutubeRepository) :
+    RPViewModel(application, youtubeRepository) {
     enum class SettingStage {
         REQUEST_GET_ACCOUNT_PERMISSION,
         REQUEST_USER_ACCOUNT,

@@ -1,5 +1,6 @@
 package com.amoscyk.android.rewatchplayer.ui
 
+import android.app.Application
 import android.util.Log
 import androidx.lifecycle.*
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
@@ -9,8 +10,8 @@ import com.amoscyk.android.rewatchplayer.datasource.vo.local.RPVideoListResponse
 import kotlinx.coroutines.launch
 
 class VideoListViewModel(
-    private val youtubeRepository: YoutubeRepository
-): ViewModel() {
+    application: Application, youtubeRepository: YoutubeRepository
+) : RPViewModel(application, youtubeRepository) {
 
 //    private val _playlistResponse = MutableLiveData<PlaylistItemListResponseResource>()
 //    val playlistResource = _playlistResponse.switchMap { it.resource }

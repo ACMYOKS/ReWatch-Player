@@ -8,12 +8,11 @@
     <fragment
         android:id="@+id/libraryFragment"
         android:name="com.amoscyk.android.rewatchplayer.ui.library.LibraryFragment"
-        tools:layout="@layout/fragment_library" >
-    </fragment>
+        tools:layout="@layout/fragment_library" />
     <fragment
         android:id="@+id/videoListFragment"
         android:name="com.amoscyk.android.rewatchplayer.ui.VideoListFragment"
-        tools:layout="@layout/fragment_video_list" >
+        tools:layout="@layout/fragment_video_list">
         <argument
             android:name="playlist"
             app:argType="com.amoscyk.android.rewatchplayer.datasource.vo.RPPlaylist" />
@@ -29,8 +28,24 @@
             android:name="channelId"
             app:argType="string" />
     </fragment>
-    <action android:id="@+id/showChannelDetail"
-        app:destination="@id/channelFragment"/>
-    <action android:id="@+id/showVideoListForPlaylist"
-        app:destination="@id/videoListFragment"/>
+    <action
+        android:id="@+id/showChannelDetail"
+        app:destination="@id/channelFragment" />
+    <action
+        android:id="@+id/showVideoListForPlaylist"
+        app:destination="@id/videoListFragment" />
+    <fragment
+        android:id="@+id/videoSearchFragment"
+        android:name="com.amoscyk.android.rewatchplayer.ui.home.VideoSearchFragment"
+        android:label="fragment_video_search"
+        tools:layout="@layout/fragment_video_search" >
+        <argument
+            android:name="videoId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null"/>
+    </fragment>
+    <action
+        android:id="@+id/showVideoSearch"
+        app:destination="@id/videoSearchFragment" />
 </navigation>

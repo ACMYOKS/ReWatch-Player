@@ -1,5 +1,6 @@
 package com.amoscyk.android.rewatchplayer.ui
 
+import android.app.Application
 import android.util.Log
 import androidx.lifecycle.*
 import com.amoscyk.android.rewatchplayer.AppConstant
@@ -11,7 +12,8 @@ import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
-class ChannelViewModel(private val youtubeRepository: YoutubeRepository) : ViewModel() {
+class ChannelViewModel(application: Application, youtubeRepository: YoutubeRepository) :
+    RPViewModel(application, youtubeRepository) {
 
     private var channelId: String = ""
 

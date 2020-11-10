@@ -22,13 +22,13 @@ fun Channel.toRPChannel() = RPChannel(
     id = id,
     title = snippet.title,
     description = snippet.description.orEmpty(),
-    keywords = brandingSettings.channel.keywords.orEmpty(),
+    keywords = brandingSettings?.channel?.keywords.orEmpty(),
     publishedAt = snippet.publishedAt,
     thumbnails = snippet.thumbnails.toRPThumbnailDetails(),
-    uploads = contentDetails.relatedPlaylists.uploads.orEmpty(),
+    uploads = contentDetails.relatedPlaylists?.uploads.orEmpty(),
     viewCount = statistics.viewCount?.toLong() ?: 0,
     subscriberCount = statistics.subscriberCount?.toLong() ?: 0,
     videoCount = statistics.videoCount?.toLong() ?: 0,
-    bannerMobileImageUrl = brandingSettings.image.bannerMobileImageUrl.orEmpty(),
-    bannerTabletImageUrl = brandingSettings.image.bannerTabletImageUrl.orEmpty()
+    bannerMobileImageUrl = brandingSettings?.image?.bannerMobileImageUrl.orEmpty(),
+    bannerTabletImageUrl = brandingSettings?.image?.bannerTabletImageUrl.orEmpty()
 )

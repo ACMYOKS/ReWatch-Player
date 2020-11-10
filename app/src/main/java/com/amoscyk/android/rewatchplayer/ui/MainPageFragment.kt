@@ -9,12 +9,10 @@ import android.os.Bundle
 import android.os.Handler
 import android.util.Log
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.view.ActionMode
 import androidx.constraintlayout.motion.widget.MotionLayout
-import androidx.core.view.children
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.Observer
@@ -56,6 +54,9 @@ class MainPageFragment : ReWatchPlayerFragment() {
     val isSmall get() = motionLayout.currentState == R.id.small
     val isFullscreen get() = motionLayout.currentState == R.id.fullscreen
     val isDimiss get() = motionLayout.currentState == R.id.dismiss
+
+    private var pendingNavIndex: Int? = null
+    private var isStarted = false
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -99,9 +100,13 @@ class MainPageFragment : ReWatchPlayerFragment() {
 
     override fun onStart() {
         super.onStart()
-        // if last open tab is not set, use default tab
-        bottomNav.selectedItemId =
-            activity!!.appSharedPreference.getInt(PreferenceKey.LAST_OPEN_TAB_ID, -1)
+        // check if there is explicitly requested nav page to open, if not exists, check if last
+        // open tab is not set, use default tab
+        isStarted = true
+        pendingNavIndex?.let { navigateToPage(it) } ?: run {
+            bottomNav.selectedItemId =
+                activity!!.appSharedPreference.getInt(PreferenceKey.LAST_OPEN_TAB_ID, -1)
+        }
     }
 
     override fun onStop() {
@@ -109,6 +114,7 @@ class MainPageFragment : ReWatchPlayerFragment() {
         activity!!.appSharedPreference.edit()
             .putInt(PreferenceKey.LAST_OPEN_TAB_ID, bottomNav.selectedItemId)
             .apply()
+        isStarted = false
     }
 
     fun onSupportActionModeStarted(actionMode: ActionMode?) {
@@ -280,6 +286,17 @@ class MainPageFragment : ReWatchPlayerFragment() {
         playerControl.hide()
     }
 
+    fun navigateToPage(pageIndex: Int) {
+        val menu = bottomNav.menu
+        if (pageIndex in 0..menu.size()) {
+            pendingNavIndex = pageIndex
+            if (isStarted) {
+                bottomNav.selectedItemId = menu.getItem(pageIndex).itemId
+                pendingNavIndex = null
+            }
+        }
+    }
+
     private fun getViewForSnackbar(): View = if (motionLayout.currentState == R.id.fullscreen) {
         playerHolder
     } else {
@@ -289,11 +306,16 @@ class MainPageFragment : ReWatchPlayerFragment() {
     fun showSnackbar(resId: Int, duration: Int) {
         newSnackbar(resId, duration).show()
     }
+
     fun showSnackbar(text: CharSequence, duration: Int) {
         newSnackbar(text, duration).show()
     }
-    fun newSnackbar(resId: Int, duration: Int) = Snackbar.make(getViewForSnackbar(), resId, duration)
-    fun newSnackbar(text: CharSequence, duration: Int) = Snackbar.make(getViewForSnackbar(), text, duration)
+
+    fun newSnackbar(resId: Int, duration: Int) =
+        Snackbar.make(getViewForSnackbar(), resId, duration)
+
+    fun newSnackbar(text: CharSequence, duration: Int) =
+        Snackbar.make(getViewForSnackbar(), text, duration)
 
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -328,7 +350,6 @@ class MainPageFragment : ReWatchPlayerFragment() {
     private fun setupBottomNavigation(requireAttach: Boolean) {
         bottomNav.setupWithNavController(
             listOf(
-                R.navigation.home,
                 R.navigation.library,
                 R.navigation.downloads,
                 R.navigation.settings

@@ -161,17 +161,17 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
         }.observe(this, Observer {
             actionMode?.title = it
         })
-        mainViewModel.archiveResult.observe(this, Observer {
-            when (it.status) {
-                Status.SUCCESS -> {
-                    viewModel.getVideoMetaWithPlayerResource(listOf(it.data!!.videoId))
-                }
-                Status.ERROR -> {
-
-                }
-                else -> {}
-            }
-        })
+//        mainViewModel.archiveResult.observe(this, Observer {
+//            when (it.status) {
+//                Status.SUCCESS -> {
+//                    viewModel.getVideoMetaWithPlayerResource(listOf(it.data!!.videoId))
+//                }
+//                Status.ERROR -> {
+//
+//                }
+//                else -> {}
+//            }
+//        })
     }
 
     override fun onCreateView(

@@ -1,5 +1,6 @@
 package com.amoscyk.android.rewatchplayer.ui.downloads
 
+import android.app.Application
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.LiveData
@@ -9,11 +10,12 @@ import com.amoscyk.android.rewatchplayer.AppConstant
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.datasource.vo.DownloadStatus
 import com.amoscyk.android.rewatchplayer.datasource.vo.Resource
+import com.amoscyk.android.rewatchplayer.ui.RPViewModel
 import com.amoscyk.android.rewatchplayer.util.FileDownloadHelper
 
 class DownloadFileDetailViewModel(
-    private val youtubeRepository: YoutubeRepository
-): DownloadPageViewModel(youtubeRepository) {
+    application: Application, youtubeRepository: YoutubeRepository
+) : DownloadPageViewModel(application, youtubeRepository) {
 
     data class ViewStatus(
         var isSelected: Boolean

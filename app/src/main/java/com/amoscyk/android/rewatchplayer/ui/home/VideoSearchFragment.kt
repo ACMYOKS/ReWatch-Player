@@ -3,11 +3,9 @@ package com.amoscyk.android.rewatchplayer.ui.home
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
@@ -19,6 +17,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -26,14 +25,13 @@ import androidx.recyclerview.widget.RecyclerView
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.datasource.vo.ListLoadingState
-import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.ui.CommonListDecoration
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel
-import com.amoscyk.android.rewatchplayer.ui.ProgressDialogUtil
 import com.amoscyk.android.rewatchplayer.ui.VideoListAdapter
+import com.amoscyk.android.rewatchplayer.ui.viewcontrol.SnackbarControl
 import com.amoscyk.android.rewatchplayer.util.*
 import com.amoscyk.android.rewatchplayer.viewModelFactory
-import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_video_search.*
 import kotlinx.android.synthetic.main.fragment_video_search.view.*
 
@@ -51,6 +49,9 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
     private val mLoadingView: ContentLoadingProgressBar get() = view!!.loading_view
     private val mEmptyView: View get() = view!!.empty_list_view
 
+    private val args by navArgs<VideoSearchFragmentArgs>()
+    private var handleVideoId: String? = null
+
     private val mVideoListAdapter = VideoListAdapter().apply {
         setOnLoadMoreNeeded {
             viewModel.loadMoreResource()
@@ -59,12 +60,14 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
             mainViewModel.readyVideo(meta.videoId)
         }
     }
+    private val snackbarSet = hashSetOf<Snackbar>()
 
     private val mainViewModel by activityViewModels<MainViewModel> { viewModelFactory }
     private val viewModel by viewModels<VideoSearchViewModel> { viewModelFactory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleVideoId = args.videoId
     }
 
     override fun onAttach(context: Context) {
@@ -100,6 +103,30 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
                     .show()
             }
         })
+        viewModel.snackEvent.observe(this, Observer { event ->
+            event.getContentIfNotHandled { ctrl ->
+                mainFragment?.newSnackbar(ctrl.title, when (ctrl.duration) {
+                    SnackbarControl.Duration.SHORT -> Snackbar.LENGTH_SHORT
+                    SnackbarControl.Duration.LONG -> Snackbar.LENGTH_LONG
+                    else -> Snackbar.LENGTH_INDEFINITE
+                }
+                )?.also {
+                    if (ctrl.action != null) {
+                        it.setAction(ctrl.action.title) { ctrl.action.action() }
+                    }
+                    it.addCallback(object : Snackbar.Callback() {
+                        override fun onShown(sb: Snackbar?) {
+                            sb?.let { snackbarSet.add(it) }
+                        }
+
+                        override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
+                            transientBottomBar?.let { snackbarSet.remove(it) }
+                        }
+                    })
+                    it.show()
+                }
+            }
+        })
     }
 
     override fun onCreateView(
@@ -114,11 +141,24 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
         setupViews()
     }
 
+    override fun onStart() {
+        super.onStart()
+        handleVideoId?.let {
+            mSearchView.isIconified = false
+            mSearchView.setQuery(it, true)
+            handleVideoId = null
+        }
+    }
+
     override fun onStop() {
         super.onStop()
         requireContext().appSharedPreference.edit {
             putInt(PreferenceKey.SEARCH_OPTION, getSelectedSearchOptionPos())
         }
+        snackbarSet.forEach {
+            it.dismiss()
+        }
+        snackbarSet.clear()
     }
 
     override fun onGoogleUserAuthResult(resultCode: Int) {

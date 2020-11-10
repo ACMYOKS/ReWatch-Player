@@ -3,6 +3,7 @@ package com.amoscyk.android.rewatchplayer.ui.library
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
@@ -12,17 +13,23 @@ import androidx.fragment.app.FragmentPagerAdapter
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
+import androidx.navigation.NavAction
+import androidx.navigation.NavOptions
+import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.navOptions
 import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager.widget.ViewPager
+import com.amoscyk.android.rewatchplayer.LibraryNavGraphDirections
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.datasource.vo.NoNetworkException
 import com.amoscyk.android.rewatchplayer.datasource.vo.ServerErrorException
 import com.amoscyk.android.rewatchplayer.ui.*
+import com.amoscyk.android.rewatchplayer.ui.viewcontrol.SnackbarControl
 import com.amoscyk.android.rewatchplayer.util.*
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.material.snackbar.Snackbar
@@ -39,7 +46,7 @@ class LibraryFragment : ReWatchPlayerFragment() {
     private lateinit var playlistFrag: ContentListFragment
     private lateinit var bookmarkFrag: ContentListFragment
     private lateinit var historyFrag: ContentListFragment
-    private var indefiniteSb: Snackbar? = null      // special ref for snackbar with indefinite show duration
+    private val snackbarSet = hashSetOf<Snackbar>()
     private val viewModel by viewModels<LibraryViewModel> { viewModelFactory }
     private val mainViewModel by activityViewModels<MainViewModel> { viewModelFactory }
 
@@ -99,8 +106,7 @@ class LibraryFragment : ReWatchPlayerFragment() {
                 toggleItemSelection(position)
                 actionMode?.title = getSelectedItemsId().size.toString()
             } else {
-//                mainActivity?.playVideoForId(meta.videoId)
-                mainViewModel?.readyVideo(meta.videoId)
+                mainViewModel.readyVideo(meta.videoId)
             }
         }
         setOnItemLongClickListener { position, meta ->
@@ -117,7 +123,6 @@ class LibraryFragment : ReWatchPlayerFragment() {
                 toggleItemSelection(position)
                 actionMode?.title = getSelectedItemsId().size.toString()
             } else {
-//                mainActivity?.playVideoForId(meta.videoId)
                 mainViewModel.readyVideo(meta.videoId)
             }
         }
@@ -154,10 +159,10 @@ class LibraryFragment : ReWatchPlayerFragment() {
         viewModel.currentDisplayMode.observe(this, Observer {
             currentDisplayMode = it
             setListForDisplayMode(it)
-            if (indefiniteSb != null) {
-                indefiniteSb!!.dismiss()
-                indefiniteSb = null
+            snackbarSet.forEach {
+                it.dismiss()
             }
+            snackbarSet.clear()
         })
         viewModel.channelList.observe(this, Observer {
             mChannelListAdapter.submitList(it.accumulatedItems + it.newItems)
@@ -239,43 +244,28 @@ class LibraryFragment : ReWatchPlayerFragment() {
             }
         })
 
-        viewModel.exceptionEvent.observe(this, Observer { event ->
-            event.getContentIfNotHandled {
-                val e = it.e
-                val actionTag = it.actionTag
-                when (e) {
-                    is SocketTimeoutException -> {
-                        mainFragment?.apply {
-                            indefiniteSb =
-                                newSnackbar(R.string.error_loading_resource, Snackbar.LENGTH_INDEFINITE)
-                                    .setAction(R.string.retry) {
-                                        when (actionTag) {
-                                            "refresh_list" -> viewModel.refreshList()
-                                            "load_more_channels" -> viewModel.loadMoreChannels()
-                                            "load_more_playlists" -> viewModel.loadMorePlaylists()
-                                        }
-                                    }
-                            indefiniteSb!!.show()
+        viewModel.snackEvent.observe(this, Observer { event ->
+            event.getContentIfNotHandled { ctrl ->
+                mainFragment?.newSnackbar(ctrl.title, when (ctrl.duration) {
+                    SnackbarControl.Duration.SHORT -> Snackbar.LENGTH_SHORT
+                    SnackbarControl.Duration.LONG -> Snackbar.LENGTH_LONG
+                    else -> Snackbar.LENGTH_INDEFINITE
+                })?.also {
+                    ctrl.action?.let { action ->
+                        it.setAction(action.title) { action.action() }
+                    }
+                    it.addCallback(object : Snackbar.Callback() {
+                        override fun onShown(sb: Snackbar?) {
+                            super.onShown(sb)
+                            sb?.let { snackbarSet.add(it) }
                         }
-                    }
-                    is NoNetworkException -> {
-                        mainFragment?.apply {
-                            indefiniteSb =
-                                newSnackbar(R.string.error_network_disconnected, Snackbar.LENGTH_INDEFINITE)
-                                    .setAction(R.string.retry) {
-                                        when (actionTag) {
-                                            "refresh_list" -> viewModel.refreshList()
-                                            "load_more_channels" -> viewModel.loadMoreChannels()
-                                            "load_more_playlists" -> viewModel.loadMorePlaylists()
-                                        }
-                                    }
-                            indefiniteSb!!.show()
+
+                        override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
+                            super.onDismissed(transientBottomBar, event)
+                            transientBottomBar?.let { snackbarSet.remove(it) }
                         }
-                    }
-                    else -> {
-                        mainFragment?.newSnackbar(e.message ?: getString(R.string.error_unknown), Snackbar.LENGTH_LONG)
-                            ?.show()
-                    }
+                    })
+                    it.show()
                 }
             }
         })
@@ -347,10 +337,10 @@ class LibraryFragment : ReWatchPlayerFragment() {
         requireActivity().appSharedPreference.apply {
             edit { putString(PreferenceKey.LIBRARY_LIST_MODE, currentDisplayMode.name) }
         }
-        if (indefiniteSb != null) {
-            indefiniteSb!!.dismiss()
-            indefiniteSb = null
+        snackbarSet.forEach {
+            it.dismiss()
         }
+        snackbarSet.clear()
     }
 
     private fun getContentListFragment(position: Int): ContentListFragment =
@@ -412,6 +402,9 @@ class LibraryFragment : ReWatchPlayerFragment() {
             inflateMenu(R.menu.library_option_menu2)
             setOnMenuItemClickListener {
                 when (it.itemId) {
+                    R.id.search -> {
+                        findNavController().navigate(LibraryFragmentDirections.showVideoSearch())
+                    }
                     R.id.refresh_list -> {
                         viewModel.refreshList()
                     }

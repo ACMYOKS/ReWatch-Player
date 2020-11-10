@@ -244,13 +244,19 @@ class YoutubeRepository(
         ServerErrorException::class
     )
     suspend fun getYtInfo(videoId: String): YtInfo? = withContext(Dispatchers.IO) {
+        val cached = appDatabase.ytInfoDao().getByVideoId(videoId).firstOrNull()
+        if (cached != null && System.currentTimeMillis() - cached.requestTime < MAX_STORE_YT_INFO_MILLISECOND) {
+            return@withContext cached
+        }
         val call = rpCloudService.getYtInfo(videoId).execute()
         if (call.isSuccessful) {
             return@withContext call.body()?.also { info ->
+                appDatabase.ytInfoDao().insert(info)
                 val meta = info.getVideoMeta()
-                val record = appDatabase.videoMetaDao().getByVideoId(info.videoDetails.videoId)
-                if (record.isEmpty()) appDatabase.videoMetaDao().insert(meta)
-                else appDatabase.videoMetaDao().update(meta)
+                appDatabase.videoMetaDao().insert(meta)
+//                val record = appDatabase.videoMetaDao().getByVideoId(info.videoDetails.videoId)
+//                if (record.isEmpty()) appDatabase.videoMetaDao().insert(meta)
+//                else appDatabase.videoMetaDao().update(meta)
             }
         } else {
             throw CloudSvcErrorHandler.getError(call.errorBody())
@@ -354,13 +360,13 @@ class YoutubeRepository(
         }
 
 
+    @Throws(Exception::class)
     suspend fun addBookmark(videoId: String) = withContext(Dispatchers.IO) {
         currentAccountName.value?.let { username ->
             appDatabase.videoBookmarkDao().insert(username, videoId)
             // add VideoMeta for bookmarked video to ease Bookmark list display
             if (appDatabase.videoMetaDao().getByVideoId(videoId).isEmpty()) {
                 getYtInfo(videoId)
-//                loadYTInfoForVideoId(videoId)
             }
         }
         return@withContext
@@ -441,6 +447,8 @@ class YoutubeRepository(
         private const val MAX_VIDEO_RESULTS: Long = 30
         private const val MAX_CHANNEL_RESULTS: Long = 50
         private const val MAX_PLAYLIST_RESULTS: Long = 30
+
+        private const val MAX_STORE_YT_INFO_MILLISECOND: Long = 3 * 60 * 1000       // 3 hours
     }
 
 }

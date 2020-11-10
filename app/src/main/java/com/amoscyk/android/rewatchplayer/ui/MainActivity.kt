@@ -11,6 +11,7 @@ import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.util.Log
 import android.util.Rational
 import android.view.View
@@ -20,17 +21,16 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.view.ActionMode
-import androidx.core.content.edit
-import androidx.core.net.toUri
 import androidx.lifecycle.Observer
 import androidx.navigation.findNavController
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.navOptions
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.amoscyk.android.rewatchplayer.*
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.service.AudioPlayerService
-import com.amoscyk.android.rewatchplayer.ui.MainViewModel.ResponseActionType
 import com.amoscyk.android.rewatchplayer.ui.library.LibraryFragmentDirections
 import com.amoscyk.android.rewatchplayer.ui.player.*
 import com.amoscyk.android.rewatchplayer.ui.viewcontrol.SnackbarControl
@@ -39,7 +39,6 @@ import com.google.android.exoplayer2.*
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.bottom_sheet_dialog_user_option.view.*
-import java.io.File
 import java.net.URL
 
 
@@ -54,11 +53,7 @@ class MainActivity : ReWatchPlayerActivity() {
     // player option view
     private var mOptionDialog: BottomSheetDialog? = null
     private var mVideoInfoDialog: VideoInfoBottomSheetDialog? = null
-    private var mArchiveOptionDialog: ArchiveOptionDialog? = null
-    private var mResOptionDialog: VideoQualityOptionDialog? = null
     private var mResOptionDialog2: BottomSheetDialog? = null
-    private var mPlaybackSpeedDialog: PlaybackSpeedDialog? = null
-    private var mPlaybackSpeedDialog2: PlaybackSpeedDialog2? = null
     private var mPlaybackSpeedAdvanceDialog: PlaybackSpeedAdvanceDialog? = null
 
     // player option view related class
@@ -137,13 +132,13 @@ class MainActivity : ReWatchPlayerActivity() {
             }
         }
 
-        override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-            if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
-                getPlayer()?.apply {
-                    viewModel.saveWatchHistory(currentPosition)
-                }
-            }
-        }
+//        override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+//            if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
+//                getPlayer()?.apply {
+//                    viewModel.saveWatchHistory(currentPosition)
+//                }
+//            }
+//        }
     }
     private var mPlayerServiceReceiver: BroadcastReceiver? = null
 
@@ -173,29 +168,6 @@ class MainActivity : ReWatchPlayerActivity() {
             getMainFragment()?.playerControl?.setRewindIncrementMs(it * 1000)
         })
 
-        viewModel.needShowArchiveOption.observe(this, Observer { event ->
-            event.getContentIfNotHandled { mArchiveOptionDialog?.show() }
-        })
-
-        // FIXME: change intent handling, show list instead of direct showing
-        viewModel.searchVideoResource.observe(this, Observer { res ->
-            when (res.status) {
-                Status.LOADING -> {
-                    Toast.makeText(this, "Checking...", Toast.LENGTH_SHORT).show()
-                }
-                Status.SUCCESS -> {
-                    viewModel.readyVideo(res.data!!)
-                }
-                Status.ERROR -> {
-                    Toast.makeText(
-                        this,
-                        "video with id ${res.data!!} not exist",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        })
-
         viewModel.bookmarkedVid.observe(this, Observer {
 
         })
@@ -203,17 +175,6 @@ class MainActivity : ReWatchPlayerActivity() {
         viewModel.videoData.observe(this, Observer { viewData ->
             val meta = viewData.videoMeta
             getMainFragment()?.setTitle(meta.title)
-//            val itags = meta.itags
-//            val vTags = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMATS.filter {
-//                itags.contains(it.key)
-//            })
-//            val aTags = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_AUDIO_FORMATS.filter {
-//                itags.contains(it.key)
-//            })
-//            mResOptionDialog?.apply {
-//                setVideoTags(vTags.keys.toList())
-//                setAudioVTags(aTags.keys.toList())
-//            }
             mVideoInfoDialog?.apply {
                 setVideoMeta(meta)
                 setViewChannelButtonOnClickListener(View.OnClickListener {
@@ -225,27 +186,6 @@ class MainActivity : ReWatchPlayerActivity() {
                     }
                     getMainFragment()?.setPlayerSize(MainPageFragment.PlayerSize.SMALL)
                 })
-            }
-        })
-
-        viewModel.archiveVideoMeta.observe(this, Observer { meta ->
-            val itags = meta.itags
-            val vTags = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMATS.filter {
-                itags.contains(it.key)
-            })
-            val aTags = LinkedHashMap(YouTubeStreamFormatCode.ADAPTIVE_AUDIO_FORMATS.filter {
-                itags.contains(it.key)
-            })
-            mArchiveOptionDialog?.apply {
-                setVideoTags(vTags.keys.toList())
-                setAudioVTags(aTags.keys.toList())
-            }
-        })
-
-        viewModel.selectedTags.observe(this, Observer {
-            mResOptionDialog?.apply {
-                it.vTag?.let { setCurrentVTag(it) }
-                it.aTag?.let { setCurrentATag(it) }
             }
         })
 
@@ -272,48 +212,7 @@ class MainActivity : ReWatchPlayerActivity() {
         })
 
         viewModel.playbackSpeedMultiplier.observe(this, Observer {
-            //            mPlaybackSpeedDialog2?.setPlaybackMultiplier(it)
             mPlaybackSpeedAdvanceDialog?.setPlaybackMultiplier(it)
-        })
-
-        viewModel.resourceUri.observe(this, Observer {
-            showPlayerView()
-            prepareMediaResource(*it.uriList.toTypedArray())
-            if (it.lastPlayPos != null) {
-                AlertDialog.Builder(this)
-                    .setMessage(R.string.player_restore_last_play_position_message)
-                    .setPositiveButton(R.string.confirm_text) { d, i ->
-                        getPlayer()?.apply {
-                            playWhenReady = true
-//                            seekTo(currentWindow, it.lastPlayPos)
-                        }
-                    }
-                    .setNegativeButton(R.string.negative_text) { d, i ->
-                        d.cancel()
-                    }
-                    .setOnCancelListener {
-                        getPlayer()?.apply {
-                            playWhenReady = true
-//                            seekTo(currentWindow, 0)
-                        }
-                    }
-                    .create()
-                    .show()
-            } else {
-                getPlayer()?.apply {
-                    playWhenReady = true
-//                    seekTo(currentWindow, playbackPosition)
-                }
-            }
-        })
-
-        viewModel.shouldSaveWatchHistory.observe(this, Observer { event ->
-            event.getContentIfNotHandled { videoId ->
-                getPlayer()?.let {
-                    Log.d("MainActivity", "save watch history, ${videoId}, ${it.currentPosition}")
-                    viewModel.saveWatchHistory(videoId, it.currentPosition)
-                }
-            }
         })
 
         viewModel.snackEvent.observe(this, Observer { event ->
@@ -328,31 +227,6 @@ class MainActivity : ReWatchPlayerActivity() {
                     snackbar.setAction(action.title) { action.action }
                 }
                 snackbar.show()
-            }
-        })
-
-        viewModel.archiveResult.observe(this, Observer { result ->
-            when (result.status) {
-                Status.SUCCESS -> {
-                    getMainFragment()?.showSnackbar(
-                        result.data!!.taskCount.let {
-                            if (it > 0) {
-                                getString(R.string.player_archive_new_tasks).format(it)
-                            } else {
-                                getString(R.string.player_archive_no_new_tasks)
-                            }
-                        },
-                        Snackbar.LENGTH_SHORT
-                    )
-                }
-                Status.ERROR -> {
-                    getMainFragment()?.showSnackbar(
-                        result.stringMessage,
-                        Snackbar.LENGTH_SHORT
-                    )
-                }
-                else -> {
-                }
             }
         })
 
@@ -372,156 +246,28 @@ class MainActivity : ReWatchPlayerActivity() {
             }
         })
 
-        viewModel.shouldStartPlayVideo.observe(this, Observer { event ->
-            event.getContentIfNotHandled {
-                getPlayer()?.let {
-                    it.playWhenReady = true
-//                    it.seekTo(currentWindow, playbackPosition)
-                }
-            }
-        })
-
-        viewModel.shouldStopVideo.observe(this, Observer { event ->
-            event.getContentIfNotHandled {
-                getPlayer()?.playWhenReady = false
-            }
-        })
-
-        viewModel.getVideoResult.observe(this, Observer { event ->
-            event.getContentIfNotHandled {
-                it.error?.let {
-                    AlertDialog.Builder(this)
-                        .setTitle(R.string.player_error_title)
-                        .setMessage(
-                            when (it) {
-                                MainViewModel.GetVideoResult.Error.EMPTY_VIDEO_ID -> R.string.player_error_no_video_id
-                                MainViewModel.GetVideoResult.Error.NO_VIDEO_META -> R.string.player_error_no_video_meta
-                                MainViewModel.GetVideoResult.Error.NO_YT_INFO -> R.string.player_error_no_yt_info
-                                MainViewModel.GetVideoResult.Error.NO_QUALITY -> R.string.player_error_no_available_quality
-                                MainViewModel.GetVideoResult.Error.UNKNOWN -> R.string.player_error_unknown
-                            }
-                        )
-                        .create()
-                        .show()
-                }
-            }
-        })
-
         viewModel.alertEvent.observe(this, Observer { event ->
             event.getContentIfNotHandled { ctrl ->
                 ctrl.getBuilder(this).create().show()
             }
         })
 
-        viewModel.responseAction.observe(this, Observer { res ->
-            when (res.status) {
-                Status.LOADING -> {
-
-                }
-                Status.SUCCESS -> {
-                    when (res.data) {
-                        ResponseActionType.SHOW_ENABLE_MOBILE_DATA_USAGE_ALERT -> {
-                            AlertDialog.Builder(this)
-                                .setMessage(getString(R.string.player_alert_enable_stream_with_mobile_data))
-                                .setPositiveButton(R.string.confirm_text) { _, _ ->
-                                    appSharedPreference.edit(true) {
-                                        putInt(PreferenceKey.ALLOW_VIDEO_STREAMING_ENV, 1)
-                                    }
-                                    viewModel.continueSetQuality()
-                                }
-                                .setNegativeButton(R.string.cancel_text) { dialog, _ -> dialog.cancel() }
-                                .setOnCancelListener {
-                                    viewModel.cancelSetQuality()
-                                    AlertDialog.Builder(this)
-                                        .setMessage(R.string.player_alert_enable_stream_with_mobile_data_cancel)
-                                        .create()
-                                        .show()
-                                }
-                                .create()
-                                .show()
-                        }
-                        else -> {
-                        }
-                    }
-                }
-                Status.ERROR -> {
-                    when (res.data) {
-                        ResponseActionType.DO_NOTHING -> {
-                            AlertDialog.Builder(this)
-                                .setMessage(res.stringMessage)
-                                .setPositiveButton(R.string.confirm_text) { _, _ -> }
-                                .create()
-                                .show()
-                        }
-                        else -> {
-                        }
-                    }
-                }
+        viewModel.autoSearchEvent.observe(this, Observer {
+            getMainFragment()?.apply {
+                navigateToPage(0)
+                if (isFullscreen) setPlayerSize(MainPageFragment.PlayerSize.SMALL)
             }
+            Handler().postDelayed({
+                findNavController(R.id.main_page_nav_host_fragment).apply {
+                    navigate(LibraryFragmentDirections.showVideoSearch().setVideoId(it), navOptions {
+                        launchSingleTop = false     // multi-instance is better
+                    })
+                }
+            }, 0)
+
         })
 
-        // FIXME: review intent handling
-        // handle implicit intent from hyperlink
-        when (intent.action) {
-            Intent.ACTION_VIEW -> {
-                intent.data?.let { data ->
-                    val videoId: String? = when (data.host) {
-                        "m.youtube.com", "www.youtube.com", "youtube.com" -> {
-                            data.getQueryParameter("v")
-                        }
-                        "youtu.be" -> {
-                            data.lastPathSegment
-                        }
-                        else -> null
-                    }
-                    // search video
-                    if (videoId != null) {
-                        viewModel.readyVideo(videoId)
-                    } else {
-                        AlertDialog.Builder(this)
-                            .setTitle(R.string.player_error_title)
-                            .setMessage("Cannot find videoId")
-                            .create()
-                            .show()
-                    }
-                }
-            }
-            Intent.ACTION_SEND -> {
-                if (intent.type == "text/plain") {
-                    intent.getStringExtra(Intent.EXTRA_TEXT)?.let { text ->
-                        runCatching {
-                            val url = URL(text)
-                            val videoId: String? = when (url.host) {
-                                "m.youtube.com", "www.youtube.com", "youtube.com" -> {
-                                    url.query.split("&").firstOrNull { it.contains("v=") }
-                                        ?.replace("v=", "")
-                                }
-                                "youtu.be" -> {
-                                    url.path.split("/").lastOrNull()
-                                }
-                                else -> null
-                            }
-                            // search video
-                            if (videoId != null) {
-                                viewModel.readyVideo(videoId)
-                            } else {
-                                AlertDialog.Builder(this)
-                                    .setTitle(R.string.player_error_title)
-                                    .setMessage("Cannot find videoId")
-                                    .create()
-                                    .show()
-                            }
-                        }.onFailure {
-                            AlertDialog.Builder(this)
-                                .setTitle(R.string.player_error_title)
-                                .setMessage(R.string.player_error_malformed_url)
-                                .create()
-                                .show()
-                        }
-                    }
-                }
-            }
-        }
+        intent?.let { handleIntent(it) }
     }
 
     override fun onResume() {
@@ -538,7 +284,7 @@ class MainActivity : ReWatchPlayerActivity() {
                 } else {
 //                    playbackPosition = playbackPos
 //                    Log.d("MainActivity", "audio service broadcast receiver: $playbackPosition")
-                    viewModel.startPlayingVideo()
+//                    viewModel.startPlayingVideo()
                 }
             }
         }
@@ -555,18 +301,16 @@ class MainActivity : ReWatchPlayerActivity() {
         mPlayerServiceReceiver = null
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-            val wasPlaying = getPlayer()?.isPlaying == true
             getPlayer()?.apply {
+                val wasPlaying = isPlaying
                 playWhenReady = false
-                viewModel.saveWatchHistory(currentPosition)
-//                playbackPosition = currentPosition
-            }
-            if (isActivityOnStackTop() && wasPlaying && appSharedPreference.getBoolean(
-                    PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
-                    AppSettings.DEFAULT_ALLOW_PLAY_IN_BACKGROUND
-                )
-            ) {
-                startPlayService()
+                if (isActivityOnStackTop() && wasPlaying && appSharedPreference.getBoolean(
+                        PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
+                        AppSettings.DEFAULT_ALLOW_PLAY_IN_BACKGROUND
+                    )
+                ) {
+                    startPlayService()
+                }
             }
         }
     }
@@ -574,18 +318,16 @@ class MainActivity : ReWatchPlayerActivity() {
     override fun onStop() {
         super.onStop()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            val wasPlaying = getPlayer()?.isPlaying == true
             getPlayer()?.apply {
+                val wasPlaying = isPlaying
                 playWhenReady = false
-                viewModel.saveWatchHistory(currentPosition)
-//                playbackPosition = currentPosition
-            }
-            if (isActivityOnStackTop() && wasPlaying && appSharedPreference.getBoolean(
+                if (isActivityOnStackTop() && wasPlaying && appSharedPreference.getBoolean(
                     PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
                     AppSettings.DEFAULT_ALLOW_PLAY_IN_BACKGROUND
                 )
-            ) {
-                startPlayService()
+                ) {
+                    startPlayService()
+                }
             }
         }
     }
@@ -618,6 +360,11 @@ class MainActivity : ReWatchPlayerActivity() {
         if (shouldEnterPIPMode()) {
             enterPIPMode()
         }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        intent?.let { handleIntent(it) }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -705,71 +452,14 @@ class MainActivity : ReWatchPlayerActivity() {
                 layoutManager = LinearLayoutManager(this@MainActivity)
             }
         }
-//        mPlaybackSpeedDialog2 = PlaybackSpeedDialog2(this).apply {
-//            setOnPlaybackSpeedChangeListener {
-//                viewModel.setPlaybackSpeed(it)
-//            }
-//            setOnAdvanceClickListener(DialogInterface.OnClickListener { dialog, which ->
-//                mPlaybackSpeedAdvanceDialog?.show()
-//            })
-//        }
         mPlaybackSpeedAdvanceDialog = PlaybackSpeedAdvanceDialog(this).apply {
             setOnPlaybackSpeedChangeListener {
                 viewModel.setPlaybackSpeed(it)
             }
         }
         mVideoInfoDialog = VideoInfoBottomSheetDialog(this)
-        mResOptionDialog = VideoQualityOptionDialog(this).apply {
-            setOnQualityOptionSelectedListener(object :
-                VideoQualityOptionDialog.OnQualityOptionSelectedListener {
-                override fun onQualityOptionSelected(vTag: Int, aTag: Int) {
-                    // save playback state
-                    getPlayer()?.let {
-                        //                        currentWindow = it.currentWindowIndex
-//                        playbackPosition = it.currentPosition
-                    }
-                    viewModel.setQuality(vTag, aTag)
-                }
-            })
-        }
-//        mArchiveOptionDialog = ArchiveOptionDialog(this).apply {
-//            setOnArchiveOptionSelectedListener(object :
-//                ArchiveOptionDialog.OnArchiveOptionSelectedListener {
-//                override fun onArchiveOptionSelected(vTag: Int, aTag: Int) {
-//                    viewModel.archiveVideo(this@MainActivity, vTag, aTag)
-//                }
-//            })
-//        }
-        mPlaybackSpeedDialog = PlaybackSpeedDialog(
-            this
-        ).apply {
-            setOnPlaybackSpeedChangeListener(object :
-                PlaybackSpeedDialog.OnPlaybackSpeedChangeListener {
-                override fun onPlaybackSpeedChange(newPlaybackSpeed: Float) {
-                    viewModel.setPlaybackSpeed(newPlaybackSpeed)
-                }
-            })
-        }
         mLoadingDialog = ProgressDialogUtil.create(this)
     }
-
-//    fun playVideoForId(videoId: String, forceFindFile: Boolean = false) {
-//        playWhenReady = true
-//        playbackPosition = 0
-//        currentWindow = 0
-//        exoPlayer?.let {
-//            it.playWhenReady = false
-//            it.seekTo(currentWindow, 0)
-//            it.playbackParameters = viewModel.playbackParams.value!!
-//        }
-//        viewModel.playVideoForId(
-//            this, videoId, forceFindFile ||
-//                    appSharedPreference.getBoolean(
-//                        PreferenceKey.PLAYER_PLAY_DOWNLOADED_IF_EXIST,
-//                        AppSettings.DEFAULT_PLAYER_PLAY_DOWNLOADED_IF_EXIST
-//                    )
-//        )
-//    }
 
     fun getPlayerOptionDialog() = mOptionDialog
 
@@ -779,24 +469,6 @@ class MainActivity : ReWatchPlayerActivity() {
 
     private fun dismissPlayerView() {
         getMainFragment()?.setPlayerSize(MainPageFragment.PlayerSize.DISMISS)
-    }
-
-
-    private fun prepareMediaResource(vararg uri: Uri?) {
-//        uri.mapNotNull { progressiveSrcFactory.createMediaSource(it) }.apply {
-//            when (size) {
-//                0 -> return
-//                1 -> getPlayer()?.prepare(first())
-//                else -> getPlayer()?.prepare(MergingMediaSource(*toTypedArray()))
-//            }
-//            exoPlayer?.playWhenReady = playWhenReady
-//            exoPlayer?.seekTo(currentWindow, playbackPosition)
-//        }
-    }
-
-    private fun getResFileUriIfExist(filename: String): Uri? {
-        val file = File(FileDownloadHelper.getDir(this), filename)
-        return if (file.exists()) file.toUri() else null
     }
 
     private fun shouldEnterPIPMode(): Boolean {
@@ -872,8 +544,76 @@ class MainActivity : ReWatchPlayerActivity() {
         stopService(Intent(this, AudioPlayerService::class.java))
     }
 
+    private fun handleIntent(intent: Intent) {
+        // FIXME: review intent handling
+        // handle implicit intent from hyperlink
+        when (intent.action) {
+            Intent.ACTION_VIEW -> {
+                intent.data?.let { data ->
+                    val videoId: String? = when (data.host) {
+                        "m.youtube.com", "www.youtube.com", "youtube.com" -> {
+                            data.getQueryParameter("v")
+                        }
+                        "youtu.be" -> {
+                            data.lastPathSegment
+                        }
+                        else -> null
+                    }
+                    // search video
+                    if (videoId != null) {
+//                        viewModel.readyVideo(videoId)
+                        viewModel.autoSearchVideo(videoId)
+                    } else {
+                        AlertDialog.Builder(this)
+                            .setTitle(R.string.player_error_title)
+                            .setMessage("Cannot find videoId")
+                            .create()
+                            .show()
+                    }
+                }
+            }
+            Intent.ACTION_SEND -> {
+                if (intent.type == "text/plain") {
+                    intent.getStringExtra(Intent.EXTRA_TEXT)?.let { text ->
+                        runCatching {
+                            val url = URL(text)
+                            val videoId: String? = when (url.host) {
+                                "m.youtube.com", "www.youtube.com", "youtube.com" -> {
+                                    url.query.split("&").firstOrNull { it.contains("v=") }
+                                        ?.replace("v=", "")
+                                }
+                                "youtu.be" -> {
+                                    url.path.split("/").lastOrNull()
+                                }
+                                else -> null
+                            }
+                            // search video
+                            if (videoId != null) {
+//                                viewModel.readyVideo(videoId)
+                                viewModel.autoSearchVideo(videoId)
+                            } else {
+                                AlertDialog.Builder(this)
+                                    .setTitle(R.string.player_error_title)
+                                    .setMessage("Cannot find videoId")
+                                    .create()
+                                    .show()
+                            }
+                        }.onFailure {
+                            AlertDialog.Builder(this)
+                                .setTitle(R.string.player_error_title)
+                                .setMessage(R.string.player_error_malformed_url)
+                                .create()
+                                .show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fun getMainFragment(): MainPageFragment? =
-        supportFragmentManager.findFragmentById(R.id.root_nav_container)?.childFragmentManager?.fragments?.firstOrNull() as? MainPageFragment
+        supportFragmentManager.findFragmentById(R.id.root_nav_container)?.
+            childFragmentManager?.fragments?.firstOrNull() as? MainPageFragment
 
     companion object {
         const val TAG = "MainActivity"

@@ -1,5 +1,6 @@
 package com.amoscyk.android.rewatchplayer.ui.player
 
+import android.app.Application
 import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
@@ -8,13 +9,14 @@ import androidx.lifecycle.*
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMetaWithPlayerResource
+import com.amoscyk.android.rewatchplayer.ui.RPViewModel
 import com.amoscyk.android.rewatchplayer.util.FileDownloadHelper
 import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
 import kotlinx.coroutines.launch
 
 class PlayerViewModel(
-    private val youtubeRepository: YoutubeRepository
-): ViewModel() {
+    application: Application, youtubeRepository: YoutubeRepository
+) : RPViewModel(application, youtubeRepository) {
 
     private val _isOnlineMode = MutableLiveData(false)
     val isOnlineMode: LiveData<Boolean> = _isOnlineMode

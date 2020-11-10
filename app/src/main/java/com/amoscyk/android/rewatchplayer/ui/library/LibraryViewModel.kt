@@ -1,21 +1,27 @@
 package com.amoscyk.android.rewatchplayer.ui.library
 
+import android.app.Application
 import android.util.Log
 import androidx.lifecycle.*
 import com.amoscyk.android.rewatchplayer.AppConstant
+import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.datasource.vo.*
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.*
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.RPPlaylistListResponse
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.RPSubscriptionListResponse
+import com.amoscyk.android.rewatchplayer.ui.RPViewModel
+import com.amoscyk.android.rewatchplayer.ui.viewcontrol.SnackbarControl
 import kotlinx.coroutines.launch
+import java.net.SocketTimeoutException
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.Exception
 
 class LibraryViewModel(
-    private val youtubeRepository: YoutubeRepository
-) : ViewModel() {
+    application: Application,
+    youtubeRepository: YoutubeRepository
+) : RPViewModel(application, youtubeRepository) {
     enum class DisplayMode {
         CHANNEL,
         PLAYLISTS,
@@ -73,6 +79,8 @@ class LibraryViewModel(
 
     private val _exceptionEvent = MutableLiveData<Event<ExceptionWithActionTag>>()
     val exceptionEvent: LiveData<Event<ExceptionWithActionTag>> = _exceptionEvent
+    private val _snackEvent = MutableLiveData<Event<SnackbarControl>>()
+    val snackEvent: LiveData<Event<SnackbarControl>> = _snackEvent
 
     init {
         _editMode.value = false
@@ -194,7 +202,29 @@ class LibraryViewModel(
                     } catch(e: Exception) {
                         Log.e(AppConstant.TAG, e.message.orEmpty())
                         _channelListResHolder = oListResHolder
-                        emitExceptionEvent(e, "refresh_list")
+                        val msg: String
+                        val duration: SnackbarControl.Duration
+                        val action: SnackbarControl.Action?
+                        when (e) {
+                            is SocketTimeoutException -> {
+                                msg = rpApp.getString(R.string.error_loading_resource)
+                                duration = SnackbarControl.Duration.FOREVER
+                                action = SnackbarControl.Action(rpApp.getString(R.string.retry)) { loadChannelList() }
+                            }
+                            is NoNetworkException -> {
+                                msg = rpApp.getString(R.string.error_network_disconnected)
+                                duration = SnackbarControl.Duration.FOREVER
+                                action = SnackbarControl.Action(rpApp.getString(R.string.retry)) { loadChannelList() }
+                            }
+                            else -> {
+                                msg = rpApp.getString(R.string.player_error_unknown)
+                                duration = SnackbarControl.Duration.SHORT
+                                action = null
+                            }
+                        }
+                        _snackEvent.value = Event(
+                            SnackbarControl(msg, action, duration)
+                        )
                     }
                     setChannelTimer()
                 }
@@ -215,7 +245,29 @@ class LibraryViewModel(
                                     youtubeRepository.getUserSubscribedChannels(nextPageToken)
                             } catch(e: Exception) {
                                 Log.e(AppConstant.TAG, e.message.orEmpty())
-                                emitExceptionEvent(e, "load_more_channels")
+                                val msg: String
+                                val duration: SnackbarControl.Duration
+                                val action: SnackbarControl.Action?
+                                when (e) {
+                                    is SocketTimeoutException -> {
+                                        msg = rpApp.getString(R.string.error_loading_resource)
+                                        duration = SnackbarControl.Duration.FOREVER
+                                        action = SnackbarControl.Action(rpApp.getString(R.string.retry)) { loadMoreChannels() }
+                                    }
+                                    is NoNetworkException -> {
+                                        msg = rpApp.getString(R.string.error_network_disconnected)
+                                        duration = SnackbarControl.Duration.FOREVER
+                                        action = SnackbarControl.Action(rpApp.getString(R.string.retry)) { loadMoreChannels() }
+                                    }
+                                    else -> {
+                                        msg = rpApp.getString(R.string.player_error_unknown)
+                                        duration = SnackbarControl.Duration.SHORT
+                                        action = null
+                                    }
+                                }
+                                _snackEvent.value = Event(
+                                    SnackbarControl(msg, action, duration)
+                                )
                             }
                         }
                     }
@@ -238,7 +290,29 @@ class LibraryViewModel(
                     } catch(e: Exception) {
                         Log.e(AppConstant.TAG, e.message.orEmpty())
                         _playlistListResHolder = oListResHolder
-                        emitExceptionEvent(e, "refresh_list")
+                        val msg: String
+                        val duration: SnackbarControl.Duration
+                        val action: SnackbarControl.Action?
+                        when (e) {
+                            is SocketTimeoutException -> {
+                                msg = rpApp.getString(R.string.error_loading_resource)
+                                duration = SnackbarControl.Duration.FOREVER
+                                action = SnackbarControl.Action(rpApp.getString(R.string.retry)) { loadPlaylists() }
+                            }
+                            is NoNetworkException -> {
+                                msg = rpApp.getString(R.string.error_network_disconnected)
+                                duration = SnackbarControl.Duration.FOREVER
+                                action = SnackbarControl.Action(rpApp.getString(R.string.retry)) { loadPlaylists() }
+                            }
+                            else -> {
+                                msg = rpApp.getString(R.string.player_error_unknown)
+                                duration = SnackbarControl.Duration.SHORT
+                                action = null
+                            }
+                        }
+                        _snackEvent.value = Event(
+                            SnackbarControl(msg, action, duration)
+                        )
                     }
                     setPlaylistTimer()
                 }
@@ -259,7 +333,29 @@ class LibraryViewModel(
                                     youtubeRepository.getUserPlaylist(nextPageToken)
                             } catch(e: Exception) {
                                 Log.e(AppConstant.TAG, e.message.orEmpty())
-                                emitExceptionEvent(e, "load_more_playlists")
+                                val msg: String
+                                val duration: SnackbarControl.Duration
+                                val action: SnackbarControl.Action?
+                                when (e) {
+                                    is SocketTimeoutException -> {
+                                        msg = rpApp.getString(R.string.error_loading_resource)
+                                        duration = SnackbarControl.Duration.FOREVER
+                                        action = SnackbarControl.Action(rpApp.getString(R.string.retry)) { loadMorePlaylists() }
+                                    }
+                                    is NoNetworkException -> {
+                                        msg = rpApp.getString(R.string.error_network_disconnected)
+                                        duration = SnackbarControl.Duration.FOREVER
+                                        action = SnackbarControl.Action(rpApp.getString(R.string.retry)) { loadMorePlaylists() }
+                                    }
+                                    else -> {
+                                        msg = rpApp.getString(R.string.player_error_unknown)
+                                        duration = SnackbarControl.Duration.SHORT
+                                        action = null
+                                    }
+                                }
+                                _snackEvent.value = Event(
+                                    SnackbarControl(msg, action, duration)
+                                )
                             }
                         }
                     }
@@ -279,10 +375,6 @@ class LibraryViewModel(
         viewModelScope.launch {
             _historyRemoveCount.value = Event(youtubeRepository.removeWatchHistory(videoIds.toTypedArray()))
         }
-    }
-
-    private fun emitExceptionEvent(e: Exception, actionTag: String) {
-        _exceptionEvent.value = Event(ExceptionWithActionTag(e, actionTag))
     }
 
     companion object {

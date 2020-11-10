@@ -30,34 +30,34 @@ class ViewModelFactory(
                 return MainViewModel(application, youtubeRepository) as T
             }
             modelClass.isAssignableFrom(StartupAccountViewModel::class.java) -> {
-                return StartupAccountViewModel(youtubeRepository) as T
+                return StartupAccountViewModel(application, youtubeRepository) as T
             }
             modelClass.isAssignableFrom(HomeViewModel::class.java) -> {
-                return HomeViewModel(youtubeRepository) as T
+                return HomeViewModel(application, youtubeRepository) as T
             }
             modelClass.isAssignableFrom(VideoSearchViewModel::class.java) -> {
-                return VideoSearchViewModel(youtubeRepository) as T
+                return VideoSearchViewModel(application, youtubeRepository) as T
             }
             modelClass.isAssignableFrom(LibraryViewModel::class.java) -> {
-                return LibraryViewModel(youtubeRepository) as T
+                return LibraryViewModel(application, youtubeRepository) as T
             }
             modelClass.isAssignableFrom(ChannelViewModel::class.java) -> {
-                return ChannelViewModel(youtubeRepository) as T
+                return ChannelViewModel(application, youtubeRepository) as T
             }
             modelClass.isAssignableFrom(VideoListViewModel::class.java) -> {
-                return VideoListViewModel(youtubeRepository) as T
+                return VideoListViewModel(application, youtubeRepository) as T
             }
             modelClass.isAssignableFrom(PlayerViewModel::class.java) -> {
-                return PlayerViewModel(youtubeRepository) as T
+                return PlayerViewModel(application, youtubeRepository) as T
             }
             modelClass.isAssignableFrom(DownloadManagerViewModel::class.java) -> {
-                return DownloadManagerViewModel(youtubeRepository) as T
+                return DownloadManagerViewModel(application, youtubeRepository) as T
             }
             modelClass.isAssignableFrom(DownloadFileDetailViewModel::class.java) -> {
-                return DownloadFileDetailViewModel(youtubeRepository) as T
+                return DownloadFileDetailViewModel(application, youtubeRepository) as T
             }
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
-                return SettingsViewModel() as T
+                return SettingsViewModel(application, youtubeRepository) as T
             }
             else -> {
                 return super.create(modelClass)

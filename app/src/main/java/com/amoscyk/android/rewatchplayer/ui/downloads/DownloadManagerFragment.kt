@@ -127,17 +127,17 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
             downloadStatusMap = it
             mListAdapter?.notifyDataSetChanged()
         })
-        mainViewModel.archiveResult.observe(this, Observer {
-            when (it.status) {
-                Status.SUCCESS -> {
-                    viewModel.getVideoMetaContainsPlayerResource()
-                }
-                Status.ERROR -> {
-
-                }
-                else -> {}
-            }
-        })
+//        mainViewModel.archiveResult.observe(this, Observer {
+//            when (it.status) {
+//                Status.SUCCESS -> {
+//                    viewModel.getVideoMetaContainsPlayerResource()
+//                }
+//                Status.ERROR -> {
+//
+//                }
+//                else -> {}
+//            }
+//        })
     }
 
     override fun onCreateView(

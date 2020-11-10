@@ -58,6 +58,7 @@
     <string name="library_action_remove_bookmark">Remove bookmark</string>
     <string name="library_bookmark_removed">%1$d bookmark(s) removed</string>
     <string name="library_history_removed">%1$d history(ies) removed</string>
+    <string name="library_option_search">Search</string>
 
     <!-- Channel -->
     <string name="channel_subscriber_count">%1$d subscribers</string>
@@ -157,5 +158,8 @@
     <string name="player_notification_channel_description">Playing video in background</string>
     <string name="player_notification_unknown_title">Unknown title</string>
     <string name="player_notification_unknown_content">Unknown content</string>
+
+    <!--  Deep link service  -->
+    <string name="find_in_rewatch_player">Find video in Rewatch Player</string>
 
 </resources>
