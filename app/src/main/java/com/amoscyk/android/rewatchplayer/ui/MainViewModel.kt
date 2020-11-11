@@ -14,7 +14,6 @@ import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.datasource.vo.Event
 import com.amoscyk.android.rewatchplayer.datasource.vo.*
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
-import com.amoscyk.android.rewatchplayer.datasource.vo.Resource
 import com.amoscyk.android.rewatchplayer.datasource.vo.cloud.YtInfo
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.PlayerResource
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
@@ -25,6 +24,9 @@ import com.amoscyk.android.rewatchplayer.ui.viewcontrol.ArchiveDialogControl
 import com.amoscyk.android.rewatchplayer.ui.viewcontrol.ITagSelectionControl
 import com.amoscyk.android.rewatchplayer.ui.viewcontrol.SnackbarControl
 import com.amoscyk.android.rewatchplayer.util.*
+import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode.ADAPTIVE_AUDIO_FORMAT_MAP
+import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMAT_MAP
+import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode.MUX_FORMAT_MAP
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.source.MergingMediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
@@ -41,14 +43,6 @@ class MainViewModel(
     youtubeRepository: YoutubeRepository
 ) : RPViewModel(application, youtubeRepository) {
 
-    private var exoPlayer: ExoPlayer? = null
-    private val playerListener: Player.EventListener = object : Player.EventListener {
-        override fun onIsPlayingChanged(isPlaying: Boolean) {
-            if (!isPlaying) {
-                viewModelScope.launch { saveHistoryForCurrent() }
-            }
-        }
-    }
     private var currentWindow = 0
     private var playbackPosition = 0L
 
@@ -57,23 +51,10 @@ class MainViewModel(
     private val progressiveSrcFactory: ProgressiveMediaSource.Factory =
         ProgressiveMediaSource.Factory(defaultFactory)
 
-    private val connMgr get() = rpApp.connectivityManager
-    val wifiStatus = ConnectivityLiveData(connMgr, ConnectivityLiveData.TransportType.WIFI)
-    val isWifiConnected = wifiStatus.map { it == ConnectivityLiveData.ConnectivityStatus.CONNECTED }
-    val mobileStatus = ConnectivityLiveData(connMgr, ConnectivityLiveData.TransportType.MOBILE)
-    val isMobileConnected =
-        mobileStatus.map { it == ConnectivityLiveData.ConnectivityStatus.CONNECTED }
-
     private val dlMgr get() = rpApp.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
 
     // sharepreferences
     private val sp get() = rpApp.appSharedPreference
-    val allowStreamingEnv = SPIntLiveData(
-        sp,
-        PreferenceKey.ALLOW_VIDEO_STREAMING_ENV,
-        AppSettings.DEFAULT_ALLOW_VIDEO_STREAMING_ENV
-    )
-    val allowMobileStreaming = allowStreamingEnv.map { it == 1 }
     val allowDlEnv = SPIntLiveData(
         sp,
         PreferenceKey.ALLOW_DOWNLOAD_ENV,
@@ -133,45 +114,21 @@ class MainViewModel(
     private val muxedVideoTagPriorityList = listOf(38, 37, 85, 84, 22, 83, 82, 18)
 
     init {
-        wifiStatus.observeForever(observerFactory.getObserver("wifiStatus"))
-        isWifiConnected.observeForever(observerFactory.getObserver("isWifiConnected"))
-        mobileStatus.observeForever(observerFactory.getObserver("mobileStatus"))
-        isMobileConnected.observeForever(observerFactory.getObserver("isMobileConnected"))
-        allowStreamingEnv.observeForever(observerFactory.getObserver("allowStreamingEnv"))
         allowDlEnv.observeForever(observerFactory.getObserver("allowDlEnv"))
         skipForwardSecond.observeForever(observerFactory.getObserver("skipForwardSecond"))
         skipBackwardSecond.observeForever(observerFactory.getObserver("skipBackwardSecond"))
-        allowMobileStreaming.observeForever(observerFactory.getObserver("allowMobileStreaming"))
         allowMobileDl.observeForever(observerFactory.getObserver("allowMobileDl"))
     }
 
-    fun initPlayer(context: Context) {
-        if (exoPlayer == null) {
-            exoPlayer = ExoPlayerFactory.newSimpleInstance(context, DefaultTrackSelector(),
-                object : DefaultLoadControl() {
-                    override fun shouldContinueLoading(
-                        bufferedDurationUs: Long,
-                        playbackSpeed: Float
-                    ): Boolean {
-                        if (allowMobileStreaming.value == false && !isLocalBuffering && isWifiConnected.value == false) return false
-                        return super.shouldContinueLoading(bufferedDurationUs, playbackSpeed)
-                    }
-                })
-            exoPlayer!!.addListener(playerListener)
-        }
+    fun onPlayerSetup(exoPlayer: ExoPlayer) {
+        exoPlayer.addListener(object : Player.EventListener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (!isPlaying) {
+                    viewModelScope.launch { saveHistoryForCurrent() }
+                }
+            }
+        })
     }
-
-    fun releasePlayer() {
-        if (exoPlayer != null) {
-            playbackPosition = exoPlayer!!.currentPosition
-            currentWindow = exoPlayer!!.currentWindowIndex
-            exoPlayer!!.removeListener(playerListener)
-            exoPlayer!!.release()
-            exoPlayer = null
-        }
-    }
-
-    fun getPlayer() = exoPlayer
 
     fun setAccountName(accountName: String?) {
         youtubeRepository.setAccountName(accountName)
@@ -357,6 +314,25 @@ class MainViewModel(
         return ResourceTag(vTag, aTag)
     }
 
+    // ready all resource for playing, but do not change resource player is playing;
+    // used when app is restarted while player is running
+    fun readyVideoBypass(videoId: String, vTag: Int?, aTag: Int?) {
+        viewModelScope.launch {
+            Log.d(AppConstant.TAG, "MainViewModel: retrieve video info $videoId for view model")
+            try {
+                val videoData = initResourceV2(videoId)
+                _showPlayerView.value = Event(true)
+                _currentVideoData.value = videoData
+                _itagControl.value =
+                    ITagSelectionControl(getOrderedITag(videoData.videoMeta.itags), vTag ?: 0)
+                _isLocalBuffering = videoData.fileMap.keys.containsAll(listOfNotNull(vTag, aTag))
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Log.e(AppConstant.TAG, "MainViewModel: readyVideoBypass exception: ${e.message}")
+            }
+        }
+    }
+
     fun readyVideo(videoId: String) {
         viewModelScope.launch {
             val getFile = sp.getBoolean(PreferenceKey.PLAYER_PLAY_DOWNLOADED_IF_EXIST, false)
@@ -374,7 +350,7 @@ class MainViewModel(
                     }
                 }
                 _showPlayerView.value = Event(true)
-                exoPlayer?.playWhenReady = false            // pause video, trigger save history
+                rpApp.getPlayer()?.playWhenReady = false            // pause video, trigger save history
                 _currentVideoData.value = videoData
                 if (lastPlayPos > 0) {
                     // ask user to resume last play position or not, show view control
@@ -435,7 +411,7 @@ class MainViewModel(
     }
 
     fun setPlaybackSpeed(multiplier: Float) {
-        val player = exoPlayer ?: return
+        val player = rpApp.getPlayer() ?: return
         val threshold = 0.0001f
         if (multiplier in (0.1f - threshold)..(10f + threshold)) {
             val oldParam = player.playbackParameters
@@ -448,7 +424,7 @@ class MainViewModel(
     fun changeQualityV2(vTag: Int) {
         _currentVideoData.value?.let { videoData ->
             viewModelScope.launch {
-                val currentPlaybackPos = exoPlayer?.currentPosition ?: 0
+                val currentPlaybackPos = rpApp.getPlayer()?.currentPosition ?: 0
                 var aTag: Int? = null
                 if (vTag in adaptiveVideoTagPriorityList) {
                     // if there is adaptive video, find suitable audio tag
@@ -507,8 +483,10 @@ class MainViewModel(
             _itagControl.value =
                 ITagSelectionControl(getOrderedITag(videoData.videoMeta.itags), vTag!!)
             _isLocalBuffering = true
-            exoPlayer?.playWhenReady = true
-            exoPlayer?.seekTo(currentWindow, playbackPos)
+            rpApp.getPlayer()?.apply {
+                playWhenReady = true
+                seekTo(currentWindow, playbackPos)
+            }
             return
         }
         if (videoData.urlMap.isEmpty() || !videoData.urlMap.keys.containsAll(targetTag)) {
@@ -519,7 +497,7 @@ class MainViewModel(
                 throw NoAvailableQualityException()
             }
         }
-        if (!allowMobileStreaming.value!! && isMobileConnected.value!!) {
+        if (!rpApp.allowMobileStreaming.value!! && rpApp.isMobileConnected.value!!) {
             // ask user permission to stream with mobile, show view control
             _alertEvent.value = Event(
                 AlertDialogControl(null,
@@ -539,8 +517,10 @@ class MainViewModel(
             ITagSelectionControl(getOrderedITag(videoData.videoMeta.itags), vTag!!)
         _isLocalBuffering = false
         prepareMediaResource(targetTag.map { videoData.urlMap.getValue(it).toUri() })
-        exoPlayer?.playWhenReady = true
-        exoPlayer?.seekTo(currentWindow, playbackPos)
+        rpApp.getPlayer()?.apply {
+            playWhenReady = true
+            seekTo(currentWindow, playbackPos)
+        }
     }
 
     fun readyArchive(videoId: String) {
@@ -651,8 +631,14 @@ class MainViewModel(
                                     else DownloadManager.Request.NETWORK_WIFI
                                 )
                                 // TODO: change notification title
-                                req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_ONLY_COMPLETION)
-                                req.setTitle(videoData.videoMeta.videoId)
+                                req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                req.setTitle(videoData.videoMeta.title)
+                                req.setDescription(
+                                    rpApp.getString(
+                                        R.string.download_notification_description,
+                                        (MUX_FORMAT_MAP + ADAPTIVE_AUDIO_FORMAT_MAP + ADAPTIVE_VIDEO_FORMAT_MAP)[tag].orEmpty()
+                                    )
+                                )
                                 dlMgr.enqueue(req)
                             }
                         youtubeRepository.addPlayerResource(
@@ -712,7 +698,7 @@ class MainViewModel(
 
 
     private suspend fun saveHistoryForCurrent() {
-        val player = exoPlayer ?: return
+        val player = rpApp.getPlayer() ?: return
         _currentVideoData.value?.let { videoData ->
             youtubeRepository.insertWatchHistory(
                 videoData.videoMeta.videoId,
@@ -754,6 +740,7 @@ class MainViewModel(
 
 
     private fun prepareMediaResource(uri: List<Uri>) {
+        val exoPlayer = rpApp.getPlayer()
         uri.mapNotNull { progressiveSrcFactory.createMediaSource(it) }.apply {
             when (size) {
                 0 -> return
@@ -805,19 +792,6 @@ class MainViewModel(
         override fun getTitle(): String = quality
     }
 
-    data class GetVideoResult(
-        val videoId: String?,
-        val error: Error?
-    ) {
-        enum class Error {
-            EMPTY_VIDEO_ID, NO_VIDEO_META, NO_YT_INFO, NO_QUALITY, UNKNOWN
-        }
-    }
-
-    enum class ResponseActionType {
-        DO_NOTHING, SHOW_ENABLE_MOBILE_DATA_USAGE_ALERT
-    }
-
     private class SpPlainObserverFactory {
         private val observers = hashMapOf<String, Observer<Any>>()
         fun getObserver(tag: String): Observer<Any> {
@@ -830,15 +804,9 @@ class MainViewModel(
     }
 
     override fun onCleared() {
-        wifiStatus.removeObserver(observerFactory.getObserver("wifiStatus"))
-        isWifiConnected.removeObserver(observerFactory.getObserver("isWifiConnected"))
-        mobileStatus.removeObserver(observerFactory.getObserver("mobileStatus"))
-        isMobileConnected.removeObserver(observerFactory.getObserver("isMobileConnected"))
-        allowStreamingEnv.removeObserver(observerFactory.getObserver("allowStreamingEnv"))
         allowDlEnv.removeObserver(observerFactory.getObserver("allowDlEnv"))
         skipForwardSecond.removeObserver(observerFactory.getObserver("skipForwardSecond"))
         skipBackwardSecond.removeObserver(observerFactory.getObserver("skipBackwardSecond"))
-        allowMobileStreaming.removeObserver(observerFactory.getObserver("allowMobileStreaming"))
         allowMobileDl.removeObserver(observerFactory.getObserver("allowMobileDl"))
         observerFactory.clearObservers()
         super.onCleared()

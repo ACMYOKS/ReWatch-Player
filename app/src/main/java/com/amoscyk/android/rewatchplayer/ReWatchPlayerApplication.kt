@@ -2,16 +2,20 @@ package com.amoscyk.android.rewatchplayer
 
 import android.app.Activity
 import android.app.Application
+import android.app.Service
 import android.util.Log
 import androidx.emoji.bundled.BundledEmojiCompatConfig
 import androidx.emoji.text.EmojiCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.*
 import androidx.room.Room
 import com.amoscyk.android.rewatchplayer.datasource.AppDatabase
 import com.amoscyk.android.rewatchplayer.datasource.RpCloudService
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeServiceProvider
+import com.amoscyk.android.rewatchplayer.util.*
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeOpenService
+import com.google.android.exoplayer2.ExoPlayer
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.functions.FirebaseFunctions
@@ -41,12 +45,14 @@ class ReWatchPlayerApplication: Application() {
         .addConverterFactory(MoshiConverterFactory.create())
         .build()
         .create(RpCloudService::class.java)
-    private lateinit var _fbFunctions: FirebaseFunctions
-    val fbFunctions get() = _fbFunctions
+    private var _exoPlayer: ExoPlayer? = null
+
+    lateinit var allowMobileStreaming: LiveData<Boolean>
+    lateinit var isWifiConnected: LiveData<Boolean>
+    lateinit var isMobileConnected: LiveData<Boolean>
 
     override fun onCreate() {
         super.onCreate()
-        Log.d("LOG", "application created")
 
         AndroidThreeTen.init(this)
 
@@ -65,10 +71,45 @@ class ReWatchPlayerApplication: Application() {
             EmojiCompat.init(it)
         }
 
-        _fbFunctions = Firebase.functions(Firebase.app,"asia-east2")
-        if (BuildConfig.DEBUG) {
-            _fbFunctions.useEmulator("10.0.2.2", 5001)
+        setupLiveData()
+    }
+
+    fun setPlayer(player: ExoPlayer) {
+        _exoPlayer = player
+    }
+
+    fun releasePlayer() {
+        _exoPlayer?.release()
+        _exoPlayer = null
+    }
+
+    fun getPlayer() = _exoPlayer
+
+    private fun setupLiveData() {
+        allowMobileStreaming = SPIntLiveData(
+            appSharedPreference,
+            PreferenceKey.ALLOW_VIDEO_STREAMING_ENV,
+            AppSettings.DEFAULT_ALLOW_VIDEO_STREAMING_ENV
+        ).switchMap { liveData { emit(it == 1) } }
+        allowMobileStreaming.observeForever { Log.d(AppConstant.TAG, "allow mobile streaming: $it") }
+        isWifiConnected = ConnectivityLiveData(
+            connectivityManager,
+            ConnectivityLiveData.TransportType.WIFI
+        ).switchMap {
+            liveData {
+                emit(it == ConnectivityLiveData.ConnectivityStatus.CONNECTED)
+            }
         }
+        isWifiConnected.observeForever { Log.d(AppConstant.TAG, "is wifi connected: $it") }
+        isMobileConnected = ConnectivityLiveData(
+            connectivityManager,
+            ConnectivityLiveData.TransportType.MOBILE
+        ).switchMap {
+            liveData {
+                emit(it == ConnectivityLiveData.ConnectivityStatus.CONNECTED)
+            }
+        }
+        isWifiConnected.observeForever { Log.d(AppConstant.TAG, "is mobile connected: $it") }
     }
 
 }

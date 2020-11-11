@@ -16,12 +16,9 @@ import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.Observer
-import com.amoscyk.android.rewatchplayer.AppConstant
+import com.amoscyk.android.rewatchplayer.*
 
-import com.amoscyk.android.rewatchplayer.R
-import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.util.*
-import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.material.snackbar.Snackbar
@@ -57,6 +54,15 @@ class MainPageFragment : ReWatchPlayerFragment() {
 
     private var pendingNavIndex: Int? = null
     private var isStarted = false
+
+    private val playerListener = object : Player.EventListener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            btnPlayback.setImageResource(
+                if (isPlaying) R.drawable.ic_pause_white
+                else R.drawable.ic_play_arrow_white
+            )
+        }
+    }
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -115,6 +121,13 @@ class MainPageFragment : ReWatchPlayerFragment() {
             .putInt(PreferenceKey.LAST_OPEN_TAB_ID, bottomNav.selectedItemId)
             .apply()
         isStarted = false
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        rpApplication.getPlayer()?.removeListener(playerListener)
+        playerView.player = null
+        playerControl.player = null
     }
 
     fun onSupportActionModeStarted(actionMode: ActionMode?) {
@@ -210,15 +223,8 @@ class MainPageFragment : ReWatchPlayerFragment() {
                 playerView.player.apply { playWhenReady = !isPlaying }      // toggle play state
             }
         }
-        val mainPlayer = mainActivity?.getPlayer()?.apply {
-            addListener(object : Player.EventListener {
-                override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    btnPlayback.setImageResource(
-                        if (isPlaying) R.drawable.ic_pause_white
-                        else R.drawable.ic_play_arrow_white
-                    )
-                }
-            })
+        val mainPlayer = rpApplication.getPlayer()?.apply {
+            addListener(playerListener)
         }
         playerView.apply {
             player = mainPlayer

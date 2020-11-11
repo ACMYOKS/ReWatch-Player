@@ -67,6 +67,7 @@
     <string name="channel_playlist_title">Playlist</string>
 
     <!-- Download -->
+    <string name="download_notification_description">quality: %1$s</string>
     <string name="download_action_remove">Remove archive</string>
     <string name="download_status_pending">Pending</string>
     <string name="download_status_paused">Paused</string>
@@ -154,7 +155,7 @@
     <string name="account_menu_settings_title">Settings</string>
 
     <!--  Player Service  -->
-    <string name="player_notification_channel_name">Player</string>
+    <string name="player_notification_channel_name">ReWatch Player</string>
     <string name="player_notification_channel_description">Playing video in background</string>
     <string name="player_notification_unknown_title">Unknown title</string>
     <string name="player_notification_unknown_content">Unknown content</string>

@@ -8,7 +8,6 @@ import android.content.*
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -16,26 +15,24 @@ import android.util.Log
 import android.util.Rational
 import android.view.View
 import android.view.WindowManager
-import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.view.ActionMode
 import androidx.lifecycle.Observer
 import androidx.navigation.findNavController
-import androidx.navigation.fragment.findNavController
 import androidx.navigation.navOptions
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.amoscyk.android.rewatchplayer.*
 import com.amoscyk.android.rewatchplayer.R
-import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.service.AudioPlayerService
 import com.amoscyk.android.rewatchplayer.ui.library.LibraryFragmentDirections
 import com.amoscyk.android.rewatchplayer.ui.player.*
 import com.amoscyk.android.rewatchplayer.ui.viewcontrol.SnackbarControl
 import com.amoscyk.android.rewatchplayer.util.*
 import com.google.android.exoplayer2.*
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.bottom_sheet_dialog_user_option.view.*
@@ -131,24 +128,37 @@ class MainActivity : ReWatchPlayerActivity() {
                 window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
         }
-
-//        override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-//            if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
-//                getPlayer()?.apply {
-//                    viewModel.saveWatchHistory(currentPosition)
-//                }
-//            }
-//        }
     }
     private var mPlayerServiceReceiver: BroadcastReceiver? = null
-
-    private var mPlayerSizeListeners = ArrayList<VideoPlayerLayout.PlayerSizeListener>()
-
     private var mPipActionReceiver: BroadcastReceiver? = null
+    private var selectedITag: Int? = null       // save last selected itag for reselect tag on app restart
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        if (rpApplication.getPlayer() == null) {
+            val exoPlayer = ExoPlayerFactory.newSimpleInstance(this, DefaultTrackSelector(),
+                object : DefaultLoadControl() {
+                    override fun shouldContinueLoading(
+                        bufferedDurationUs: Long,
+                        playbackSpeed: Float
+                    ): Boolean {
+                        // FIXME: value is undetermined when viewModel is released, try holding those values in application level
+                        if (rpApplication.allowMobileStreaming.value == false &&
+                            !viewModel.isLocalBuffering &&
+                            rpApplication.isWifiConnected.value == false
+                        ) return false
+                        return super.shouldContinueLoading(bufferedDurationUs, playbackSpeed)
+                    }
+                }).apply {
+                addListener(mPlayerListener)
+            }
+            viewModel.onPlayerSetup(exoPlayer)
+            rpApplication.setPlayer(exoPlayer)
+        } else {
+            viewModel.onPlayerSetup(rpApplication.getPlayer()!!)
+        }
 
         // init account name for youtube repo every time main activity is created
         // to prevent null account name on app restart
@@ -156,8 +166,6 @@ class MainActivity : ReWatchPlayerActivity() {
             viewModel.setAccountName(it)
         }
 
-        viewModel.initPlayer(this)
-        getPlayer()?.addListener(mPlayerListener)
         setupViews()
 
         viewModel.skipForwardSecond.observe(this, Observer {
@@ -200,6 +208,7 @@ class MainActivity : ReWatchPlayerActivity() {
                     itag == control.selectedTag
                 )
             }
+            selectedITag = control.selectedTag
             resSelectionAdapter.submitList(list)
         })
 
@@ -275,16 +284,15 @@ class MainActivity : ReWatchPlayerActivity() {
 
         mPlayerServiceReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                val playbackPos =
-                    intent.getLongExtra(AudioPlayerService.EXTRA_KEY_PLAYBACK_POSITION, 0L)
                 val videoId = intent.getStringExtra(AudioPlayerService.EXTRA_KEY_VIDEO_ID)
-                if (viewModel.videoData.value?.videoMeta?.videoId != videoId) {
-                    // no playing resource, restart killed app while foreground playing
-                    viewModel.readyVideo(videoId)
-                } else {
-//                    playbackPosition = playbackPos
-//                    Log.d("MainActivity", "audio service broadcast receiver: $playbackPosition")
-//                    viewModel.startPlayingVideo()
+                val vTag = intent.getIntExtra(AudioPlayerService.EXTRA_KEY_VIDEO_ITAG, 0)
+                val aTag = intent.getIntExtra(AudioPlayerService.EXTRA_KEY_AUDIO_ITAG, 0)
+                if (videoId != null) {
+                    if (viewModel.videoData.value?.videoMeta?.videoId != videoId) {
+                        // no playing resource, restart killed app while foreground playing
+                        // continue playing while setting data back for viewModel
+                        viewModel.readyVideoBypass(videoId, vTag, aTag)
+                    }
                 }
             }
         }
@@ -302,14 +310,14 @@ class MainActivity : ReWatchPlayerActivity() {
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
             getPlayer()?.apply {
-                val wasPlaying = isPlaying
-                playWhenReady = false
-                if (isActivityOnStackTop() && wasPlaying && appSharedPreference.getBoolean(
+                if (isActivityOnStackTop() && isPlaying && appSharedPreference.getBoolean(
                         PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
                         AppSettings.DEFAULT_ALLOW_PLAY_IN_BACKGROUND
                     )
                 ) {
                     startPlayService()
+                } else {
+                    playWhenReady = false
                 }
             }
         }
@@ -319,22 +327,24 @@ class MainActivity : ReWatchPlayerActivity() {
         super.onStop()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             getPlayer()?.apply {
-                val wasPlaying = isPlaying
-                playWhenReady = false
-                if (isActivityOnStackTop() && wasPlaying && appSharedPreference.getBoolean(
-                    PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
-                    AppSettings.DEFAULT_ALLOW_PLAY_IN_BACKGROUND
-                )
+                if (isActivityOnStackTop() && isPlaying && appSharedPreference.getBoolean(
+                        PreferenceKey.ALLOW_PLAY_IN_BACKGROUND,
+                        AppSettings.DEFAULT_ALLOW_PLAY_IN_BACKGROUND
+                    )
                 ) {
                     startPlayService()
+                } else {
+                    playWhenReady = false
                 }
             }
         }
     }
 
     override fun onDestroy() {
-        getPlayer()?.removeListener(mPlayerListener)
-        viewModel.releasePlayer()
+        rpApplication.getPlayer()?.removeListener(mPlayerListener)
+        if (!isMyServiceRunning(AudioPlayerService::class.java)) {
+            rpApplication.releasePlayer()
+        }
         super.onDestroy()
     }
 
@@ -437,7 +447,7 @@ class MainActivity : ReWatchPlayerActivity() {
         }
     }
 
-    fun getPlayer(): ExoPlayer? = viewModel.getPlayer()
+    fun getPlayer(): ExoPlayer? = rpApplication.getPlayer()
 
     private fun setupViews() {
         mOptionDialog = PlayerBottomSheetDialogBuilder.createDialog(this) {
@@ -525,18 +535,18 @@ class MainActivity : ReWatchPlayerActivity() {
         )
 
     private fun startPlayService() {
-        val viewData = viewModel.videoData.value!!
-        val intent = AudioPlayerService.IntentBuilder(this)
-            .setVideoId(viewData.videoMeta.videoId)
-            .setUriList(viewModel.resourceUri.value!!.uriList.toTypedArray())
-//            .setPlaybackPosition(playbackPosition)
-            .setTitle(viewData.videoMeta.title)
-            .setContent(viewData.videoMeta.channelTitle)
-            .build()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
+        viewModel.videoData.value?.let { viewData ->
+            val intent = AudioPlayerService.IntentBuilder(this)
+                .setVideoId(viewData.videoMeta.videoId)
+                .setTitle(viewData.videoMeta.title)
+                .setContent(viewData.videoMeta.channelTitle)
+                .setVTag(selectedITag ?: 0)
+                .build()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
         }
     }
 
@@ -561,7 +571,6 @@ class MainActivity : ReWatchPlayerActivity() {
                     }
                     // search video
                     if (videoId != null) {
-//                        viewModel.readyVideo(videoId)
                         viewModel.autoSearchVideo(videoId)
                     } else {
                         AlertDialog.Builder(this)
@@ -589,7 +598,6 @@ class MainActivity : ReWatchPlayerActivity() {
                             }
                             // search video
                             if (videoId != null) {
-//                                viewModel.readyVideo(videoId)
                                 viewModel.autoSearchVideo(videoId)
                             } else {
                                 AlertDialog.Builder(this)
