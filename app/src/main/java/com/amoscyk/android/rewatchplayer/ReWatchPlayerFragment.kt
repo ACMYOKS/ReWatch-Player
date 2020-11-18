@@ -1,9 +1,13 @@
 package com.amoscyk.android.rewatchplayer
 
+import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
 import com.amoscyk.android.rewatchplayer.ui.MainActivity
 import com.amoscyk.android.rewatchplayer.ui.MainPageFragment
+import com.amoscyk.android.rewatchplayer.ui.RPViewModel
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
 
 abstract class ReWatchPlayerFragment: Fragment() {
@@ -27,7 +31,19 @@ abstract class ReWatchPlayerFragment: Fragment() {
      * callback function for requestForGoogleUserAuth
      */
     open fun onGoogleUserAuthResult(resultCode: Int) {
+        if (resultCode == Activity.RESULT_OK) {
+            AlertDialog.Builder(requireContext()).setMessage(R.string.google_auth_ok).create()
+                .show()
+        } else if (resultCode == Activity.RESULT_CANCELED) {
+            AlertDialog.Builder(requireContext()).setMessage(R.string.google_auth_cancelled)
+                .create().show()
+        }
+    }
 
+    protected fun handleGoogleUserAuthEvent(viewModel: RPViewModel) {
+        viewModel.googleUserAuthExceptionEvent.observe(this, Observer { event ->
+            event.getContentIfNotHandled { requestForGoogleUserAuth(it) }
+        })
     }
 
     val mainActivity: MainActivity? get() = activity as? MainActivity

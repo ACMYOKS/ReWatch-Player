@@ -1,20 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:paddingStart="40dp"
+    android:paddingTop="80dp"
+    android:paddingEnd="40dp"
+    android:paddingBottom="80dp"
     tools:context=".ui.account.StartupAccountFragment">
 
-    <com.google.android.material.button.MaterialButton
+    <TextView
+        android:id="@+id/tv_msg1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/start_page_welcome_message"
+        android:textAlignment="center"
+        android:textAppearance="@style/TextAppearance.MaterialComponents.Headline4"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/tv_msg2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:text="@string/start_page_instruction_message"
+        android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
+        app:layout_constraintTop_toBottomOf="@id/tv_msg1" />
+
+    <Button
         android:id="@+id/signup_btn"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="link your google account"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:text="@string/start_page_link_account_message"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/tv_msg2" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

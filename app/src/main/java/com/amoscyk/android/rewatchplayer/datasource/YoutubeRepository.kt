@@ -207,7 +207,7 @@ class YoutubeRepository(
         pageToken: String? = null,
         maxResults: Long = MAX_CHANNEL_RESULTS
     ): RPChannelListResponse = withContext(Dispatchers.IO) {
-        ytApiService.channels().list("snippet,contentDetails,statistics,brandingSettings").apply {
+        ytApiService.channels().list("snippet,contentDetails,statistics").apply {
             id = ids.joinToString(",")
             setMaxResults(maxResults)
             pageToken?.let { setPageToken(it) }

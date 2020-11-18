@@ -8,6 +8,7 @@ import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.datasource.vo.*
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.RPChannelListResponse
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.RPPlaylistListResponse
+import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -40,23 +41,27 @@ class ChannelViewModel(application: Application, youtubeRepository: YoutubeRepos
         if (this.channelId != channelId) {
             this.channelId = channelId
             viewModelScope.launch {
-                async {
-                    _showLoadingChannel.loading {
-                        runCatching {
-                            _channelListRes.value =
-                                youtubeRepository.getChannelsById(listOf(channelId))
-                        }.onFailure {
-                            Log.e(AppConstant.TAG, it.message.orEmpty())
+                _showLoadingChannel.loading {
+                    runCatching {
+                        _channelListRes.value =
+                            youtubeRepository.getChannelsById(listOf(channelId))
+                    }.onFailure {
+                        Log.e(AppConstant.TAG, it.message.orEmpty())
+                        if (it is UserRecoverableAuthIOException) {
+                            emitGoogleUserAuthExceptionEvent(it)
                         }
                     }
                 }
-                async {
-                    _showLoadingPlaylist.loading {
-                        runCatching {
-                            _featuredListListRes.value =
-                                youtubeRepository.getPlaylistsByChannelId(channelId)
-                        }.onFailure {
-                            Log.e(AppConstant.TAG, it.message.orEmpty())
+            }
+            viewModelScope.launch {
+                _showLoadingPlaylist.loading {
+                    runCatching {
+                        _featuredListListRes.value =
+                            youtubeRepository.getPlaylistsByChannelId(channelId)
+                    }.onFailure {
+                        Log.e(AppConstant.TAG, it.message.orEmpty())
+                        if (it is UserRecoverableAuthIOException) {
+                            emitGoogleUserAuthExceptionEvent(it)
                         }
                     }
                 }
@@ -71,7 +76,11 @@ class ChannelViewModel(application: Application, youtubeRepository: YoutubeRepos
                     _uploadedListListRes.value =
                         youtubeRepository.getPlaylistsByPlaylistId(listOf(playlistId))
                 }.onFailure {
-                    (it as? GoogleJsonResponseException)?.let {  Log.e(AppConstant.TAG, it.details.message) }
+                    if (it is GoogleJsonResponseException) {
+                        Log.e(AppConstant.TAG, it.details.message)
+                    } else if (it is UserRecoverableAuthIOException) {
+                        emitGoogleUserAuthExceptionEvent(it)
+                    }
                     Log.e(AppConstant.TAG, it.message.orEmpty())
                 }
             }
@@ -80,14 +89,16 @@ class ChannelViewModel(application: Application, youtubeRepository: YoutubeRepos
 
     fun loadMorePlaylist() {
         viewModelScope.launch {
-            _featuredListListRes.value?.apply {
-                if (nextPageToken != null) {
-                    _showLoadingPlaylist.loading(true) {
-                        runCatching {
-                            _featuredListListRes.value =
-                                youtubeRepository.getPlaylistsByChannelId(channelId, nextPageToken)
-                        }.onFailure {
-                            Log.e(AppConstant.TAG, it.message.orEmpty())
+            val listResponse = _featuredListListRes.value ?: return@launch
+            if (listResponse.nextPageToken != null) {
+                _showLoadingPlaylist.loading(true) {
+                    runCatching {
+                        _featuredListListRes.value =
+                            youtubeRepository.getPlaylistsByChannelId(channelId, listResponse.nextPageToken)
+                    }.onFailure {
+                        Log.e(AppConstant.TAG, it.message.orEmpty())
+                        if (it is UserRecoverableAuthIOException) {
+                            emitGoogleUserAuthExceptionEvent(it)
                         }
                     }
                 }

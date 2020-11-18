@@ -29,6 +29,7 @@ class AppInfoFragment : ReWatchPlayerFragment(), EasyPermissions.PermissionCallb
     private val tvCurrentAccount get() = view!!.tv_current_account
     private val cellTutorial get() = view!!.btn_tutorial
     private val cellAppInfo get() = view!!.btn_app_info
+    private val cellCheckUpdate get() = view!!.btn_check_update
     private val cellFaq get() = view!!.btn_faq
     private val cellContact get() = view!!.btn_contact
 
@@ -91,6 +92,9 @@ class AppInfoFragment : ReWatchPlayerFragment(), EasyPermissions.PermissionCallb
         }
         cellAppInfo.apply {
             setTitle(getString(R.string.account_app_info_title))
+        }
+        cellCheckUpdate.apply {
+            setTitle(getString(R.string.account_check_update))
         }
         cellFaq.apply {
             setTitle(getString(R.string.account_faq_title))

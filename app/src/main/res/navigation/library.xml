@@ -37,7 +37,6 @@
     <fragment
         android:id="@+id/videoSearchFragment"
         android:name="com.amoscyk.android.rewatchplayer.ui.home.VideoSearchFragment"
-        android:label="fragment_video_search"
         tools:layout="@layout/fragment_video_search" >
         <argument
             android:name="videoId"

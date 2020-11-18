@@ -3,7 +3,6 @@ package com.amoscyk.android.rewatchplayer.ui.library
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
@@ -13,28 +12,20 @@ import androidx.fragment.app.FragmentPagerAdapter
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
-import androidx.navigation.NavAction
-import androidx.navigation.NavOptions
-import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.navOptions
 import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager.widget.ViewPager
-import com.amoscyk.android.rewatchplayer.LibraryNavGraphDirections
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
-import com.amoscyk.android.rewatchplayer.datasource.vo.NoNetworkException
-import com.amoscyk.android.rewatchplayer.datasource.vo.ServerErrorException
 import com.amoscyk.android.rewatchplayer.ui.*
 import com.amoscyk.android.rewatchplayer.ui.viewcontrol.SnackbarControl
 import com.amoscyk.android.rewatchplayer.util.*
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_library.view.*
-import java.net.SocketTimeoutException
 
 class LibraryFragment : ReWatchPlayerFragment() {
 
@@ -269,6 +260,8 @@ class LibraryFragment : ReWatchPlayerFragment() {
                 }
             }
         })
+
+        handleGoogleUserAuthEvent(viewModel)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

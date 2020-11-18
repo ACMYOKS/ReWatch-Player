@@ -6,12 +6,11 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.Toast
+import android.widget.TextView
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
@@ -27,36 +26,33 @@ import pub.devrel.easypermissions.EasyPermissions
 class StartupAccountFragment : ReWatchPlayerFragment(), EasyPermissions.PermissionCallbacks {
 
     private var rootView: View? = null
-    private lateinit var signupBtn: Button
-
     private val viewModel by viewModels<StartupAccountViewModel> { viewModelFactory }
-
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
         viewModel.settingStageMessenger.observe(this, Observer {
             when (it.stage) {
                 StartupAccountViewModel.SettingStage.REQUEST_GET_ACCOUNT_PERMISSION -> {
-                    EasyPermissions.requestPermissions(this,
+                    EasyPermissions.requestPermissions(
+                        this,
                         getString(R.string.settings_request_get_account_permission),
                         REQUEST_GET_ACCOUNT_PERMISSION,
-                        Manifest.permission.GET_ACCOUNTS)
+                        Manifest.permission.GET_ACCOUNTS
+                    )
                 }
                 StartupAccountViewModel.SettingStage.REQUEST_USER_ACCOUNT -> {
                     startActivityForResult(
                         youtubeServiceProvider.credential.newChooseAccountIntent(),
-                        REQUEST_ACCOUNT_PICKER)
+                        REQUEST_ACCOUNT_PICKER
+                    )
                 }
                 StartupAccountViewModel.SettingStage.USER_ACCOUNT_SELECTED -> {
-                    Toast.makeText(requireContext(),
-                        "username set: ${it.username}",
-                        Toast.LENGTH_SHORT)
-                        .show()
                     findNavController().navigate(StartupAccountFragmentDirections.showMainPage())
                 }
             }
         })
     }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -69,10 +65,25 @@ class StartupAccountFragment : ReWatchPlayerFragment(), EasyPermissions.Permissi
     }
 
     private fun setupViews() {
-        signupBtn = rootView!!.findViewById(R.id.signup_btn)
-        signupBtn.setOnClickListener {
+        val tv1 = rootView!!.findViewById<TextView>(R.id.tv_msg1)
+        val tv2 = rootView!!.findViewById<TextView>(R.id.tv_msg2)
+        val signupBtn = rootView!!.findViewById<Button>(R.id.signup_btn)
+        signupBtn!!.setOnClickListener {
             chooseUserAccount()
         }
+        tv1.fadeInAndSlide(false, 0)
+        tv2.fadeInAndSlide(false, 1000)
+        signupBtn.fadeInAndSlide(true, 2200)
+    }
+
+    private fun View.fadeInAndSlide(up: Boolean, delay: Long) {
+        this.translationY = if (up) 100f else -100f
+        this.alpha = 0f
+        animate()
+            .setStartDelay(delay)
+            .alpha(1f)
+            .translationY(0f)
+            .start()
     }
 
     @AfterPermissionGranted(REQUEST_GET_ACCOUNT_PERMISSION)

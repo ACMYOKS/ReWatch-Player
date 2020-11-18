@@ -59,6 +59,17 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
         setOnItemClickListener { position, meta ->
             mainViewModel.readyVideo(meta.videoId)
         }
+        setArchivable(true)
+        setBookmarkable(true)
+        setOnArchiveClickListener { position, meta ->
+            mainViewModel.readyArchive(meta.videoId)
+        }
+        setOnBookmarkClickListener { position, meta ->
+            mainViewModel.setBookmarked(
+                meta.videoId,
+                meta.videoId !in mainViewModel.bookmarkedVid.value.orEmpty()
+            )
+        }
     }
     private val snackbarSet = hashSetOf<Snackbar>()
 
@@ -72,6 +83,9 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
+
+        handleGoogleUserAuthEvent(viewModel)
+
         viewModel.showLoading.observe(this, Observer { event ->
             event.getContentIfNotHandled { content: ListLoadingState ->
                 if (!content.loadMore) {
@@ -127,6 +141,9 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
                 }
             }
         })
+        mainViewModel.bookmarkedVid.observe(this, Observer {
+            mVideoListAdapter.setBookmarkedVideoId(it)
+        })
     }
 
     override fun onCreateView(
@@ -161,15 +178,11 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
         snackbarSet.clear()
     }
 
-    override fun onGoogleUserAuthResult(resultCode: Int) {
-        super.onGoogleUserAuthResult(resultCode)
-
-    }
-
     private fun setupViews() {
         mToolbar.apply {
             setupWithNavController(findNavController())
-            inflateMenu(R.menu.search_option_menu)
+            // disable menu
+            /*inflateMenu(R.menu.search_option_menu)
             val searchOptionPos =
                 requireContext().appSharedPreference.getInt(PreferenceKey.SEARCH_OPTION, 0)
             menu[searchOptionPos].isChecked = true
@@ -183,9 +196,10 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
                     }
                 }
                 true
-            }
+            }*/
         }
         mSearchView.apply {
+            setIconifiedByDefault(false)
             setOnSearchClickListener {
 
             }

@@ -6,16 +6,21 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 
 import com.amoscyk.android.rewatchplayer.R
+import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.util.PreferenceKey
 import com.amoscyk.android.rewatchplayer.util.appSharedPreference
 import com.amoscyk.android.rewatchplayer.util.getString
 import com.amoscyk.android.rewatchplayer.util.remove
+import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.amoscyk.android.rewatchplayer.youtubeServiceProvider
 
-class RootRouterPageFragment : Fragment() {
+class RootRouterPageFragment : ReWatchPlayerFragment() {
+
+    private val mainViewModel by activityViewModels<MainViewModel> { viewModelFactory }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -34,10 +39,8 @@ class RootRouterPageFragment : Fragment() {
     }
 
     private fun navigateToNextPage() {
-        // FIXME: should set account name in MainActivity,
-        // since this page cannot be reached on app restart and this line will not be called
         getSelectedAccountName()?.let {
-            youtubeServiceProvider.credential.selectedAccountName = it
+            mainViewModel.setAccountName(it)
             findNavController().navigate(RootRouterPageFragmentDirections.showMainPage())
         } ?: findNavController().navigate(RootRouterPageFragmentDirections.showStartupAccount())
     }

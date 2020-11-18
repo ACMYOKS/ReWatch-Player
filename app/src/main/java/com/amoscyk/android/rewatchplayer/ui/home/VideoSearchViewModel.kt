@@ -11,6 +11,7 @@ import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.getVideoMeta
 import com.amoscyk.android.rewatchplayer.ui.RPViewModel
 import com.amoscyk.android.rewatchplayer.ui.viewcontrol.SnackbarControl
+import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
 import kotlinx.coroutines.launch
 import java.lang.Exception
 import java.net.ConnectException
@@ -56,7 +57,13 @@ class VideoSearchViewModel(
             searchListResHolder = ListResponseHolder()
             viewModelScope.launch {
                 _showLoading.loading {
-                    _searchListResult.value = youtubeRepository.getVideoSearchResult(query)
+                    runCatching {
+                        _searchListResult.value = youtubeRepository.getVideoSearchResult(query)
+                    }.onFailure {
+                        if (it is UserRecoverableAuthIOException) {
+                            emitGoogleUserAuthExceptionEvent(it)
+                        }
+                    }
                 }
             }
         }

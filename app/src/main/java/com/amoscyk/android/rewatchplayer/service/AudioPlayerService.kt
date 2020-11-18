@@ -16,14 +16,9 @@ import com.amoscyk.android.rewatchplayer.ui.MainActivity
 import com.amoscyk.android.rewatchplayer.util.PreferenceKey
 import com.amoscyk.android.rewatchplayer.util.appSharedPreference
 import com.amoscyk.android.rewatchplayer.util.getInt
-import com.google.android.exoplayer2.ExoPlayer
-import com.google.android.exoplayer2.ExoPlayerFactory
+import com.amoscyk.android.rewatchplayer.util.isMyActivityRunning
 import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.source.MergingMediaSource
-import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.PlayerNotificationManager
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
-import java.util.*
 
 class AudioPlayerService : Service() {
 
@@ -36,6 +31,14 @@ class AudioPlayerService : Service() {
     private var content: String? = null
     private var vTag: Int? = null
     private var aTag: Int? = null
+
+    private val playerListener = object : Player.EventListener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            super.onIsPlayingChanged(isPlaying)
+            // FIXME: cannot dismiss notification sometimes
+            if (!isPlaying) stopForeground(false)
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -81,6 +84,7 @@ class AudioPlayerService : Service() {
             setPlayer(rpApp.getPlayer())
             setPriority(NotificationCompat.PRIORITY_HIGH)
             setBadgeIconType(NotificationCompat.BADGE_ICON_NONE)
+            rpApp.getPlayer()?.addListener(playerListener)
         }
     }
 
@@ -121,19 +125,13 @@ class AudioPlayerService : Service() {
             .putExtra(EXTRA_KEY_VIDEO_ID, videoId)
             .putExtra(EXTRA_KEY_VIDEO_ITAG, vTag)
             .putExtra(EXTRA_KEY_AUDIO_ITAG, aTag))
+        rpApp.getPlayer()?.removeListener(playerListener)
         notiMngr?.setPlayer(null)
+        if (!rpApp.isMyActivityRunning(MainActivity::class.java)) {
+            rpApp.releasePlayer()
+        }
         super.onDestroy()
     }
-
-//    private fun prepareMediaResource(uris: Array<Uri>) {
-//        uris.mapNotNull { progressiveSrcFactory.createMediaSource(it) }.apply {
-//            when (size) {
-//                0 -> return
-//                1 -> exoPlayer?.prepare(first())
-//                else -> exoPlayer?.prepare(MergingMediaSource(*toTypedArray()))
-//            }
-//        }
-//    }
 
     class IntentBuilder(val context: Context) {
         private var _videoId: String? = null

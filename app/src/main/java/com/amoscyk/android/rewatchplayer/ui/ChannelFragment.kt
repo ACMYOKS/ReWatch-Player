@@ -7,11 +7,13 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.LinearInterpolator
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.toBitmap
+import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
@@ -44,9 +46,10 @@ class ChannelFragment: ReWatchPlayerFragment() {
     private val mCollapsingToolbar by lazy { mRootView!!.collapsing_toolbar }
     private val mToolbar by lazy { mRootView!!.toolbar }
     private val mSvContent by lazy { mRootView!!.sv_content }
-    private val mIvBanner by lazy { mRootView!!.iv_banner }
     private val mIvThumbnail by lazy { mRootView!!.iv_thumbnail }
     private val mTvChannelName by lazy { mRootView!!.tv_title }
+    private val mIvThumbnailToolbar by lazy { mRootView!!.iv_thumbnail_toolbar }
+    private val mTvChannelNameToolbar by lazy { mRootView!!.tv_title_toolbar }
     private val mTvSubscriberCount by lazy { mRootView!!.tv_subscriber_count }
     private val mTvVideoCount by lazy { mRootView!!.tv_video_count }
     private val mTvDescription by lazy { mRootView!!.tv_description }
@@ -73,6 +76,8 @@ class ChannelFragment: ReWatchPlayerFragment() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
 
+        handleGoogleUserAuthEvent(viewModel)
+
         viewModel.showLoadingChannel.observe(this, Observer { event ->
             event.getContentIfNotHandled {
 
@@ -82,35 +87,17 @@ class ChannelFragment: ReWatchPlayerFragment() {
         viewModel.channelList.observe(this, Observer { res ->
             res.items.firstOrNull()?.let { info ->
                 val title = info.title.withEmoji()
-                mCollapsingToolbar.title = title
                 mTvChannelName.text = title
+                mTvChannelNameToolbar.text = title
                 mTvDescription.text = info.description.withEmoji()
                 mTvSubscriberCount.text = getString(R.string.channel_subscriber_count).format(info.subscriberCount)
                 mTvVideoCount.text = getString(R.string.channel_video_count).format(info.videoCount)
                 mIvThumbnail.load(info.thumbnails.run { standard?.url ?: default?.url }) {
                     transformations(CircleCropTransformation())
                 }
-                LoadRequest.Builder(requireContext())
-                    .allowHardware(false)       // disable hardware to allow getting bitmap from drawable
-                    .transformations(BlurTransformation(requireContext()))
-                    .data(info.bannerMobileImageUrl)
-                    .target { drawable ->
-                        mIvBanner.setImageDrawable(drawable)
-                        runCatching {
-                            val bitmap = drawable.toBitmap()
-                            val palette = Palette.from(bitmap).generate()
-                            palette.dominantSwatch?.let {
-                                val rgbTextColor = ColorUtils.compositeColors(it.titleTextColor, Color.WHITE)       // flatten alpha value
-                                mCollapsingToolbar.apply {
-                                    setContentScrimColor(it.rgb)
-                                    setCollapsedTitleTextColor(rgbTextColor)
-                                }
-                                mToolbar.setForegroundItemColor(rgbTextColor)
-                            }
-                        }
-                    }
-                    .build()
-                    .also { Coil.imageLoader(requireContext()).execute(it) }
+                mIvThumbnailToolbar.load(info.thumbnails.run { standard?.url ?: default?.url }) {
+                    transformations(CircleCropTransformation())
+                }
                 viewModel.setUploadedListId(info.uploads)
             }
         })
@@ -183,6 +170,26 @@ class ChannelFragment: ReWatchPlayerFragment() {
             layoutManager = LinearLayoutManager(requireContext())
             addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(14f).toInt()))
         }
+        mSvContent.setOnScrollChangeListener { v: NestedScrollView?, scrollX: Int, scrollY: Int, oldScrollX: Int, oldScrollY: Int ->
+            val channelY = mTvChannelName.let { it.y + it.height }
+            if (scrollY > channelY) {
+                mTvChannelNameToolbar.changeAlpha(1f)
+                mIvThumbnailToolbar.changeAlpha(1f)
+            } else {
+                mTvChannelNameToolbar.changeAlpha(0f)
+                mIvThumbnailToolbar.changeAlpha(0f)
+            }
+        }
+        mTvChannelNameToolbar.alpha = 0f
+        mIvThumbnailToolbar.alpha = 0f
+    }
+
+    private fun View.changeAlpha(newAlpha: Float) {
+        animate().apply {
+            interpolator = LinearInterpolator()
+            alpha(newAlpha)
+            duration = 300
+        }.start()
     }
 
     private class PlaylistAdapter(
