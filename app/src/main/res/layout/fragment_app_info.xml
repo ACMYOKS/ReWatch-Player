@@ -29,16 +29,16 @@
                 android:id="@+id/current_user_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="?android:attr/selectableItemBackground"
                 android:clickable="true"
                 android:focusable="true"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp"
-                android:paddingTop="20dp"
-                android:paddingBottom="20dp"
                 android:orientation="horizontal"
-                android:background="?android:attr/selectableItemBackground">
+                android:paddingStart="14dp"
+                android:paddingTop="20dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="20dp">
 
-            <ImageView
+                <ImageView
                     android:layout_width="60dp"
                     android:layout_height="60dp"
                     android:src="@drawable/ic_account_circle"
@@ -48,94 +48,116 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
+                    android:layout_marginStart="14dp"
                     android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:layout_marginStart="14dp">
+                    android:orientation="vertical">
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/account_current_account_title"
-                        android:textSize="12sp"/>
+                        android:textSize="12sp" />
 
                     <TextView
                         android:id="@+id/tv_current_account"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:textSize="16sp"
                         android:textStyle="bold"
-                        tools:text="example@google.com"
-                        android:textSize="16sp"/>
+                        tools:text="example@google.com" />
                 </LinearLayout>
             </LinearLayout>
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingTop="25dp"
                 android:paddingStart="14dp"
+                android:paddingTop="25dp"
                 android:paddingEnd="14dp"
                 android:paddingBottom="8dp"
-                android:textStyle="bold"
-                android:text="@string/account_section_about_title"/>
+                android:text="@string/account_section_about_title"
+                android:textStyle="bold" />
+
             <com.amoscyk.android.rewatchplayer.ui.setting.SettingItemCell
                 android:id="@+id/btn_tutorial"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content" />
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="0.5dp"
-                android:background="@android:color/darker_gray"
                 android:layout_marginStart="14dp"
-                android:layout_marginEnd="14dp"/>
+                android:layout_marginEnd="14dp"
+                android:background="@android:color/darker_gray" />
+
             <com.amoscyk.android.rewatchplayer.ui.setting.SettingItemCell
                 android:id="@+id/btn_app_info"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="0.5dp"
-                android:background="@android:color/darker_gray"
                 android:layout_marginStart="14dp"
-                android:layout_marginEnd="14dp"/>
+                android:layout_marginEnd="14dp"
+                android:background="@android:color/darker_gray"
+                android:visibility="gone" />
+
             <com.amoscyk.android.rewatchplayer.ui.setting.SettingItemCell
                 android:id="@+id/btn_check_update"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content" />
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="0.5dp"
-                android:background="@android:color/darker_gray"
                 android:layout_marginStart="14dp"
-                android:layout_marginEnd="14dp"/>
+                android:layout_marginEnd="14dp"
+                android:background="@android:color/darker_gray" />
+
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingTop="25dp"
                 android:paddingStart="14dp"
+                android:paddingTop="25dp"
                 android:paddingEnd="14dp"
                 android:paddingBottom="8dp"
-                android:textStyle="bold"
-                android:text="@string/account_section_help_title" />
+                android:text="@string/account_section_help_title"
+                android:textStyle="bold" />
+
             <com.amoscyk.android.rewatchplayer.ui.setting.SettingItemCell
                 android:id="@+id/btn_faq"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content" />
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="0.5dp"
-                android:background="@android:color/darker_gray"
                 android:layout_marginStart="14dp"
-                android:layout_marginEnd="14dp"/>
+                android:layout_marginEnd="14dp"
+                android:background="@android:color/darker_gray" />
+
             <com.amoscyk.android.rewatchplayer.ui.setting.SettingItemCell
                 android:id="@+id/btn_contact"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="0.5dp"
-                android:background="@android:color/darker_gray"
                 android:layout_marginStart="14dp"
-                android:layout_marginEnd="14dp"/>
+                android:layout_marginEnd="14dp"
+                android:background="@android:color/darker_gray"
+                android:visibility="gone" />
         </LinearLayout>
     </ScrollView>
+
+    <TextView
+        android:id="@+id/tv_app_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:textAlignment="center" />
 </LinearLayout>

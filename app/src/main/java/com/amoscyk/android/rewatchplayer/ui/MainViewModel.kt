@@ -9,11 +9,13 @@ import androidx.core.net.toUri
 import androidx.lifecycle.*
 import com.amoscyk.android.rewatchplayer.AppConstant
 import com.amoscyk.android.rewatchplayer.AppSettings
+import com.amoscyk.android.rewatchplayer.BuildConfig
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.datasource.vo.Event
 import com.amoscyk.android.rewatchplayer.datasource.vo.*
 import com.amoscyk.android.rewatchplayer.datasource.vo.RPVideo
+import com.amoscyk.android.rewatchplayer.datasource.vo.cloud.UpdateResponse
 import com.amoscyk.android.rewatchplayer.datasource.vo.cloud.YtInfo
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.PlayerResource
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMeta
@@ -30,7 +32,6 @@ import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode.MUX_FORMAT
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.source.MergingMediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import kotlinx.coroutines.launch
 import java.io.File
@@ -112,6 +113,9 @@ class MainViewModel(
         listOf(298, 136, 135, 134, 133, 160, 299, 137, 264, 138, 266)
     private val adaptiveAudioTagPriorityList = listOf(141, 140, 139)
     private val muxedVideoTagPriorityList = listOf(38, 37, 85, 84, 22, 83, 82, 18)
+
+    private val _updateDialogEvent = MutableLiveData<Event<UpdateResponse>>()
+    val updateDialogEvent: LiveData<Event<UpdateResponse>> = _updateDialogEvent
 
     init {
         allowDlEnv.observeForever(observerFactory.getObserver("allowDlEnv"))
@@ -738,6 +742,29 @@ class MainViewModel(
         }
     }
 
+    fun checkUpdate() {
+        viewModelScope.launch {
+            try {
+                _updateDialogEvent.value = Event(youtubeRepository.getUpdate(BuildConfig.VERSION_NAME))
+            } catch (e: Exception) {
+                _alertEvent.value = Event(
+                    AlertDialogControl(rpApp.getString(R.string.player_error_title),
+                        when (e) {
+                            is NoNetworkException -> rpApp.getString(R.string.error_network_disconnected)
+                            is SocketTimeoutException, is ConnectException -> rpApp.getString(R.string.player_error_server_connect_fail)
+                            is ServerErrorException -> rpApp.getString(
+                                R.string.player_error_server_error,
+                                e.message
+                            )
+                            else -> e.message.orEmpty()
+                        },
+                        true,
+                        AlertDialogControl.Action(rpApp.getString(R.string.confirm_text)) {}
+                    )
+                )
+            }
+        }
+    }
 
     private fun prepareMediaResource(uri: List<Uri>) {
         val exoPlayer = rpApp.getPlayer()

@@ -34,4 +34,13 @@
 
     <action android:id="@+id/showVideoListForPlaylist"
         app:destination="@id/videoListFragment"/>
+    <fragment
+        android:id="@+id/webViewFragment"
+        android:name="com.amoscyk.android.rewatchplayer.ui.WebViewFragment">
+        <argument
+            android:name="url"
+            app:argType="string" />
+    </fragment>
+    <action android:id="@+id/showWebView"
+        app:destination="@id/webViewFragment" />
 </navigation>

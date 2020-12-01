@@ -443,6 +443,15 @@ class YoutubeRepository(
         } ?: 0
     }
 
+    suspend fun getUpdate(currentVersion: String) = withContext(Dispatchers.IO) {
+        val res = rpCloudService.getUpdate(currentVersion).execute()
+        if (res.isSuccessful) {
+            return@withContext res.body() ?: throw Error("Empty content")
+        } else {
+            throw CloudSvcErrorHandler.getError(res.errorBody())
+        }
+    }
+
     companion object {
         private const val MAX_VIDEO_RESULTS: Long = 30
         private const val MAX_CHANNEL_RESULTS: Long = 50

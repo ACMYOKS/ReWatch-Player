@@ -9,13 +9,14 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
-import com.amoscyk.android.rewatchplayer.R
-import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
+import androidx.navigation.findNavController
+import com.amoscyk.android.rewatchplayer.*
+import com.amoscyk.android.rewatchplayer.ui.MainViewModel
+import com.amoscyk.android.rewatchplayer.ui.WebViewFragmentDirections
 import com.amoscyk.android.rewatchplayer.ui.setting.SettingsActivity
-import com.amoscyk.android.rewatchplayer.viewModelFactory
-import com.amoscyk.android.rewatchplayer.youtubeServiceProvider
 import kotlinx.android.synthetic.main.fragment_app_info.view.*
 import pub.devrel.easypermissions.AfterPermissionGranted
 import pub.devrel.easypermissions.AppSettingsDialog
@@ -23,6 +24,7 @@ import pub.devrel.easypermissions.EasyPermissions
 
 class AppInfoFragment : ReWatchPlayerFragment(), EasyPermissions.PermissionCallbacks {
 
+    private val mainViewModel by activityViewModels<MainViewModel> { viewModelFactory }
     private val viewModel by viewModels<StartupAccountViewModel> { viewModelFactory }
     private val toolbar get() = view!!.toolbar
     private val currentUserLayout get() = view!!.current_user_layout
@@ -32,6 +34,7 @@ class AppInfoFragment : ReWatchPlayerFragment(), EasyPermissions.PermissionCallb
     private val cellCheckUpdate get() = view!!.btn_check_update
     private val cellFaq get() = view!!.btn_faq
     private val cellContact get() = view!!.btn_contact
+    private val tvAppInfo get() = view!!.tv_app_info
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -88,20 +91,38 @@ class AppInfoFragment : ReWatchPlayerFragment(), EasyPermissions.PermissionCallb
         }
         tvCurrentAccount.text = youtubeServiceProvider.credential.selectedAccountName
         cellTutorial.apply {
-            setTitle(getString(R.string.account_tutorial_title))
+            setTitle(getString(R.string.account_guide_title))
+            setOnClickListener {
+                findNavController().navigate(
+                    WebViewFragmentDirections.showWebView(
+                        AppConstant.APP_WEBSITE_URL + "guide?no_nav=true"
+                    )
+                )
+            }
         }
         cellAppInfo.apply {
             setTitle(getString(R.string.account_app_info_title))
         }
         cellCheckUpdate.apply {
             setTitle(getString(R.string.account_check_update))
+            setOnClickListener {
+                mainViewModel.checkUpdate()
+            }
         }
         cellFaq.apply {
             setTitle(getString(R.string.account_faq_title))
+            setOnClickListener {
+                findNavController().navigate(
+                    WebViewFragmentDirections.showWebView(
+                        AppConstant.APP_WEBSITE_URL + "faq?no_nav=true"
+                    )
+                )
+            }
         }
         cellContact.apply {
             setTitle(getString(R.string.account_contact_title))
         }
+        tvAppInfo.text = getString(R.string.app_info, getString(R.string.app_name), BuildConfig.VERSION_NAME)
     }
 
     @AfterPermissionGranted(REQUEST_GET_ACCOUNT_PERMISSION)

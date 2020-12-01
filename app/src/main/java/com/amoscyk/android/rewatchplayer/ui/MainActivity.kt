@@ -1,6 +1,8 @@
 package com.amoscyk.android.rewatchplayer.ui
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.app.DownloadManager
 import android.app.PendingIntent
 import android.app.PictureInPictureParams
 import android.app.RemoteAction
@@ -8,6 +10,7 @@ import android.content.*
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -19,6 +22,7 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.view.ActionMode
+import androidx.core.content.FileProvider
 import androidx.lifecycle.Observer
 import androidx.navigation.findNavController
 import androidx.navigation.navOptions
@@ -26,6 +30,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.amoscyk.android.rewatchplayer.*
 import com.amoscyk.android.rewatchplayer.R
+import com.amoscyk.android.rewatchplayer.datasource.vo.cloud.UpdateResponse
 import com.amoscyk.android.rewatchplayer.service.AudioPlayerService
 import com.amoscyk.android.rewatchplayer.ui.library.LibraryFragmentDirections
 import com.amoscyk.android.rewatchplayer.ui.player.*
@@ -36,10 +41,15 @@ import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.bottom_sheet_dialog_user_option.view.*
+import org.json.JSONObject
+import pub.devrel.easypermissions.AfterPermissionGranted
+import pub.devrel.easypermissions.AppSettingsDialog
+import pub.devrel.easypermissions.EasyPermissions
+import java.io.File
 import java.net.URL
 
 
-class MainActivity : ReWatchPlayerActivity() {
+class MainActivity : ReWatchPlayerActivity(), EasyPermissions.PermissionCallbacks {
 
     data class Resolution(val itag: Int, val quality: String) : SelectableItemWithTitle {
         override fun getTitle() = quality
@@ -130,8 +140,13 @@ class MainActivity : ReWatchPlayerActivity() {
         }
     }
     private var mPlayerServiceReceiver: BroadcastReceiver? = null
+    private var mApkDownloadReceiver: BroadcastReceiver? = null
+    private var mDownloadCompleteReceiver: BroadcastReceiver? = null
     private var mPipActionReceiver: BroadcastReceiver? = null
     private var selectedITag: Int? = null       // save last selected itag for reselect tag on app restart
+
+    private var apkDownloadId: Long? = null
+    private var updateResponseToHandle: UpdateResponse? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -276,6 +291,15 @@ class MainActivity : ReWatchPlayerActivity() {
 
         })
 
+        viewModel.updateDialogEvent.observe(this, Observer { event ->
+            event.getContentIfNotHandled {
+                updateResponseToHandle = it
+                AppUpdateDialog(this, it) {
+                   downloadApk()
+                }.show()
+            }
+        })
+
         intent?.let { handleIntent(it) }
     }
 
@@ -299,6 +323,26 @@ class MainActivity : ReWatchPlayerActivity() {
         registerReceiver(mPlayerServiceReceiver, IntentFilter().apply {
             addAction(AudioPlayerService.ACTION_GET_PLAYBACK_POSITION)
         })
+        mApkDownloadReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                intent.getLongExtra(ApkDownloadHelper.EXTRA_DOWNLOAD_ID, -1).let {
+                    if (it >= 0) {
+                        apkDownloadId = it
+                    }
+                }
+            }
+        }
+        registerReceiver(mApkDownloadReceiver, IntentFilter(ApkDownloadHelper.ACTION_GET_DOWNLOAD_ID))
+        mDownloadCompleteReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, 0)
+                if (apkDownloadId == downloadId) {
+                    apkDownloadId = null
+                    openDownloadedApk(downloadId)
+                }
+            }
+        }
+        registerReceiver(mDownloadCompleteReceiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
         stopPlayService()
     }
 
@@ -307,6 +351,10 @@ class MainActivity : ReWatchPlayerActivity() {
 
         mPlayerServiceReceiver?.let { unregisterReceiver(it) }
         mPlayerServiceReceiver = null
+        mApkDownloadReceiver?.let { unregisterReceiver(it) }
+        mApkDownloadReceiver = null
+        mDownloadCompleteReceiver?.let { unregisterReceiver(it) }
+        mDownloadCompleteReceiver = null
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
             getPlayer()?.apply {
@@ -443,6 +491,27 @@ class MainActivity : ReWatchPlayerActivity() {
             } else {
                 mPipActionReceiver?.let { unregisterReceiver(it) }
                 mPipActionReceiver = null
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this)
+    }
+
+    override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
+
+    }
+
+    override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {
+        if (requestCode == REQUEST_WRITE_STORAGE_PERM) {
+            if (EasyPermissions.somePermissionPermanentlyDenied(this, perms)) {
+                AppSettingsDialog.Builder(this).build().show()
             }
         }
     }
@@ -623,11 +692,57 @@ class MainActivity : ReWatchPlayerActivity() {
         supportFragmentManager.findFragmentById(R.id.root_nav_container)?.
             childFragmentManager?.fragments?.firstOrNull() as? MainPageFragment
 
+    @AfterPermissionGranted(REQUEST_WRITE_STORAGE_PERM)
+    private fun downloadApk() {
+        if (EasyPermissions.hasPermissions(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            updateResponseToHandle?.let {
+                ApkDownloadHelper.startDownloadApk(this, it)
+                updateResponseToHandle = null
+            }
+        } else {
+            EasyPermissions.requestPermissions(
+                this,
+                getString(R.string.settings_request_write_storage_permission),
+                REQUEST_WRITE_STORAGE_PERM,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+        }
+    }
+
+    private fun openDownloadedApk(downloadId: Long) {
+        val dlMgr = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val query = DownloadManager.Query().setFilterById(downloadId)
+        val cursor = dlMgr.query(query)
+        if (cursor.moveToFirst()) {
+            val status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))
+            val localUriStr = cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI))
+            val mimeType = cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_MEDIA_TYPE))
+            if (status == DownloadManager.STATUS_SUCCESSFUL && localUriStr != null) {
+                var localUri = Uri.parse(localUriStr)
+                if (ContentResolver.SCHEME_FILE == localUri.scheme) {
+                    val file = File(localUri.path!!)
+                    localUri = FileProvider.getUriForFile(this, "com.amoscyk.android.rewatchplayer.provider", file)
+                }
+                val openFileIntent = Intent(Intent.ACTION_VIEW)
+                openFileIntent
+                    .setDataAndType(localUri, mimeType)
+                    .setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                try {
+                    startActivity(openFileIntent)
+                } catch (e: Exception) {
+                    getMainFragment()?.showSnackbar(R.string.update_download_cannot_open_downloaded_apk, Snackbar.LENGTH_SHORT)
+                }
+            }
+        }
+        cursor.close()
+    }
+
     companion object {
         const val TAG = "MainActivity"
         const val EXTRA_VIDEO_ID = "com.amoscyk.android.rewatchplayer.extra.videoId"
         private const val REQUEST_CODE_PIP_PLAY = 10001
         private const val REQUEST_CODE_PIP_PAUSE = 10002
+        private const val REQUEST_WRITE_STORAGE_PERM = 20000
         private const val ACTION_PIP_PLAY = "com.amoscyk.android.rewatchplayer.PIP_PLAY"
         private const val ACTION_PIP_PAUSE = "com.amoscyk.android.rewatchplayer.PIP_PAUSE"
         private val SELECTION_DIFF_CALLBACK = object :
