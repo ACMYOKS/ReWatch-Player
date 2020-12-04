@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -12,7 +13,8 @@
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize" />
+            android:layout_height="?attr/actionBarSize"
+            app:title="@string/app_name" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <ScrollView
@@ -53,26 +55,26 @@
                     android:orientation="vertical">
 
                     <TextView
+                        style="?attr/textAppearanceCaption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/account_current_account_title"
-                        android:textSize="12sp" />
+                        android:text="@string/account_current_account_title" />
 
                     <TextView
                         android:id="@+id/tv_current_account"
+                        style="?attr/textAppearanceBody1"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
                         tools:text="example@google.com" />
                 </LinearLayout>
             </LinearLayout>
 
             <TextView
+                style="?attr/textAppearanceSubtitle1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingStart="14dp"
-                android:paddingTop="25dp"
+                android:paddingTop="14dp"
                 android:paddingEnd="14dp"
                 android:paddingBottom="8dp"
                 android:text="@string/account_section_about_title"
@@ -82,13 +84,6 @@
                 android:id="@+id/btn_tutorial"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0.5dp"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="14dp"
-                android:background="@android:color/darker_gray" />
 
             <com.amoscyk.android.rewatchplayer.ui.setting.SettingItemCell
                 android:id="@+id/btn_app_info"
@@ -114,13 +109,14 @@
                 android:layout_height="0.5dp"
                 android:layout_marginStart="14dp"
                 android:layout_marginEnd="14dp"
-                android:background="@android:color/darker_gray" />
+                android:background="?android:attr/dividerVertical" />
 
             <TextView
+                style="?attr/textAppearanceSubtitle1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingStart="14dp"
-                android:paddingTop="25dp"
+                android:paddingTop="14dp"
                 android:paddingEnd="14dp"
                 android:paddingBottom="8dp"
                 android:text="@string/account_section_help_title"
@@ -130,13 +126,6 @@
                 android:id="@+id/btn_faq"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0.5dp"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="14dp"
-                android:background="@android:color/darker_gray" />
 
             <com.amoscyk.android.rewatchplayer.ui.setting.SettingItemCell
                 android:id="@+id/btn_contact"
@@ -156,6 +145,7 @@
 
     <TextView
         android:id="@+id/tv_app_info"
+        style="?attr/textAppearanceCaption"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"

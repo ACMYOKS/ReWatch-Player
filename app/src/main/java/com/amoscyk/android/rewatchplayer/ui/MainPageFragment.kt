@@ -13,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.view.ActionMode
 import androidx.constraintlayout.motion.widget.MotionLayout
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.Observer
@@ -239,6 +240,7 @@ class MainPageFragment : ReWatchPlayerFragment() {
         }
         playerToolbar.apply {
             inflateMenu(R.menu.player_option_menu)
+            setMenuItemTintColor(ContextCompat.getColor(requireContext(), android.R.color.white))
             setOnMenuItemClickListener {
                 when (it.itemId) {
                     R.id.bookmark -> {

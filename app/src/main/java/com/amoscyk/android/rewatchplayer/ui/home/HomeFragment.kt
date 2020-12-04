@@ -14,6 +14,8 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.setupWithNavController
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ui.player.PlayerActivity
+import com.amoscyk.android.rewatchplayer.util.getColorFromAttr
+import com.amoscyk.android.rewatchplayer.util.setMenuItemTintColor
 import kotlinx.android.synthetic.main.fragment_home.view.*
 
 class HomeFragment : Fragment() {
@@ -38,6 +40,7 @@ class HomeFragment : Fragment() {
 
     private fun setupOptionMenu() {
         toolbar.inflateMenu(R.menu.home_option_menu)
+        toolbar.setMenuItemTintColor(requireContext().getColorFromAttr(R.attr.colorOnPrimary))
         toolbar.setOnMenuItemClickListener {
             when (it.itemId) {
                 R.id.search_video -> {

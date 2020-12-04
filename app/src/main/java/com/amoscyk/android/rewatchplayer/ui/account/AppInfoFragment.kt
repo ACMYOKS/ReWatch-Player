@@ -5,10 +5,16 @@ import android.accounts.AccountManager
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.graphics.ColorFilter
+import android.graphics.PorterDuff
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.BlendModeColorFilterCompat
+import androidx.core.graphics.BlendModeCompat
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
@@ -17,6 +23,8 @@ import com.amoscyk.android.rewatchplayer.*
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel
 import com.amoscyk.android.rewatchplayer.ui.WebViewFragmentDirections
 import com.amoscyk.android.rewatchplayer.ui.setting.SettingsActivity
+import com.amoscyk.android.rewatchplayer.util.getColorFromAttr
+import com.amoscyk.android.rewatchplayer.util.setMenuItemTintColor
 import kotlinx.android.synthetic.main.fragment_app_info.view.*
 import pub.devrel.easypermissions.AfterPermissionGranted
 import pub.devrel.easypermissions.AppSettingsDialog
@@ -75,6 +83,7 @@ class AppInfoFragment : ReWatchPlayerFragment(), EasyPermissions.PermissionCallb
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         toolbar.apply {
             inflateMenu(R.menu.app_info_menu)
+            setMenuItemTintColor(requireContext().getColorFromAttr(R.attr.colorOnPrimary))
             setOnMenuItemClickListener {
                 when (it.itemId) {
                     R.id.settings -> {

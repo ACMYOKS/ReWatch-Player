@@ -6,6 +6,7 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
+import android.view.Menu
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
@@ -17,6 +18,13 @@ import androidx.core.view.children
 
 fun Toolbar.setMenuItemTintColor(@ColorInt color: Int) {
     menu?.children?.forEach {
+        it.icon?.setTint(color)
+        it.title = SpannableString(it.title).apply { setSpan(ForegroundColorSpan(color), 0, length, 0) }
+    }
+}
+
+fun Menu.setMenuItemTintColor(@ColorInt color: Int) {
+    this.children.forEach {
         it.icon?.setTint(color)
         it.title = SpannableString(it.title).apply { setSpan(ForegroundColorSpan(color), 0, length, 0) }
     }

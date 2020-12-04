@@ -1,108 +1,92 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/card_view"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
-    <androidx.cardview.widget.CardView
-        android:id="@+id/card_view"
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:cardCornerRadius="5dp"
-        app:cardElevation="1dp"
-        app:cardMaxElevation="4dp"
-        android:foreground="?android:attr/selectableItemBackground">
+        android:layout_height="wrap_content">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
+        <ImageView
+            android:id="@+id/thumbnail"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:scaleType="centerCrop"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintDimensionRatio="16:9"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_percent="0.4" />
+
+        <TextView
+            android:id="@+id/duration_tv"
+            tools:text="00:00"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="#454545"
-            android:paddingStart="12dp"
-            android:paddingTop="8dp"
-            android:paddingEnd="12dp"
-            android:paddingBottom="8dp">
+            android:layout_marginEnd="4dp"
+            android:background="#AA000000"
+            android:paddingStart="2dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="2dp"
+            android:paddingBottom="2dp"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            app:layout_constraintBottom_toTopOf="@id/watch_progress"
+            app:layout_constraintEnd_toEndOf="@id/thumbnail" />
 
-            <ImageView
-                android:id="@+id/thumbnail"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:scaleType="centerCrop"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintDimensionRatio="16:9"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintWidth_percent="0.4" />
+        <ProgressBar
+            android:id="@+id/watch_progress"
+            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+            android:layout_width="0dp"
+            android:layout_height="4dp"
+            android:maxHeight="4dp"
+            android:minHeight="4dp"
+            android:progressBackgroundTint="@android:color/black"
+            android:progressTint="@color/red_700"
+            app:layout_constraintBottom_toBottomOf="@id/thumbnail"
+            app:layout_constraintEnd_toEndOf="@id/thumbnail"
+            app:layout_constraintStart_toStartOf="@id/thumbnail" />
 
-            <TextView
-                android:id="@+id/duration_tv"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:layout_constraintEnd_toEndOf="@id/thumbnail"
-                app:layout_constraintBottom_toTopOf="@id/watch_progress"
-                android:layout_marginEnd="4dp"
-                android:paddingTop="2dp"
-                android:paddingBottom="2dp"
-                android:paddingStart="2dp"
-                android:paddingEnd="2dp"
-                android:background="#AA000000"
-                android:textColor="@android:color/white"
-                android:textSize="12sp"
-                tools:text="00:00"/>
+        <TextView
+            android:id="@+id/title_tv"
+            tools:text="title here"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="14dp"
+            android:ellipsize="end"
+            android:maxLines="3"
+            android:textAppearance="?attr/textAppearanceSubtitle1"
+            app:layout_constraintEnd_toStartOf="@id/checkbox_select"
+            app:layout_constraintStart_toEndOf="@id/thumbnail"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_goneMarginEnd="0dp" />
 
-            <ProgressBar
-                android:id="@+id/watch_progress"
-                style="@style/Widget.AppCompat.ProgressBar.Horizontal"
-                android:layout_width="0dp"
-                android:layout_height="4dp"
-                android:minHeight="4dp"
-                android:maxHeight="4dp"
-                app:layout_constraintStart_toStartOf="@id/thumbnail"
-                app:layout_constraintEnd_toEndOf="@id/thumbnail"
-                app:layout_constraintBottom_toBottomOf="@id/thumbnail"
-                android:progressTint="#FF0000"
-                android:progressBackgroundTint="#000000"/>
+        <TextView
+            android:id="@+id/channel_title_tv"
+            tools:text="channel name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textAppearance="?attr/textAppearanceCaption"
+            app:layout_constraintEnd_toStartOf="@id/checkbox_select"
+            app:layout_constraintStart_toStartOf="@id/title_tv"
+            app:layout_constraintTop_toBottomOf="@id/title_tv" />
 
-            <TextView
-                android:id="@+id/title_tv"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_marginEnd="8dp"
-                app:layout_goneMarginEnd="0dp"
-                android:ellipsize="end"
-                android:maxLines="3"
-                android:textColor="@android:color/white"
-                android:textSize="18sp"
-                app:layout_constraintEnd_toStartOf="@id/checkbox_select"
-                app:layout_constraintStart_toEndOf="@id/thumbnail"
-                app:layout_constraintTop_toTopOf="parent"
-                tools:text="title here" />
+        <CheckBox
+            android:id="@+id/checkbox_select"
+            tools:visibility="visible"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="14dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <TextView
-                android:id="@+id/channel_title_tv"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:ellipsize="end"
-                android:maxLines="2"
-                android:textColor="@android:color/white"
-                android:textSize="12sp"
-                app:layout_constraintEnd_toStartOf="@id/checkbox_select"
-                app:layout_constraintStart_toStartOf="@id/title_tv"
-                app:layout_constraintTop_toBottomOf="@id/title_tv"
-                tools:text="channel name" />
-
-            <CheckBox
-                android:id="@+id/checkbox_select"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
-                tools:visibility="visible"/>
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-    </androidx.cardview.widget.CardView>
-</RelativeLayout>
+</com.google.android.material.card.MaterialCardView>

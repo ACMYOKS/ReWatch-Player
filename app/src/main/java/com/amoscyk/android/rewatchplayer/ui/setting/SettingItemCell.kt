@@ -20,18 +20,15 @@ open class SettingItemCell : LinearLayout {
         defStyleAttr
     )
 
-    protected val tvTitle: TextView = TextView(context).apply {
+    protected val tvTitle: TextView = TextView(context, null, R.attr.textAppearanceBody1).apply {
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
     }
-    protected val tvDescription: TextView = TextView(context).apply {
+    protected val tvDescription: TextView = TextView(context, null, R.attr.textAppearanceCaption).apply {
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
     }
-    protected val tvCurrentValue: TextView = TextView(context).apply {
+    protected val tvCurrentValue: TextView = TextView(context, null, R.attr.textAppearanceCaption).apply {
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-        setTextColor(ContextCompat.getColor(context, R.color.colorHighlight))
+        setTextColor(ContextCompat.getColor(context, R.color.blue_800))
     }
     protected val childContainer: LinearLayout = LinearLayout(context).apply {
         layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)

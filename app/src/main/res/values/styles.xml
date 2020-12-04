@@ -3,45 +3,137 @@
     <!-- Base application theme. -->
     <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar.Bridge">
         <!-- Customize your theme here. -->
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
+        <item name="colorPrimary">@color/light_blue_300</item>
+        <item name="colorPrimaryVariant">@color/light_blue_300_dark</item>
+        <item name="android:statusBarColor">@color/light_blue_300_dark</item>
+        <item name="colorOnPrimary">@android:color/black</item>
+        <item name="colorSecondary">@color/amber_500</item>
+        <item name="colorSecondaryVariant">@color/amber_500_dark</item>
+        <item name="colorOnSecondary">@android:color/black</item>
+        <item name="colorAccent">@color/amber_500</item>
+        <item name="android:colorBackground">@android:color/white</item>
+        <item name="colorSurface">@android:color/white</item>
+        <item name="colorOnSurface">@android:color/black</item>
+        <item name="colorError">@color/red_900</item>
+        <item name="colorOnError">@android:color/white</item>
+
+        <!--  add for toolbar action icon color  -->
+        <item name="colorControlNormal">?attr/colorOnPrimary</item>
+
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.App.LargeComponent</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.App.MediumComponent</item>
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.App.SmallComponent</item>
+
+        <item name="materialCardViewStyle">@style/Widget.App.CardView</item>
 
         <!-- overlay action mode above tool bar -->
         <item name="windowActionModeOverlay">true</item>
 
         <item name="snackbarStyle">@style/Widget.MaterialComponents.Snackbar</item>
-        <item name="snackbarButtonStyle">@style/Widget.MaterialComponents.Button.TextButton.Snackbar</item>
-        <item name="actionModeStyle">@style/AppActionModeStyle</item>
+        <item name="snackbarButtonStyle">
+            @style/Widget.MaterialComponents.Button.TextButton.Snackbar
+        </item>
+        <item name="actionModeStyle">@style/Widget.App.ActionMode</item>
         <item name="actionBarTheme">@style/ThemeOverlay.AppCompat.Dark.ActionBar</item>
-        <item name="toolbarStyle">@style/AppToolbarStyle</item>
+        <item name="toolbarStyle">@style/Widget.App.Toolbar</item>
+        <item name="tabStyle">@style/Widget.App.TabLayout</item>
+    </style>
+
+    <!--  Shape theme overrides  -->
+    <style name="ShapeAppearance.App.SmallComponent" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">1dp</item>
+    </style>
+
+    <style name="ShapeAppearance.App.MediumComponent" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">4dp</item>
+    </style>
+
+    <style name="ShapeAppearance.App.LargeComponent" parent="ShapeAppearance.MaterialComponents.LargeComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">6dp</item>
+    </style>
+
+    <style name="ShapeAppearanceOverlay.App.Button.Circle" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="Widget.App.CircleButton" parent="Widget.MaterialComponents.Button">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.App.Button.Circle</item>
+        <item name="backgroundTint">@color/app_circle_btn_bg</item>
+        <item name="android:textColor">@color/app_circle_btn_icon</item>
+        <item name="iconTint">@color/app_circle_btn_icon</item>
+        <item name="iconPadding">0dp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="android:padding">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetRight">0dp</item>
+    </style>
+
+    <!--  Card theme overrides  -->
+    <style name="Widget.App.CardView" parent="Widget.MaterialComponents.CardView">
+        <item name="materialThemeOverlay">@style/ThemeOverlay.App.Card</item>
+        <item name="contentPaddingBottom">8dp</item>
+        <item name="contentPaddingTop">8dp</item>
+        <item name="contentPaddingLeft">14dp</item>
+        <item name="contentPaddingRight">14dp</item>
+        <item name="cardElevation">1dp</item>
+        <item name="cardMaxElevation">4dp</item>
+    </style>
+
+    <!--  Card theme overlay  -->
+    <style name="ThemeOverlay.App.Card" parent="">
+        <item name="colorSurface">@android:color/white</item>
+        <item name="colorOnSurface">@android:color/black</item>
+    </style>
+
+    <style name="Widget.App.TabLayout" parent="Widget.MaterialComponents.TabLayout.Colored">
+        <item name="tabIndicatorColor">?attr/colorSecondary</item>
+        <item name="tabTextAppearance">@style/Widget.App.TabTextAppearance</item>
+        <item name="tabIndicatorHeight">4dp</item>
+    </style>
+
+    <style name="Widget.App.TabTextAppearance" parent="TextAppearance.MaterialComponents.Button">
+        <item name="textAllCaps">false</item>
+        <item name="android:textAllCaps">false</item>
     </style>
 
     <style name="AppProgressDialog" parent="Theme.MaterialComponents.Dialog.Bridge">
+        <item name="colorPrimary">@color/light_blue_300</item>
+        <item name="colorPrimaryVariant">@color/light_blue_300_dark</item>
+        <item name="android:statusBarColor">@color/light_blue_300_dark</item>
+        <item name="colorOnPrimary">@android:color/black</item>
+        <item name="colorSecondary">@color/amber_500</item>
+        <item name="colorSecondaryVariant">@color/amber_500_dark</item>
+        <item name="colorOnSecondary">@android:color/white</item>
+        <item name="colorAccent">@color/amber_500</item>
+        <item name="android:colorBackground">@android:color/white</item>
+        <item name="colorSurface">@android:color/white</item>
+        <item name="colorOnSurface">@android:color/black</item>
+        <item name="colorError">@color/red_900</item>
+        <item name="colorOnError">@android:color/white</item>
         <item name="android:windowBackground">@android:color/transparent</item>
     </style>
 
-    <style name="AppActionModeStyle" parent="@style/Widget.AppCompat.ActionMode">
-
+    <style name="Widget.App.ActionMode" parent="@style/Widget.AppCompat.ActionMode">
+        <item name="background">@color/blue_grey_900</item>
     </style>
-    <style name="AppToolbarStyle" parent="@style/Widget.AppCompat.Toolbar">
+
+    <style name="Widget.App.Toolbar" parent="@style/Widget.MaterialComponents.Toolbar">
         <item name="contentInsetStart">14dp</item>
         <item name="contentInsetEnd">14dp</item>
         <item name="contentInsetStartWithNavigation">8dp</item>
         <item name="contentInsetEndWithActions">8dp</item>
-        <item name="collapsedTitleTextAppearance">@style/AppBarTitleTextAppearance</item>
-        <item name="titleTextAppearance">@style/AppBarTitleTextAppearance</item>
+        <item name="titleTextColor">?attr/colorOnPrimary</item>
+        <item name="subtitleTextColor">?attr/colorOnPrimary</item>
     </style>
+
     <style name="AppBarTitleTextAppearance" parent="TextAppearance.AppCompat.Widget.ActionBar.Title">
-        <item name="android:textSize">18sp</item>
-    </style>
-    <style name="AlertDialogSubButtonStyle" parent="Widget.AppCompat.Button">
-        <item name="android:paddingTop">4dp</item>
-        <item name="android:paddingBottom">4dp</item>
-        <item name="android:textAlignment">center</item>
-        <item name="android:gravity">center</item>
-        <item name="android:background">@drawable/btn_circle_bg</item>
-        <item name="android:textColor">@color/btn_circle_text_color</item>
+        <item name="android:textColor">?attr/colorOnPrimary</item>
     </style>
 
 </resources>

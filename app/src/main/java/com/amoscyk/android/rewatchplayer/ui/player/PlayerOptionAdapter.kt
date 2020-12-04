@@ -9,10 +9,12 @@ import android.widget.CompoundButton
 import android.widget.ImageView
 import android.widget.Switch
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.amoscyk.android.rewatchplayer.R
+import com.amoscyk.android.rewatchplayer.util.getColorFromAttr
 
 class PlayerOptionAdapter(
     private val itemOnClick: ((option: PlayerOption, position: Int) -> Unit)? = null,
@@ -48,7 +50,7 @@ class PlayerOptionAdapter(
         fun bind(option: PlayerOption) {
             imageView.apply {
                 setImageResource(option.imgResId)
-                setColorFilter(Color.WHITE)
+                setColorFilter(context.getColorFromAttr(R.attr.colorOnSurface))
             }
             titleTv.text = option.title
             switchCheck.apply {

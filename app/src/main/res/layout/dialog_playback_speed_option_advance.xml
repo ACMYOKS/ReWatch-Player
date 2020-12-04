@@ -11,131 +11,114 @@
 
     <TextView
         android:id="@+id/tv_title"
+        style="?attr/textAppearanceSubtitle1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
         android:text="@string/player_dialog_speed_title"
-        android:textColor="#000000"
-        android:textSize="18sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/tv_current_speed"
+        style="?attr/textAppearanceHeadline3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:paddingTop="20dp"
         android:paddingBottom="20dp"
-        android:textSize="50sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tv_title"
         tools:text="1.00x" />
 
     <TextView
+        style="?attr/textAppearanceHeadline4"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="1"
-        android:textSize="26sp"
         app:layout_constraintBottom_toBottomOf="@id/btn_minus_1"
         app:layout_constraintEnd_toStartOf="@id/btn_plus_1"
         app:layout_constraintStart_toEndOf="@id/btn_minus_1"
         app:layout_constraintTop_toTopOf="@id/btn_minus_1" />
 
     <TextView
+        style="?attr/textAppearanceHeadline4"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="0.1"
-        android:textSize="26sp"
         app:layout_constraintBottom_toBottomOf="@id/btn_minus_0_1"
         app:layout_constraintEnd_toStartOf="@id/btn_plus_0_1"
         app:layout_constraintStart_toEndOf="@id/btn_minus_0_1"
         app:layout_constraintTop_toTopOf="@id/btn_minus_0_1" />
 
     <TextView
+        style="?attr/textAppearanceHeadline4"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="0.05"
-        android:textSize="26sp"
         app:layout_constraintBottom_toBottomOf="@id/btn_minus_0_0_5"
         app:layout_constraintEnd_toStartOf="@id/btn_plus_0_0_5"
         app:layout_constraintStart_toEndOf="@id/btn_minus_0_0_5"
         app:layout_constraintTop_toTopOf="@id/btn_minus_0_0_5" />
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_minus_1"
-        style="@style/AlertDialogSubButtonStyle"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="-"
-        android:textAllCaps="false"
-        android:textSize="32sp"
-        app:layout_constraintDimensionRatio="1:1"
+        style="@style/Widget.App.CircleButton"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="14dp"
+        app:icon="@drawable/ic_remove_black_24dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tv_current_speed" />
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_plus_1"
-        style="@style/AlertDialogSubButtonStyle"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="+"
-        android:textAllCaps="false"
-        android:textSize="32sp"
-        app:layout_constraintDimensionRatio="1:1"
+        style="@style/Widget.App.CircleButton"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="14dp"
+        app:icon="@drawable/ic_add_black_24dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tv_current_speed" />
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_minus_0_1"
-        style="@style/AlertDialogSubButtonStyle"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="-"
-        android:textAllCaps="false"
-        android:textSize="32sp"
-        app:layout_constraintDimensionRatio="1:1"
+        style="@style/Widget.App.CircleButton"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="14dp"
+        app:icon="@drawable/ic_remove_black_24dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/btn_minus_1" />
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_plus_0_1"
-        style="@style/AlertDialogSubButtonStyle"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="+"
-        android:textAllCaps="false"
-        android:textSize="32sp"
-        app:layout_constraintDimensionRatio="1:1"
+        style="@style/Widget.App.CircleButton"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="14dp"
+        app:icon="@drawable/ic_add_black_24dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/btn_plus_1" />
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_minus_0_0_5"
-        style="@style/AlertDialogSubButtonStyle"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="-"
-        android:textAllCaps="false"
-        android:textSize="32sp"
-        app:layout_constraintDimensionRatio="1:1"
+        style="@style/Widget.App.CircleButton"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="14dp"
+        app:icon="@drawable/ic_remove_black_24dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/btn_minus_0_1" />
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_plus_0_0_5"
-        style="@style/AlertDialogSubButtonStyle"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="+"
-        android:textAllCaps="false"
-        android:textSize="32sp"
-        app:layout_constraintDimensionRatio="1:1"
+        style="@style/Widget.App.CircleButton"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="14dp"
+        app:icon="@drawable/ic_add_black_24dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/btn_plus_0_1" />
 </androidx.constraintlayout.widget.ConstraintLayout>

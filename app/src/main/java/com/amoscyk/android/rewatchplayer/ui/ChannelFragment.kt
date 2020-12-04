@@ -135,16 +135,23 @@ class ChannelFragment: ReWatchPlayerFragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
-        if (mRootView == null) {
-            mRootView = inflater.inflate(R.layout.fragment_channel, container, false)
-            setupViews()
-        }
-        return mRootView
+        return inflater.inflate(R.layout.fragment_channel, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        mRootView = view
+        setupViews()
     }
 
     override fun onStart() {
         super.onStart()
         viewModel.setChannelId(args.channelId)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        mRootView = null
     }
 
     private fun setupViews() {
@@ -163,12 +170,12 @@ class ChannelFragment: ReWatchPlayerFragment() {
         mRvUploaded.apply {
             adapter = mUploadedAdapter
             layoutManager = LinearLayoutManager(requireContext())
-            addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(14f).toInt()))
+            addItemDecoration(CommonListDecoration(dpToPx(8f).toInt(), dpToPx(14f).toInt()))
         }
         mRvPlaylist.apply {
             adapter = mPlaylistAdapter
             layoutManager = LinearLayoutManager(requireContext())
-            addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(14f).toInt()))
+            addItemDecoration(CommonListDecoration(dpToPx(8f).toInt(), dpToPx(14f).toInt()))
         }
         mSvContent.setOnScrollChangeListener { v: NestedScrollView?, scrollX: Int, scrollY: Int, oldScrollX: Int, oldScrollY: Int ->
             val channelY = mTvChannelName.let { it.y + it.height }

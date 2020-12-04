@@ -1,118 +1,131 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    xmlns:tools="http://schemas.android.com/tools">
+    android:layout_height="wrap_content">
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
+
         <TextView
-            android:layout_width="wrap_content"
+            style="?attr/textAppearanceHeadline6"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/player_video_info_title"
-            android:textSize="20sp"
-            android:textColor="@android:color/black"
             android:paddingStart="14dp"
-            android:paddingEnd="14dp"
             android:paddingTop="8dp"
-            android:paddingBottom="8dp"/>
+            android:paddingEnd="14dp"
+            android:paddingBottom="8dp"
+            android:text="@string/player_video_info_title"/>
+
         <View
             android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@android:color/darker_gray"/>
+            android:layout_height="0.5dp"
+            android:background="?attr/colorOnSurface" />
+
         <TextView
+            style="?attr/textAppearanceCaption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/player_video_info_video_title"
-            android:textSize="12sp"
-            android:paddingTop="8dp"
             android:paddingStart="14dp"
-            android:paddingEnd="14dp"/>
+            android:paddingTop="8dp"
+            android:paddingEnd="14dp"
+            android:text="@string/player_video_info_video_title" />
+
         <TextView
             android:id="@+id/tv_video_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            tools:text="Video Title"
-            android:textSize="16sp"
             android:paddingStart="14dp"
-            android:paddingEnd="14dp"/>
+            android:paddingEnd="14dp"
+            style="?attr/textAppearanceBody1"
+            tools:text="Video Title" />
+
         <TextView
+            style="?attr/textAppearanceCaption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/player_video_info_channel_title"
-            android:textSize="12sp"
-            android:paddingTop="8dp"
             android:paddingStart="14dp"
-            android:paddingEnd="14dp"/>
+            android:paddingTop="8dp"
+            android:paddingEnd="14dp"
+            android:text="@string/player_video_info_channel_title" />
+
         <TextView
             android:id="@+id/tv_channel_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:clickable="true"
             android:focusable="true"
-            tools:text="Channel Title"
-            android:textColor="@color/colorHighlight"
-            android:textStyle="bold"
-            android:textSize="16sp"
             android:paddingStart="14dp"
-            android:paddingEnd="14dp"/>
+            android:paddingEnd="14dp"
+            android:textColor="@color/blue_800"
+            style="?attr/textAppearanceBody1"
+            android:textStyle="bold"
+            tools:text="Channel Title" />
+
         <TextView
+            style="?attr/textAppearanceCaption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/player_video_info_video_id"
-            android:textSize="12sp"
-            android:paddingTop="8dp"
             android:paddingStart="14dp"
-            android:paddingEnd="14dp"/>
+            android:paddingTop="8dp"
+            android:paddingEnd="14dp"
+            android:text="@string/player_video_info_video_id" />
+
         <TextView
             android:id="@+id/tv_video_id"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            tools:text="Video ID"
-            android:textSize="16sp"
             android:paddingStart="14dp"
-            android:paddingEnd="14dp"/>
+            android:paddingEnd="14dp"
+            style="?attr/textAppearanceBody1"
+            tools:text="Video ID" />
+
         <TextView
+            style="?attr/textAppearanceCaption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="12sp"
-            android:text="@string/player_video_info_description"
-            android:paddingTop="8dp"
             android:paddingStart="14dp"
-            android:paddingEnd="14dp"/>
+            android:paddingTop="8dp"
+            android:paddingEnd="14dp"
+            android:text="@string/player_video_info_description" />
+
         <TextView
             android:id="@+id/tv_video_description"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            tools:text="Description"
-            android:textSize="16sp"
             android:paddingStart="14dp"
-            android:paddingEnd="14dp"/>
+            android:paddingEnd="14dp"
+            style="?attr/textAppearanceBody1"
+            tools:text="Description" />
+
         <TextView
+            style="?attr/textAppearanceCaption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/player_video_info_video_tags"
-            android:textSize="12sp"
-            android:paddingTop="8dp"
             android:paddingStart="14dp"
-            android:paddingEnd="14dp"/>
+            android:paddingTop="8dp"
+            android:paddingEnd="14dp"
+            android:text="@string/player_video_info_video_tags" />
+
         <TextView
             android:id="@+id/tv_video_tags"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:visibility="gone"
-            tools:text="Video Tags"
-            android:textSize="16sp"
             android:paddingStart="14dp"
             android:paddingEnd="14dp"
-            android:paddingBottom="14dp"/>
+            android:paddingBottom="14dp"
+            android:textSize="16sp"
+            android:visibility="gone"
+            tools:text="Video Tags" />
+
         <com.google.android.material.chip.ChipGroup
             android:id="@+id/chip_group_video_tags"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingStart="14dp"
             android:paddingEnd="14dp"
-            android:paddingBottom="14dp"/>
+            android:paddingBottom="14dp" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

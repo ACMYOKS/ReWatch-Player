@@ -228,7 +228,7 @@ class VideoSearchFragment : ReWatchPlayerFragment() {
 
         mVideoList.adapter = mVideoListAdapter
         mVideoList.layoutManager = LinearLayoutManager(requireContext())
-        mVideoList.addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(4f).toInt()))
+        mVideoList.addItemDecoration(CommonListDecoration(dpToPx(8f).toInt(), dpToPx(14f).toInt()))
     }
 
     private fun getSelectedSearchOptionPos(): Int {

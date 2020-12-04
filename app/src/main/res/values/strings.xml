@@ -90,7 +90,8 @@
     <string name="download_reason_error_too_many_redirect">Too many redirect</string>
     <string name="download_reason_error_unhandled_http_code">Unhandled HTTP code</string>
     <string name="download_reason_error_unknown">Unknown</string>
-
+    <string name="download_confirm_delete">Confirm to delete item(s)?</string>
+    <string name="download_delete_message">Item(s) deleted</string>
     <!--  Common error  -->
     <string name="error_loading_resource">Error occurred while loading resource</string>
     <string name="error_network_disconnected">Network disconnected</string>

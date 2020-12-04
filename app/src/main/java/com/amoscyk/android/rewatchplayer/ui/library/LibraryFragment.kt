@@ -4,14 +4,17 @@ package com.amoscyk.android.rewatchplayer.ui.library
 import android.content.Context
 import android.os.Bundle
 import android.view.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentPagerAdapter
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -20,12 +23,14 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager.widget.ViewPager
 import com.amoscyk.android.rewatchplayer.R
 import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
+import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.ui.*
 import com.amoscyk.android.rewatchplayer.ui.viewcontrol.SnackbarControl
 import com.amoscyk.android.rewatchplayer.util.*
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.fragment_library.view.*
+import kotlinx.coroutines.launch
 
 class LibraryFragment : ReWatchPlayerFragment() {
 
@@ -44,6 +49,7 @@ class LibraryFragment : ReWatchPlayerFragment() {
     private val actionModeCallback = object : ActionMode.Callback {
         override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
             mode.menuInflater.inflate(R.menu.library_action_mode_menu, menu)
+            menu.setMenuItemTintColor(ContextCompat.getColor(requireContext(), android.R.color.white))
             return true
         }
 
@@ -54,11 +60,7 @@ class LibraryFragment : ReWatchPlayerFragment() {
         override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
             when (item.itemId) {
                 R.id.confirm_delete -> {
-                    if (currentDisplayMode == LibraryViewModel.DisplayMode.BOOKMARKED) {
-                        viewModel.removeBookmark(mBookmarkListAdapter.getSelectedItemsId())
-                    } else if (currentDisplayMode == LibraryViewModel.DisplayMode.HISTORY) {
-                        viewModel.removeWatchHistory(mHistoryListAdapter.getSelectedItemsId())
-                    }
+                    mDialogDelete.show()
                 }
             }
             return true
@@ -124,6 +126,23 @@ class LibraryFragment : ReWatchPlayerFragment() {
             true
         }
         setHasStableIds(true)
+    }
+
+    private val mDialogDelete by lazy {
+        AlertDialog.Builder(requireContext())
+            .setMessage(getString(R.string.download_confirm_delete))
+            .setPositiveButton(R.string.confirm_text) { _, _ ->
+                lifecycleScope.launch {
+                    if (currentDisplayMode == LibraryViewModel.DisplayMode.BOOKMARKED) {
+                        viewModel.removeBookmark(mBookmarkListAdapter.getSelectedItemsId())
+                    } else if (currentDisplayMode == LibraryViewModel.DisplayMode.HISTORY) {
+                        viewModel.removeWatchHistory(mHistoryListAdapter.getSelectedItemsId())
+                    }
+                    actionMode?.finish()
+                }
+            }
+            .setNegativeButton(R.string.cancel_text) { _, _ -> }
+            .create()
     }
 
     override fun onAttach(context: Context) {
@@ -278,22 +297,21 @@ class LibraryFragment : ReWatchPlayerFragment() {
         historyFrag = getContentListFragment(3)
         channelFrag.setupRecyclerView {
             it.layoutManager = LinearLayoutManager(requireContext())
-            it.addItemDecoration(DividerItemDecoration(requireContext(), RecyclerView.VERTICAL))
             it.adapter = mChannelListAdapter
         }
         playlistFrag.setupRecyclerView {
             it.layoutManager = LinearLayoutManager(requireContext())
-            it.addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(8f).toInt()))
+            it.addItemDecoration(CommonListDecoration(dpToPx(8f).toInt(), dpToPx(14f).toInt()))
             it.adapter = mPlaylistAdapter
         }
         bookmarkFrag.setupRecyclerView {
             it.layoutManager = LinearLayoutManager(requireContext())
-            it.addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(8f).toInt()))
+            it.addItemDecoration(CommonListDecoration(dpToPx(8f).toInt(), dpToPx(14f).toInt()))
             it.adapter = mBookmarkListAdapter
         }
         historyFrag.setupRecyclerView {
             it.layoutManager = LinearLayoutManager(requireContext())
-            it.addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(8f).toInt()))
+            it.addItemDecoration(CommonListDecoration(dpToPx(8f).toInt(), dpToPx(14f).toInt()))
             it.adapter = mHistoryListAdapter
         }
     }
@@ -393,6 +411,7 @@ class LibraryFragment : ReWatchPlayerFragment() {
     private fun setupOptionMenu() {
         toolbar.apply {
             inflateMenu(R.menu.library_option_menu2)
+            setMenuItemTintColor(requireContext().getColorFromAttr(R.attr.colorOnPrimary))
             setOnMenuItemClickListener {
                 when (it.itemId) {
                     R.id.search -> {

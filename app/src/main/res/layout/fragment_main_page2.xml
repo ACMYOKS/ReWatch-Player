@@ -21,12 +21,9 @@
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/main_bottom_nav"
+        style="@style/Widget.MaterialComponents.BottomNavigationView.Colored"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/colorPrimary"
-        app:itemBackground="@color/colorPrimary"
-        app:itemIconTint="@color/bottom_nav_item_color"
-        app:itemTextColor="@color/bottom_nav_item_color"
         app:labelVisibilityMode="labeled"
         app:menu="@menu/main_navigation_menu" />
 
@@ -34,18 +31,18 @@
         android:id="@+id/player_holder"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#222222" />
+        android:background="@color/blue_grey_900" />
 
     <TextView
         android:id="@+id/tv_video_title_small"
+        style="?attr/textAppearanceBody1"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:ellipsize="marquee"
         android:gravity="center_vertical"
         android:marqueeRepeatLimit="marquee_forever"
         android:singleLine="true"
-        android:textColor="@android:color/white"
-        android:textSize="14sp" />
+        android:textColor="@android:color/white" />
 
     <ImageButton
         android:id="@+id/btn_playback_small"
@@ -53,7 +50,7 @@
         android:layout_height="48dp"
         android:background="@android:color/transparent"
         android:src="@drawable/ic_play_arrow_white"
-        android:tint="@android:color/darker_gray" />
+        android:tint="@android:color/white" />
 
     <ImageButton
         android:id="@+id/btn_close_small"
@@ -61,7 +58,7 @@
         android:layout_height="48dp"
         android:background="@android:color/transparent"
         android:src="@drawable/ic_close_white"
-        android:tint="@android:color/darker_gray" />
+        android:tint="@android:color/white" />
 
     <com.google.android.exoplayer2.ui.PlayerView
         android:id="@+id/player_view"
@@ -80,6 +77,7 @@
 
             <TextView
                 android:id="@+id/tv_video_title"
+                style="?attr/textAppearanceBody1"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:ellipsize="marquee"
@@ -87,7 +85,6 @@
                 android:marqueeRepeatLimit="marquee_forever"
                 android:singleLine="true"
                 android:textColor="@android:color/white"
-                android:textSize="18sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"

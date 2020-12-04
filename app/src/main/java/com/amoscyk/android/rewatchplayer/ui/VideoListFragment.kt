@@ -166,11 +166,13 @@ class VideoListFragment : ReWatchPlayerFragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        if (rootView == null) {
-            rootView = inflater.inflate(R.layout.fragment_video_list, container, false)
-            setupView()
-        }
-        return rootView
+        return inflater.inflate(R.layout.fragment_video_list, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        rootView = view
+        setupView()
     }
 
     override fun onStart() {
@@ -182,6 +184,11 @@ class VideoListFragment : ReWatchPlayerFragment() {
         super.onResume()
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        rootView = null
+    }
+
     private fun setupView() {
         mToolbar = rootView!!.findViewById(R.id.toolbar)
         mVideoListView = rootView!!.findViewById(R.id.video_list)
@@ -191,7 +198,7 @@ class VideoListFragment : ReWatchPlayerFragment() {
         mToolbar.setupWithNavController(findNavController())
         mVideoListView.apply {
             adapter = mListAdapter
-            addItemDecoration(CommonListDecoration(dpToPx(4f).toInt(), dpToPx(8f).toInt()))
+            addItemDecoration(CommonListDecoration(dpToPx(8f).toInt(), dpToPx(14f).toInt()))
             layoutManager = LinearLayoutManager(requireContext())
         }
         mButton.setOnClickListener {

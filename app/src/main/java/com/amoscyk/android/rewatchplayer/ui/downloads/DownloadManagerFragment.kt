@@ -12,6 +12,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
@@ -25,12 +26,10 @@ import com.amoscyk.android.rewatchplayer.ReWatchPlayerFragment
 import com.amoscyk.android.rewatchplayer.datasource.vo.DownloadStatus
 import com.amoscyk.android.rewatchplayer.datasource.vo.Status
 import com.amoscyk.android.rewatchplayer.datasource.vo.local.VideoMetaWithPlayerResource
+import com.amoscyk.android.rewatchplayer.ui.CommonListDecoration
 import com.amoscyk.android.rewatchplayer.ui.MainViewModel
 import com.amoscyk.android.rewatchplayer.ui.downloads.DownloadPageViewModel.MenuState
-import com.amoscyk.android.rewatchplayer.util.DateTimeHelper
-import com.amoscyk.android.rewatchplayer.util.YouTubeStreamFormatCode
-import com.amoscyk.android.rewatchplayer.util.YouTubeVideoThumbnailHelper
-import com.amoscyk.android.rewatchplayer.util.formatReadableByteUnit
+import com.amoscyk.android.rewatchplayer.util.*
 import com.amoscyk.android.rewatchplayer.viewModelFactory
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.download_manager_fragment_list_item.view.*
@@ -45,15 +44,15 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
     private var mListAdapter: DownloadItemAdapter? = null
     private val mDialogDelete by lazy {
         AlertDialog.Builder(requireContext())
-            .setMessage("Are you sure to remove the selected items?")
+            .setMessage(getString(R.string.download_confirm_delete))
             .setPositiveButton(getString(R.string.confirm_text)) { _, _ ->
                 lifecycleScope.launch {
                     val result = viewModel.deleteSelectedPlayerResource(requireContext())
                     if (result.status == Status.SUCCESS) {
-                        mainFragment?.showSnackbar("Item(s) deleted!", Snackbar.LENGTH_SHORT)
+                        mainFragment?.showSnackbar(getString(R.string.download_delete_message), Snackbar.LENGTH_SHORT)
                         viewModel.getVideoMetaContainsPlayerResource()
                     } else {
-                        mainFragment?.showSnackbar(result.message as? String ?: "error",
+                        mainFragment?.showSnackbar(result.message as? String ?: getString(R.string.error_unknown),
                             Snackbar.LENGTH_SHORT)
                     }
                     actionMode?.finish()
@@ -66,6 +65,7 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
     private val actionModeCallback = object : ActionMode.Callback {
         override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
             mode.menuInflater.inflate(R.menu.download_manager_action_mode_menu, menu)
+            menu.setMenuItemTintColor(ContextCompat.getColor(requireContext(), android.R.color.white))
             return true
         }
 
@@ -162,7 +162,7 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
         rvDownloadStatus.apply {
             adapter = mListAdapter
             layoutManager = LinearLayoutManager(requireContext())
-            addItemDecoration(DividerItemDecoration(requireContext(), RecyclerView.VERTICAL))
+            addItemDecoration(CommonListDecoration(dpToPx(8f).toInt(), dpToPx(14f).toInt()))
         }
     }
 

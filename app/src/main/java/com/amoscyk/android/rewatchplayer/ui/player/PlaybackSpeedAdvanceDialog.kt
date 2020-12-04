@@ -7,18 +7,18 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.AppCompatButton
 import com.amoscyk.android.rewatchplayer.R
+import com.google.android.material.button.MaterialButton
 
 class PlaybackSpeedAdvanceDialog(context: Context) : AlertDialog(context) {
     private var mCustomView: View? = null
     private var mTvCurrentSpeed: TextView? = null
-    private var mBtnPlus1: AppCompatButton? = null
-    private var mBtnMinus1: AppCompatButton? = null
-    private var mBtnPlus01: AppCompatButton? = null
-    private var mBtnMinus01: AppCompatButton? = null
-    private var mBtnPlus005: AppCompatButton? = null
-    private var mBtnMinus005: AppCompatButton? = null
+    private var mBtnPlus1: MaterialButton? = null
+    private var mBtnMinus1: MaterialButton? = null
+    private var mBtnPlus01: MaterialButton? = null
+    private var mBtnMinus01: MaterialButton? = null
+    private var mBtnPlus005: MaterialButton? = null
+    private var mBtnMinus005: MaterialButton? = null
 
     private var mCurrentMultiplier = 1f
 

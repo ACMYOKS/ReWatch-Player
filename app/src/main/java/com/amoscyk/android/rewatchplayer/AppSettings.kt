@@ -7,8 +7,8 @@ import android.os.Build
 import android.os.Process
 
 object AppSettings {
-    const val DEFAULT_PLAYER_SKIP_FORWARD_SECOND = 15
-    const val DEFAULT_PLAYER_SKIP_BACKWARD_SECOND = 5
+    const val DEFAULT_PLAYER_SKIP_FORWARD_SECOND = 10
+    const val DEFAULT_PLAYER_SKIP_BACKWARD_SECOND = 10
     const val DEFAULT_PLAYER_ENABLE_PIP = true
     const val DEFAULT_PLAYER_PLAY_DOWNLOADED_IF_EXIST = true
     const val DEFAULT_ALLOW_VIDEO_STREAMING_ENV = 0
