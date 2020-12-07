@@ -185,9 +185,9 @@ class DownloadManagerFragment : ReWatchPlayerFragment() {
                 tvTitle.text = item.videoMeta.title
                 tvAuthor.text = item.videoMeta.channelTitle
                 tvQuality.text = item.playerResources.joinToString { res ->
-                    YouTubeStreamFormatCode.FORMAT_CODES[res.itag]?.let {
-                        it.resolution ?: it.bitrate
-                    }.orEmpty()
+                    (YouTubeStreamFormatCode.MUX_FORMAT_MAP
+                            + YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMAT_MAP
+                            + YouTubeStreamFormatCode.ADAPTIVE_AUDIO_FORMAT_MAP)[res.itag] ?: "--"
                 }
                 checkBox.isChecked = checkStatus[item.videoMeta.videoId]!!
                 checkBox.visibility = if (isEditMode) View.VISIBLE else View.GONE

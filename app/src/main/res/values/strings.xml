@@ -102,7 +102,7 @@
     <string name="negative_text">No</string>
     <string name="cancel_text">Cancel</string>
     <string name="default_text">Default</string>
-    <string name="empty_list">No item</string>
+    <string name="empty_list">Oh, it is empty!</string>
     <string name="retry">Retry</string>
 
     <!-- Setting -->

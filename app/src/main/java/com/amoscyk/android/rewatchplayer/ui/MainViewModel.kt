@@ -381,6 +381,17 @@ class MainViewModel(
             } catch (e: Exception) {
                 Log.e(TAG, "playVideo: ${e.message}")
                 when (e) {
+                    is NoNetworkException -> {
+                        _alertEvent.value = Event(
+                            AlertDialogControl(rpApp.getString(R.string.player_error_title),
+                                rpApp.getString(R.string.error_network_disconnected),
+                                true,
+                                positiveAction = AlertDialogControl.Action(rpApp.getString(R.string.retry)) {
+                                    readyVideo(videoId)
+                                },
+                                negativeAction = AlertDialogControl.Action(rpApp.getString(R.string.cancel_text)) {})
+                        )
+                    }
                     is ConnectException, is SocketTimeoutException -> {
                         _alertEvent.value = Event(
                             AlertDialogControl(rpApp.getString(R.string.player_error_title),
@@ -398,7 +409,7 @@ class MainViewModel(
                             is NoVideoMetaException -> rpApp.getString(R.string.player_error_no_video_meta)
                             is NoAvailableQualityException -> rpApp.getString(R.string.player_error_no_available_quality)
                             is ServerErrorException -> rpApp.getString(R.string.player_error_server_error, e.message)
-                            else -> rpApp.getString(R.string.player_error_unknown)
+                            else -> rpApp.getString(R.string.player_error_unknown) + ": ${e.message}"
                         }
                         _alertEvent.value = Event(
                             AlertDialogControl(rpApp.getString(R.string.player_error_title),
@@ -439,6 +450,19 @@ class MainViewModel(
                     playWithResource(videoData, vTag, aTag, currentPlaybackPos)
                 } catch (e: Exception) {
                     when (e) {
+                        is NoNetworkException -> {
+                            _alertEvent.value = Event(
+                                AlertDialogControl(rpApp.getString(R.string.player_error_title),
+                                    rpApp.getString(R.string.error_network_disconnected),
+                                    true,
+                                    positiveAction = AlertDialogControl.Action(rpApp.getString(R.string.retry)) {
+                                        viewModelScope.launch {
+                                            changeQualityV2(vTag)
+                                        }
+                                    },
+                                    negativeAction = AlertDialogControl.Action(rpApp.getString(R.string.cancel_text)) {})
+                            )
+                        }
                         is ConnectException, is SocketTimeoutException -> {
                             _alertEvent.value = Event(
                                 AlertDialogControl(rpApp.getString(R.string.player_error_title),
@@ -546,6 +570,15 @@ class MainViewModel(
                 )
             } catch (e: Exception) {
                 when (e) {
+                    is NoNetworkException -> {
+                        _snackEvent.value = Event(
+                            SnackbarControl(rpApp.getString(R.string.error_network_disconnected),
+                                SnackbarControl.Action(rpApp.getString(R.string.retry)) {
+                                    readyArchive(videoId)
+                                },
+                                SnackbarControl.Duration.FOREVER)
+                        )
+                    }
                     is ConnectException, is SocketTimeoutException -> {
                         _snackEvent.value = Event(
                             SnackbarControl(rpApp.getString(R.string.player_error_server_connect_fail),
@@ -662,6 +695,15 @@ class MainViewModel(
                 _snackEvent.value = Event(SnackbarControl(msg))
             } catch (e: Exception) {
                 when (e) {
+                    is NoNetworkException -> {
+                        _snackEvent.value = Event(
+                            SnackbarControl(rpApp.getString(R.string.error_network_disconnected),
+                                SnackbarControl.Action(rpApp.getString(R.string.retry)) {
+                                    archiveVideo(videoData, vTag, aTag)
+                                },
+                                SnackbarControl.Duration.FOREVER)
+                        )
+                    }
                     is ConnectException, is SocketTimeoutException -> {
                         _snackEvent.value = Event(
                             SnackbarControl(rpApp.getString(R.string.player_error_server_connect_fail),

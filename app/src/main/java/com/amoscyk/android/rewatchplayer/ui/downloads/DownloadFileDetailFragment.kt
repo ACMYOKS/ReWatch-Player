@@ -245,8 +245,9 @@ class DownloadFileDetailFragment: ReWatchPlayerFragment() {
             val item = getItem(position)
             if (checkStatus[item.downloadId] == null) checkStatus[item.downloadId] = false
             holder.apply {
-                tvDescription.text = YouTubeStreamFormatCode.FORMAT_CODES[item.itag]?.
-                    let { it.resolution ?: it.bitrate }
+                tvDescription.text = (YouTubeStreamFormatCode.MUX_FORMAT_MAP
+                        + YouTubeStreamFormatCode.ADAPTIVE_VIDEO_FORMAT_MAP
+                        + YouTubeStreamFormatCode.ADAPTIVE_AUDIO_FORMAT_MAP)[item.itag] ?: "--"
                 selectBox.visibility = if (isEditMode) View.VISIBLE else View.GONE
                 selectBox.isChecked = checkStatus[item.downloadId]!!
                 setViewForExtraData(item.totalFileSize, item.currentFileSize, item.status, item.reason)

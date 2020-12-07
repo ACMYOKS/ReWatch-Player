@@ -166,13 +166,11 @@ class VideoListFragment : ReWatchPlayerFragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.fragment_video_list, container, false)
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        rootView = view
-        setupView()
+        if (rootView == null) {
+            rootView = inflater.inflate(R.layout.fragment_video_list, container, false)
+            setupView()
+        }
+        return rootView
     }
 
     override fun onStart() {
@@ -182,11 +180,6 @@ class VideoListFragment : ReWatchPlayerFragment() {
 
     override fun onResume() {
         super.onResume()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        rootView = null
     }
 
     private fun setupView() {

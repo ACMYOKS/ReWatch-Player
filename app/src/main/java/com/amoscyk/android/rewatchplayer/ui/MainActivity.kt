@@ -94,10 +94,7 @@ class MainActivity : ReWatchPlayerActivity(), EasyPermissions.PermissionCallback
     private val extraPlayerOptions by lazy {
         listOf(
             PlayerOption(getString(R.string.player_option_info), R.drawable.ic_info),
-            PlayerOption(
-                getString(R.string.player_option_resolution),
-                R.mipmap.ic_action_resolution
-            ),
+            PlayerOption(getString(R.string.player_option_resolution), R.drawable.ic_aspect_ratio_black_24dp),
             PlayerOption(getString(R.string.player_option_archive), R.drawable.ic_archive_white),
             PlayerOption(getString(R.string.player_option_speed), R.drawable.ic_slow_motion_video),
             PlayerOption(getString(R.string.player_option_share), R.drawable.ic_share)

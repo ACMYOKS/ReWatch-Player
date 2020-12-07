@@ -84,6 +84,7 @@ class AudioPlayerService : Service() {
             setPlayer(rpApp.getPlayer())
             setPriority(NotificationCompat.PRIORITY_HIGH)
             setBadgeIconType(NotificationCompat.BADGE_ICON_NONE)
+            setSmallIcon(R.drawable.ic_app_icon_outline)
             rpApp.getPlayer()?.addListener(playerListener)
         }
     }

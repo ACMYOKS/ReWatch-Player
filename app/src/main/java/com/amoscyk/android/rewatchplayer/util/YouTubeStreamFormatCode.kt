@@ -46,6 +46,7 @@ object YouTubeStreamFormatCode {
         141 to "256k"
     )
 
+    // NOT USED
     val FORMAT_CODES = sortedMapOf(
         5 to StreamFormat(5, Container.FLV, Content.AV, "240p"),
         6 to StreamFormat(6, Container.FLV, Content.AV, "270p"),
@@ -123,28 +124,29 @@ object YouTubeStreamFormatCode {
         337 to StreamFormat(337, Container.WEBM, Content.V, "2160p60")
     )
 
+    // NOT USED
     val MUXED_VIDEO_FORMATS = hashMapOf<Int, StreamFormat>()
     val ADAPTIVE_VIDEO_FORMATS = hashMapOf<Int, StreamFormat>()
     val ADAPTIVE_AUDIO_FORMATS = hashMapOf<Int, StreamFormat>()
 
-    init {
-        FORMAT_CODES.forEach { (idx, value) ->
-            when (value.container) {
-                YouTubeStreamFormatCode.Container.MP4 -> {
-                    if (value.content == YouTubeStreamFormatCode.Content.AV) {
-                        MUXED_VIDEO_FORMATS[idx] = value
-                    } else {
-                        ADAPTIVE_VIDEO_FORMATS[idx] = value
-                    }
-                }
-                YouTubeStreamFormatCode.Container.M4A -> {
-                    ADAPTIVE_AUDIO_FORMATS[idx] = value
-                }
-                else -> {
-                }
-            }
-        }
-    }
+//    init {
+//        FORMAT_CODES.forEach { (idx, value) ->
+//            when (value.container) {
+//                YouTubeStreamFormatCode.Container.MP4 -> {
+//                    if (value.content == YouTubeStreamFormatCode.Content.AV) {
+//                        MUXED_VIDEO_FORMATS[idx] = value
+//                    } else {
+//                        ADAPTIVE_VIDEO_FORMATS[idx] = value
+//                    }
+//                }
+//                YouTubeStreamFormatCode.Container.M4A -> {
+//                    ADAPTIVE_AUDIO_FORMATS[idx] = value
+//                }
+//                else -> {
+//                }
+//            }
+//        }
+//    }
 }
 
 

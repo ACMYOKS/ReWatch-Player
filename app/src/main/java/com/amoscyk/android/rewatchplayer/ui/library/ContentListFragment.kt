@@ -13,8 +13,9 @@ import java.util.*
 
 class ContentListFragment : ReWatchPlayerFragment() {
 
-    private lateinit var loadingView: ContentLoadingProgressBar
-    private lateinit var recyclerView: RecyclerView
+    private var loadingView: ContentLoadingProgressBar? = null
+    private var recyclerView: RecyclerView? = null
+    private var emptyView: View? = null
 
     private var rvSetup : ((RecyclerView) -> Unit)? = null
     private var shouldShowLoading = false
@@ -32,8 +33,10 @@ class ContentListFragment : ReWatchPlayerFragment() {
         super.onViewCreated(view, savedInstanceState)
         recyclerView = view.findViewById(R.id.rv_content)
         loadingView = view.findViewById(R.id.loading_view)
-        loadingView.hide()
-        rvSetup?.invoke(recyclerView)
+        emptyView = view.findViewById(R.id.empty_view)
+        loadingView?.hide()
+        emptyView?.visibility = View.GONE
+        recyclerView?.let { rvSetup?.invoke(it) }
         if (hasPendingViewChange) {
             handleViewChange()
         }
@@ -52,6 +55,10 @@ class ContentListFragment : ReWatchPlayerFragment() {
         setShouldShowLoading(false)
     }
 
+    fun setShowEmptyView(show: Boolean) {
+        emptyView?.visibility = if (show) View.VISIBLE else View.GONE
+    }
+
     private fun setShouldShowLoading(value: Boolean) {
         shouldShowLoading = value
         if (view == null) {
@@ -64,11 +71,11 @@ class ContentListFragment : ReWatchPlayerFragment() {
 
     private fun handleViewChange() {
         if (shouldShowLoading) {
-            loadingView.show()
-            recyclerView.visibility = View.INVISIBLE
+            loadingView?.show()
+            recyclerView?.visibility = View.INVISIBLE
         } else {
-            loadingView.hide()
-            recyclerView.visibility = View.VISIBLE
+            loadingView?.hide()
+            recyclerView?.visibility = View.VISIBLE
         }
         hasPendingViewChange = false
     }

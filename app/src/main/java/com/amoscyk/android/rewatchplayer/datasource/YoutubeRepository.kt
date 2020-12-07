@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.map
 import androidx.lifecycle.switchMap
+import com.amoscyk.android.rewatchplayer.AppConstant
 import com.amoscyk.android.rewatchplayer.datasource.vo.*
 import com.amoscyk.android.rewatchplayer.datasource.vo.cloud.CloudSvcErrorHandler
 import com.amoscyk.android.rewatchplayer.datasource.vo.cloud.YtInfo
@@ -29,8 +30,6 @@ class YoutubeRepository(
     private val rpCloudService: RpCloudService,
     private val appDatabase: AppDatabase
 ) {
-
-    private val ytExtractor = YouTubeExtractor(ytOpenService)
     private val ytApiService get() = ytApiServiceProvider.youtubeService
 
     private val _currentAccountName = MutableLiveData<String>()
@@ -122,11 +121,28 @@ class YoutubeRepository(
         pageToken: String? = null,
         maxResults: Long = MAX_PLAYLIST_RESULTS
     ): RPPlaylistListResponse = withContext(Dispatchers.IO) {
-        ytApiService.playlists().list("id,snippet,contentDetails").apply {
+        val request = ytApiService.playlists().list("id,snippet,contentDetails").apply {
             mine = true
             setMaxResults(maxResults)
             pageToken?.let { setPageToken(pageToken) }
-        }.getResponse()
+        }
+        // TODO: special handling for 404 Not Found channelNotFound, should let user know what to do
+        runCatching {
+            request.getResponse()
+        }.getOrElse {
+            if ((it as Exception).message.orEmpty().contains("channelNotFound")) {
+                Log.e(AppConstant.TAG, "getUserPlaylist: user does not have youtube channel")
+            }
+            RPPlaylistListResponse(
+                request,
+                emptyList(),
+                null,
+                null,
+                null,
+                0,
+                0
+            )
+        }
     }
 
     suspend fun loadPlaylistItemForPlaylist(

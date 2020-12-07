@@ -135,23 +135,16 @@ class ChannelFragment: ReWatchPlayerFragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.fragment_channel, container, false)
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        mRootView = view
-        setupViews()
+        if (mRootView == null) {
+            mRootView = inflater.inflate(R.layout.fragment_channel, container, false)
+            setupViews()
+        }
+        return mRootView
     }
 
     override fun onStart() {
         super.onStart()
         viewModel.setChannelId(args.channelId)
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        mRootView = null
     }
 
     private fun setupViews() {

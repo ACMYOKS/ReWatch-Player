@@ -175,17 +175,21 @@ class LibraryFragment : ReWatchPlayerFragment() {
             snackbarSet.clear()
         })
         viewModel.channelList.observe(this, Observer {
+            channelFrag.setShowEmptyView((it.accumulatedItems + it.newItems).isEmpty())
             mChannelListAdapter.submitList(it.accumulatedItems + it.newItems)
             mChannelListAdapter.setEnableInfiniteLoad(!it.isEndOfList)
         })
         viewModel.playlistList.observe(this, Observer {
+            playlistFrag.setShowEmptyView((it.accumulatedItems + it.newItems).isEmpty())
             mPlaylistAdapter.submitList(it.accumulatedItems + it.newItems)
             mPlaylistAdapter.setEnableInfiniteLoad(!it.isEndOfList)
         })
         viewModel.bookmarkList.observe(this, Observer {
+            bookmarkFrag.setShowEmptyView(it.isEmpty())
             mBookmarkListAdapter.submitList(it.map { it.videoMeta })
         })
         viewModel.historyList.observe(this, Observer {
+            historyFrag.setShowEmptyView(it.isEmpty())
             mHistoryListAdapter.submitList(it)
         })
         viewModel.showLoadingChannel.observe(this, Observer { event ->

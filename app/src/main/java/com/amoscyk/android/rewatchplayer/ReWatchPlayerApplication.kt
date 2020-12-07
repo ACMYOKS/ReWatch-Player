@@ -13,6 +13,7 @@ import com.amoscyk.android.rewatchplayer.datasource.AppDatabase
 import com.amoscyk.android.rewatchplayer.datasource.RpCloudService
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeRepository
 import com.amoscyk.android.rewatchplayer.datasource.YoutubeServiceProvider
+import com.amoscyk.android.rewatchplayer.datasource.vo.NoNetworkException
 import com.amoscyk.android.rewatchplayer.util.*
 import com.amoscyk.android.rewatchplayer.ytextractor.YouTubeOpenService
 import com.google.android.exoplayer2.ExoPlayer
@@ -23,9 +24,11 @@ import com.google.firebase.functions.ktx.functions
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.ktx.app
 import com.jakewharton.threetenabp.AndroidThreeTen
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
+import java.util.concurrent.TimeUnit
 
 class ReWatchPlayerApplication: Application() {
 
@@ -35,12 +38,23 @@ class ReWatchPlayerApplication: Application() {
     private lateinit var _youtubeRepository: YoutubeRepository
     val youtubeRepository
         get() = _youtubeRepository
+    // NOT USED
     val youtubeOpenService: YouTubeOpenService = Retrofit.Builder()
         .baseUrl(AppConstant.YOUTUBE_BASE_URL)
         .addConverterFactory(ScalarsConverterFactory.create())
         .build()
         .create(YouTubeOpenService::class.java)
     val rpCloudService: RpCloudService = Retrofit.Builder()
+        .client(OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                if (!this.isNetworkConnected) throw NoNetworkException()
+                chain.proceed(chain.request())
+            }
+            .callTimeout(10, TimeUnit.SECONDS)
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS)
+            .build())
         .baseUrl(AppConstant.FIREBASE_CLOUD_FUNCTIONS_URL)
         .addConverterFactory(MoshiConverterFactory.create())
         .build()
@@ -109,7 +123,7 @@ class ReWatchPlayerApplication: Application() {
                 emit(it == ConnectivityLiveData.ConnectivityStatus.CONNECTED)
             }
         }
-        isWifiConnected.observeForever { Log.d(AppConstant.TAG, "is mobile connected: $it") }
+        isMobileConnected.observeForever { Log.d(AppConstant.TAG, "is mobile connected: $it") }
     }
 
 }
